@@ -94,6 +94,7 @@ class seq:
         self._current = 0
         self._increment = 0
         self._base = None
+        self._initialized = False
 
     def _validate_parameters(
         self,
@@ -128,20 +129,23 @@ class seq:
         key = (value, increment_by, start, suffix)
 
         if key not in cls._locks:
-            cls._locks[key] = Lock()
-            cls._instances[key] = super().__new__(cls)
-
-        instance = cls._instances[key]
-
-        if not hasattr(instance, "_initialized"):
-            instance.__init__(value, increment_by, start, suffix)
-            instance._initialized = True
-            if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
-                instance._initialize_datetime_sequence(value, increment_by)
-            else:
-                instance._initialize_basic_sequence(value, increment_by, start)
+            # Use a temporary lock to protect lock creation
+            with Lock():
+                if key not in cls._locks:
+                    cls._locks[key] = Lock()
 
         with cls._locks[key]:
+            if key not in cls._instances:
+                instance = super().__new__(cls)
+                instance.__init__(value, increment_by, start, suffix)
+                instance._initialized = True
+                if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+                    instance._initialize_datetime_sequence(value, increment_by)
+                else:
+                    instance._initialize_basic_sequence(value, increment_by, start)
+                cls._instances[key] = instance
+
+            instance = cls._instances[key]
             instance._current += instance._increment
 
             if isinstance(value, (datetime.datetime, datetime.date)):

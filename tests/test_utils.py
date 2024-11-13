@@ -3,6 +3,9 @@ from __future__ import annotations
 import asyncio
 import datetime
 import itertools
+from collections import deque
+from queue import Queue
+from threading import Lock
 from threading import Thread
 
 import pytest
@@ -105,13 +108,17 @@ def test_invalid_datetime_increment():
 
 
 def test_safety_threads():
-    results: list[int] = []
+    results_queue: Queue[int] = Queue()
     num_threads = 50
     iterations_per_thread = 100
 
     def worker():
+        local_results = []  # Use thread-local storage first
         for _ in range(iterations_per_thread):
-            results.append(seq(1000))
+            local_results.append(seq(1000))
+        # Bulk transfer to queue
+        for result in local_results:
+            results_queue.put(result)
 
     threads = [Thread(target=worker) for _ in range(num_threads)]
 
@@ -120,9 +127,39 @@ def test_safety_threads():
     for t in threads:
         t.join()
 
+    # Convert queue to list for verification
+    results = []
+    while not results_queue.empty():
+        results.append(results_queue.get())
+
     assert len(results) == num_threads * iterations_per_thread
     assert len(set(results)) == len(results)
     assert sorted(results) == list(range(1001, 1001 + len(results)))
+
+
+@pytest.mark.asyncio
+async def test_safety_async():
+    results = deque(maxlen=num_tasks * iterations_per_task)
+    results_lock = Lock()  # For thread-safe deque access
+    num_tasks = 50
+    iterations_per_task = 100
+
+    async def worker():
+        local_results = []  # Local buffer
+        for _ in range(iterations_per_task):
+            local_results.append(seq(1000))
+            await asyncio.sleep(0.001)
+        # Bulk transfer with single lock acquisition
+        with results_lock:
+            results.extend(local_results)
+
+    tasks = [asyncio.create_task(worker()) for _ in range(num_tasks)]
+    await asyncio.gather(*tasks)
+
+    results_list = list(results)
+    assert len(results_list) == num_tasks * iterations_per_task
+    assert len(set(results_list)) == len(results_list)
+    assert sorted(results_list) == list(range(1001, 1001 + len(results_list)))
 
 
 @pytest.mark.asyncio
@@ -146,15 +183,21 @@ async def test_safety_async():
 
 
 def test_multiple_sequences_threads():
-    results1 = []
-    results2 = []
+    results1: Queue[int] = Queue()
+    results2: Queue[int] = Queue()
     num_threads = 20
 
     def worker1():
-        results1.append(seq(1000))
+        local_results = []
+        local_results.append(seq(1000))
+        for result in local_results:
+            results1.put(result)
 
     def worker2():
-        results2.append(seq(2000))
+        local_results = []
+        local_results.append(seq(2000))
+        for result in local_results:
+            results2.put(result)
 
     threads = []
     for _ in range(num_threads):
@@ -167,30 +210,40 @@ def test_multiple_sequences_threads():
     for t in threads:
         t.join()
 
-    assert len(results1) == num_threads
-    assert len(set(results1)) == len(results1)
-    assert sorted(results1) == list(range(1001, 1001 + len(results1)))
+    results1_list = []
+    results2_list = []
 
-    assert len(results2) == num_threads
-    assert len(set(results2)) == len(results2)
-    assert sorted(results2) == list(range(2001, 2001 + len(results2)))
+    while not results1.empty():
+        results1_list.append(results1.get())
+    while not results2.empty():
+        results2_list.append(results2.get())
+
+    assert len(results1_list) == num_threads
+    assert len(set(results1_list)) == len(results1_list)
+    assert sorted(results1_list) == list(range(1001, 1001 + len(results1_list)))
+
+    assert len(results2_list) == num_threads
+    assert len(set(results2_list)) == len(results2_list)
+    assert sorted(results2_list) == list(range(2001, 2001 + len(results2_list)))
 
 
 @pytest.mark.asyncio
 async def test_multiple_sequences_async():
-    results1 = []
-    results2 = []
+    results1_queue = asyncio.Queue()
+    results2_queue = asyncio.Queue()
     num_tasks = 20
 
     async def worker1():
-        results1.append(seq(1000))
-        # Simulate some async work
+        local_results = []
+        local_results.append(seq(1000))
         await asyncio.sleep(0.001)
+        await results1_queue.put(local_results[0])
 
     async def worker2():
-        results2.append(seq(2000))
-        # Simulate some async work
+        local_results = []
+        local_results.append(seq(2000))
         await asyncio.sleep(0.001)
+        await results2_queue.put(local_results[0])
 
     tasks = []
     for _ in range(num_tasks):
@@ -198,6 +251,14 @@ async def test_multiple_sequences_async():
         tasks.append(asyncio.create_task(worker2()))
 
     await asyncio.gather(*tasks)
+
+    results1 = []
+    results2 = []
+
+    while not results1_queue.empty():
+        results1.append(await results1_queue.get())
+    while not results2_queue.empty():
+        results2.append(await results2_queue.get())
 
     assert len(results1) == num_tasks
     assert len(set(results1)) == len(results1)
@@ -211,23 +272,27 @@ async def test_multiple_sequences_async():
 @pytest.mark.asyncio
 async def test_multiple_sequences_async_complex():
     num_tasks = 20
-    results_number = []
-    results_string = []
-    results_date = []
+
+    number_queue = asyncio.Queue()
+    string_queue = asyncio.Queue()
+    date_queue = asyncio.Queue()
 
     start_date = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
 
     async def worker_number():
-        results_number.append(seq(1000))
+        result = seq(1000)
         await asyncio.sleep(0.001)
+        await number_queue.put(result)
 
     async def worker_string():
-        results_string.append(seq("User-", suffix="-test"))
+        result = seq("User-", suffix="-test")
         await asyncio.sleep(0.001)
+        await string_queue.put(result)
 
     async def worker_date():
-        results_date.append(seq(start_date, increment_by=datetime.timedelta(days=1)))
+        result = seq(start_date, increment_by=datetime.timedelta(days=1))
         await asyncio.sleep(0.001)
+        await date_queue.put(result)
 
     tasks = []
     for _ in range(num_tasks):
@@ -241,21 +306,35 @@ async def test_multiple_sequences_async_complex():
 
     await asyncio.gather(*tasks)
 
+    results_number = []
+    results_string = []
+    results_date = []
+
+    async def drain_queue(queue):
+        results = []
+        while not queue.empty():
+            results.append(await queue.get())
+        return results
+
+    results_number = await drain_queue(number_queue)
+    results_string = await drain_queue(string_queue)
+    results_date = await drain_queue(date_queue)
+
     assert len(results_number) == num_tasks
     assert len(set(results_number)) == len(results_number)
     assert sorted(results_number) == list(range(1001, 1001 + len(results_number)))
 
     assert len(results_string) == num_tasks
     assert len(set(results_string)) == len(results_string)
-    assert sorted(results_string) == sorted(
-        [f"User-{i}-test" for i in range(1, num_tasks + 1)]
-    )
+    expected_strings = [f"User-{i}-test" for i in range(1, num_tasks + 1)]
+    assert sorted(results_string) == sorted(expected_strings)
 
     assert len(results_date) == num_tasks
     assert len(set(results_date)) == len(results_date)
-    assert sorted(results_date) == [
+    expected_dates = [
         start_date + datetime.timedelta(days=i) for i in range(1, num_tasks + 1)
     ]
+    assert sorted(results_date) == expected_dates
 
 
 def test_sequence_iterator():
