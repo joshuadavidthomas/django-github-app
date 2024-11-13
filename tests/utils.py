@@ -210,6 +210,12 @@ class seq:
         return "".join(stringified_value)
 
     @classmethod
+    def _reset(cls):
+        """Reset all sequence state. Used for testing purposes."""
+        cls._instances.clear()
+        cls._locks.clear()
+
+    @classmethod
     def iter(
         cls,
         value: Any,

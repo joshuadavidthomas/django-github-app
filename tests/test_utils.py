@@ -14,12 +14,10 @@ from .utils import seq
 
 
 @pytest.fixture(autouse=True)
-def clear_seq_state():
-    seq._instances = {}
-    seq._locks = {}
+def reset_seq():
+    seq._reset()
     yield
-    seq._instances = {}
-    seq._locks = {}
+    seq._reset()
 
 
 def test_basic_number_sequence():
