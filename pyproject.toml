@@ -1,0 +1,225 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[dependency-groups]
+dev = [
+  "coverage[toml]>=7.6.4",
+  "django-coverage-plugin>=3.1.0",
+  "faker>=30.8.2",
+  "ipython>=8.29.0",
+  "model-bakery>=1.17.0",
+  "nox[uv]>=2024.10.9",
+  "pytest>=8.3.3",
+  "pytest-asyncio>=0.24.0",
+  "pytest-cov>=6.0.0",
+  "pytest-django>=4.9.0",
+  "pytest-httpx>=0.33.0",
+  "pytest-randomly>=3.16.0",
+  "pytest-xdist>=3.6.1",
+  "ruff>=0.7.3"
+]
+types = [
+  "django-stubs>=5.1.1",
+  "django-stubs-ext>=5.1.1",
+  "mypy>=1.13.0",
+  "types-cachetools>=5.5.0.20240820"
+]
+
+[project]
+authors = [
+  {name = "Josh Thomas", email = "josh@joshthomas.dev"}
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Framework :: Django",
+  "Framework :: Django :: 4.2",
+  "Framework :: Django :: 5.0",
+  "Framework :: Django :: 5.1",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython"
+]
+dependencies = [
+  "cachetools>=5.5.0",
+  "django>=4.2",
+  "gidgethub>=5.3.0",
+  "httpx>=0.27.2"
+]
+description = "Add your description here"
+dynamic = ["version"]
+license = {file = "LICENSE"}
+name = "django-github-app"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[project.urls]
+Documentation = "https://django-github-app.readthedocs.io/"
+Issues = "https://github.com/joshuadavidthomas/django-github-app/issues"
+Source = "https://github.com/joshuadavidthomas/django-github-app"
+
+[tool.bumpver]
+commit = true
+commit_message = ":bookmark: bump version {old_version} -> {new_version}"
+current_version = "0.1.0"
+push = false  # set to false for CI
+tag = false
+version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
+
+[tool.bumpver.file_patterns]
+"src/django_github_app/__init__.py" = [
+  '__version__ = "{version}"'
+]
+"tests/test_version.py" = [
+  'assert __version__ == "{version}"'
+]
+
+[tool.coverage.paths]
+source = ["src"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "if DEBUG:",
+  "if not DEBUG:",
+  "if settings.DEBUG:",
+  "if TYPE_CHECKING:",
+  'def __str__\(self\)\s?\-?\>?\s?\w*\:'
+]
+fail_under = 100
+
+[tool.coverage.run]
+omit = [
+  "src/django_github_app/migrations/*",
+  "src/django_github_app/_typing.py",
+  "tests/*"
+]
+source = ["src/django_github_app"]
+
+[tool.django-stubs]
+django_settings_module = "tests.settings"
+strict_settings = false
+
+[tool.hatch.build]
+exclude = [
+  ".*",
+  "Justfile"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/django_github_app"]
+
+[tool.hatch.version]
+path = "src/django_github_app/__init__.py"
+
+[tool.mypy]
+check_untyped_defs = true
+exclude = [
+  ".venv",
+  "docs",
+  "migrations",
+  "tests",
+  "venv"
+]
+mypy_path = "src/"
+no_implicit_optional = true
+plugins = [
+  "mypy_django_plugin.main"
+]
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+ignore_errors = true
+ignore_missing_imports = true
+module = [
+  "*.migrations.*",
+  "docs.*",
+  "tests.*"
+]
+
+[tool.mypy_django_plugin]
+ignore_missing_model_attributes = true
+
+[tool.pytest.ini_options]
+addopts = "--create-db -n auto --dist loadfile --doctest-modules"
+asyncio_default_fixture_loop_scope = "function"
+django_find_project = false
+norecursedirs = ".* bin build dist *.egg htmlcov logs node_modules templates venv"
+python_files = "tests.py test_*.py *_tests.py"
+python_functions = "test* atest*"
+pythonpath = "src"
+testpaths = ["tests"]
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+  ".bzr",
+  ".direnv",
+  ".eggs",
+  ".git",
+  ".github",
+  ".hg",
+  ".mypy_cache",
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  "__pypackages__",
+  "_build",
+  "build",
+  "dist",
+  "migrations",
+  "node_modules",
+  "venv"
+]
+extend-include = ["*.pyi?"]
+indent-width = 4
+# Same as Black.
+line-length = 88
+# Assume Python >3.8
+target-version = "py38"
+
+[tool.ruff.format]
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+[tool.ruff.lint]
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["A", "B", "C", "D", "E", "F", "I"]
+ignore = ["E501", "E741"]  # temporary
+select = [
+  "B",  # flake8-bugbear
+  "E",  # Pycodestyle
+  "F",  # Pyflakes
+  "I",  # isort
+  "UP"  # pyupgrade
+]
+unfixable = []
+
+[tool.ruff.lint.isort]
+force-single-line = true
+known-first-party = ["django_github_app", "tests"]
+required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+
+[tool.ruff.lint.pyupgrade]
+# Preserve types, even if a file imports `from __future__ import annotations`.
+keep-runtime-typing = true
