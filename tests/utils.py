@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import datetime
+import json
+import tempfile
 import warnings
 from collections.abc import Iterator
-from threading import Lock
+from pathlib import Path
 from typing import Any
+
+from filelock import FileLock
 
 EPOCH = datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc)
 
@@ -19,64 +23,13 @@ class seq:
     The class maintains separate sequences for different parameter combinations using
     class-level state, protected by locks for thread safety. It supports numbers,
     strings, dates, times, and datetimes.
-
-    Examples:
-        Simple number sequence:
-        >>> seq(1000)
-        1001
-        >>> seq(1000)
-        1002
-        >>> seq(1000)
-        1003
-
-        String sequence with suffix:
-        >>> seq("User-", suffix="-test")
-        'User-1-test'
-        >>> seq("User-", suffix="-test")
-        'User-2-test'
-
-        String sequence with custom start:
-        >>> seq("User-", start=10)
-        'User-10'
-        >>> seq("User-", start=10)
-        'User-11'
-
-        Number sequence with custom increment:
-        >>> seq(1000, increment_by=10)
-        1010
-        >>> seq(1000, increment_by=10)
-        1020
-
-        DateTime sequence:
-        >>> start_date = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-        >>> first = seq(start_date, increment_by=datetime.timedelta(days=1))
-        >>> first.isoformat()
-        '2024-01-02T00:00:00+00:00'
-        >>> second = seq(start_date, increment_by=datetime.timedelta(days=1))
-        >>> second.isoformat()
-        '2024-01-03T00:00:00+00:00'
-
-        Date sequence:
-        >>> start = datetime.date(2024, 1, 1)
-        >>> first = seq(start, increment_by=datetime.timedelta(days=1))
-        >>> str(first)
-        '2024-01-02'
-        >>> second = seq(start, increment_by=datetime.timedelta(days=1))
-        >>> str(second)
-        '2024-01-03'
-
-        Time sequence:
-        >>> start = datetime.time(12, 0)
-        >>> first = seq(start, increment_by=datetime.timedelta(hours=1))
-        >>> str(first)
-        '13:00:00'
-        >>> second = seq(start, increment_by=datetime.timedelta(hours=1))
-        >>> str(second)
-        '14:00:00'
     """
 
     _instances = {}
     _locks = {}
+    _process_lock_file = Path(tempfile.gettempdir(), "seq_process_lock")
+    _process_lock = FileLock(_process_lock_file)
+    _state_file = Path(tempfile.gettempdir(), "seq_state.json")
 
     def __init__(
         self,
@@ -128,13 +81,23 @@ class seq:
     ):
         key = (value, increment_by, start, suffix)
 
-        if key not in cls._locks:
-            # Use a temporary lock to protect lock creation
-            with Lock():
-                if key not in cls._locks:
-                    cls._locks[key] = Lock()
+        # Use process-safe lock for instance creation
+        with cls._process_lock:
+            if key not in cls._locks:
+                cls._locks[key] = cls._get_process_safe_lock(key)
 
-        with cls._locks[key]:
+            # Load saved state if instance doesn't exist
+            if key not in cls._instances:
+                saved_state = cls._load_state()
+                if key in saved_state:
+                    instance = super().__new__(cls)
+                    instance.__init__(value, increment_by, start, suffix)
+                    instance._current = saved_state[key]
+                    instance._initialized = True
+                    cls._instances[key] = instance
+
+        lock = cls._locks[key]
+        with lock:
             if key not in cls._instances:
                 instance = super().__new__(cls)
                 instance.__init__(value, increment_by, start, suffix)
@@ -147,6 +110,9 @@ class seq:
 
             instance = cls._instances[key]
             instance._current += instance._increment
+
+            # Save state after updating
+            cls._save_state()
 
             if isinstance(value, (datetime.datetime, datetime.date)):
                 return instance._generate_datetime_value()
@@ -212,8 +178,42 @@ class seq:
     @classmethod
     def _reset(cls):
         """Reset all sequence state. Used for testing purposes."""
-        cls._instances.clear()
-        cls._locks.clear()
+        with cls._process_lock:
+            cls._instances.clear()
+            cls._locks.clear()
+            if cls._state_file.exists():
+                cls._state_file.unlink()
+
+    @classmethod
+    def _load_state(cls):
+        """Load sequence state from file."""
+        try:
+            with cls._process_lock:
+                if cls._state_file.exists():
+                    state = json.loads(cls._state_file.read_text())
+                    return {
+                        tuple(json.loads(k)): v.get("_current", 0)
+                        for k, v in state.items()
+                    }
+        except Exception:
+            return {}
+        return {}
+
+    @classmethod
+    def _save_state(cls):
+        """Save sequence state to file."""
+        with cls._process_lock:
+            state = {
+                json.dumps([str(k) for k in key]): {"_current": instance._current}
+                for key, instance in cls._instances.items()
+            }
+            cls._state_file.write_text(json.dumps(state))
+
+    @classmethod
+    def _get_process_safe_lock(cls, key):
+        """Get or create a process-safe lock for the given key."""
+        lock_file = Path(tempfile.gettempdir(), f"seq_lock_{hash(key)}")
+        return FileLock(lock_file)
 
     @classmethod
     def iter(
