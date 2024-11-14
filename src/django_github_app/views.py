@@ -23,7 +23,7 @@ from .github import AsyncGitHubAPI
 from .github import SyncGitHubAPI
 from .models import EventLog
 from .models import Installation
-from .routing import Router
+from .routing import GitHubRouter
 
 GitHubAPIType = TypeVar("GitHubAPIType", AsyncGitHubAPI, SyncGitHubAPI)
 
@@ -59,7 +59,7 @@ class BaseWebhookView(View, ABC, Generic[GitHubAPIType]):
 
     @property
     def router(self) -> GidgetHubRouter:
-        return GidgetHubRouter(*Router.routers)
+        return GidgetHubRouter(*GitHubRouter.routers)
 
     @abstractmethod
     def post(

@@ -8,12 +8,12 @@ from gidgethub.routing import AsyncCallback
 from gidgethub.routing import Router as GidgetHubRouter
 
 
-class Router:
+class GitHubRouter:
     _routers: list[GidgetHubRouter] = []
 
     def __init__(self) -> None:
         self.router = GidgetHubRouter()
-        Router._routers.append(self.router)
+        GitHubRouter._routers.append(self.router)
 
     @classproperty
     def routers(cls):
