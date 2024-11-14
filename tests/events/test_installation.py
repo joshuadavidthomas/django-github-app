@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 from asgiref.sync import sync_to_async
-from django.test import override_settings
 from gidgethub.abc import sansio
 from model_bakery import baker
 
@@ -19,7 +18,9 @@ from tests.utils import seq
 pytestmark = [pytest.mark.asyncio, pytest.mark.django_db]
 
 
-async def test_create_installation(installation_id, repository_id):
+async def test_create_installation(
+    installation_id, repository_id, override_app_settings
+):
     data = {
         "installation": {
             "id": installation_id,
@@ -31,9 +32,7 @@ async def test_create_installation(installation_id, repository_id):
     }
     event = sansio.Event(data, event="installation", delivery_id="1234")
 
-    with override_settings(
-        DJANGO_GITHUB_APP={"APP_ID": str(data["installation"]["app_id"])}
-    ):
+    with override_app_settings(APP_ID=str(data["installation"]["app_id"])):
         await create_installation(event, None)
 
     installation = await Installation.objects.aget(

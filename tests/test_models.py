@@ -4,7 +4,6 @@ import datetime
 
 import pytest
 from asgiref.sync import sync_to_async
-from django.test import override_settings
 from django.utils import timezone
 from gidgethub import sansio
 from model_bakery import baker
@@ -109,7 +108,7 @@ class TestEventLog:
 
 class TestInstallationManager:
     @pytest.mark.asyncio
-    async def test_acreate_from_event(self, create_event):
+    async def test_acreate_from_event(self, create_event, override_app_settings):
         repositories = [
             {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"},
             {"id": seq.next(), "node_id": "node2", "full_name": "owner/repo2"},
@@ -126,9 +125,7 @@ class TestInstallationManager:
             "installation",
         )
 
-        with override_settings(
-            DJANGO_GITHUB_APP={"APP_ID": str(installation_data["app_id"])}
-        ):
+        with override_app_settings(APP_ID=str(installation_data["app_id"])):
             installation = await Installation.objects.acreate_from_event(event)
 
         assert installation.installation_id == installation_data["id"]
@@ -137,7 +134,7 @@ class TestInstallationManager:
             installation=installation
         ).acount() == len(repositories)
 
-    def test_create_from_event(self, create_event):
+    def test_create_from_event(self, create_event, override_app_settings):
         repositories = [
             {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"},
             {"id": seq.next(), "node_id": "node2", "full_name": "owner/repo2"},
@@ -154,9 +151,7 @@ class TestInstallationManager:
             "installation",
         )
 
-        with override_settings(
-            DJANGO_GITHUB_APP={"APP_ID": str(installation_data["app_id"])}
-        ):
+        with override_app_settings(APP_ID=str(installation_data["app_id"])):
             installation = Installation.objects.create_from_event(event)
 
         assert installation.installation_id == installation_data["id"]

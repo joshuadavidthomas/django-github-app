@@ -9,7 +9,6 @@ import pytest
 from asgiref.sync import sync_to_async
 from django.core.exceptions import BadRequest
 from django.http import JsonResponse
-from django.test import override_settings
 from django.utils import timezone
 from gidgethub import sansio
 from model_bakery import baker
@@ -28,8 +27,8 @@ WEBHOOK_SECRET = "webhook-secret"
 
 
 @pytest.fixture(autouse=True)
-def webhook_secret():
-    with override_settings(DJANGO_GITHUB_APP={"WEBHOOK_SECRET": WEBHOOK_SECRET}):
+def webhook_secret(override_app_settings):
+    with override_app_settings(WEBHOOK_SECRET=WEBHOOK_SECRET):
         yield
 
 
