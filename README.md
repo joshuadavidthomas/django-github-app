@@ -211,6 +211,8 @@ All models and their managers provide async methods for database operations and 
 
 It also has support for automatically cleaning up old events based on your configuration, via the `acleanup_events` manager method and the `GITHUB_APP["DAYS_TO_KEEP_EVENTS"]` setting. For more details, see the sections on [`AUTO_CLEANUP_EVENTS`](#auto_cleanup_events) and [`DAYS_TO_KEEP_EVENTS`](#days_to_keep_events) in the [Configuration](#configuration) documentation below.
 
+The model primarily serves the webhook handling system, but you can also use it to query past events if needed.
+
 ##### Manager methods
 
 - `acreate_from_event`/`create_from_event`: Store incoming webhook events _(primarily for internal use)_
@@ -219,8 +221,6 @@ It also has support for automatically cleaning up old events based on your confi
 ##### Properties
 
 - `action`: Extract action from event payload, if present
-
-The model primarily serves the webhook handling system, but you can also use it to query past events if needed.
 
 #### `Installation`
 
