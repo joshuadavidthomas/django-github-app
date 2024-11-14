@@ -97,9 +97,7 @@
 
 ## Getting Started
 
-## Documentation
-
-Please refer to the [documentation](https://django-github-app.readthedocs.io) for more information.
+## Configuration
 
 ## License
 
