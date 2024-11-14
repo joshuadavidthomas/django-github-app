@@ -33,12 +33,12 @@ class AsyncGitHubAPI(gh_abc.GitHubAPI):
         **kwargs: Any,
     ) -> None:
         self.installation_id = installation_id
+        self._client = httpx.AsyncClient(verify=ssl_context)
         super().__init__(*args, cache=cache, **kwargs)
 
     async def __aenter__(self) -> AsyncGitHubAPI:
         from .models import Installation
 
-        self._client = httpx.AsyncClient(verify=ssl_context)
         if self.installation_id:
             try:
                 installation = await Installation.objects.aget(
