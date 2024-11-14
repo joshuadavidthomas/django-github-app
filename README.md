@@ -335,8 +335,8 @@ The GitHub App's name as registered on GitHub.
 
 The GitHub App's private key for authentication. Can be provided as either:
 
-- Raw key contents (e.g., from environment variable)
-- Path to key file (as string or Path object)
+- Raw key contents (e.g., from an environment variable)
+- Path to key file (as a `str` or `Path` object)
 
 The library will automatically detect and read the key file if a path is provided.
 
