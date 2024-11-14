@@ -207,7 +207,7 @@ All models and their managers provide async methods for database operations and 
 
 #### `EventLog`
 
-Maintains a history of incoming webhook events, storing both the event type and its full payload. Automatically cleans up old events based on your configuration, via the `acleanup_events` manager method and the `GITHUB_APP["DAYS_TO_KEEP_EVENTS"]` setting.
+`django_github_app.models.EventLog` maintains a history of incoming webhook events, storing both the event type and its full payload. Automatically cleans up old events based on your configuration, via the `acleanup_events` manager method and the `GITHUB_APP["DAYS_TO_KEEP_EVENTS"]` setting.
 
 Manager methods:
 
@@ -222,7 +222,7 @@ The model primarily serves the webhook handling system, but you can also use it 
 
 #### `Installation`
 
-Represents where your GitHub App is installed. Stores the installation ID and metadata from GitHub, and provides methods for authentication:
+`django_github_app.models.Installation` represents where your GitHub App is installed. Stores the installation ID and metadata from GitHub, and provides methods for authentication:
 
 ```python
 from django_github_app.models import Installation
@@ -245,7 +245,7 @@ Methods:
 
 #### `Repository`
 
-Tracks repositories where your app is installed and provides high-level methods for GitHub operations:
+`django_github_app.models.Repository` tracks repositories where your app is installed and provides high-level methods for GitHub operations:
 
 ```python
 from django_github_app.models import Repository
