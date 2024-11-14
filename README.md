@@ -66,18 +66,17 @@
     ```
 
    > [!NOTE]
-   >
    > In this example, the private key's contents are set and loaded directly from the environment. If you prefer to use the file itself, you could do something like this instead:
-   >
-   > ```python
-   > from pathlib import Path
-   > 
-   > GITHUB_APP = {
-   >     ...
-   >     "PRIVATE_KEY": Path(env.path("GITHUB_PRIVATE_KEY_PATH")).read_text(),
-   >     ...
-   > }
-   > ```
+
+   ```python
+   from pathlib import Path
+
+   GITHUB_APP = {
+       ...
+       "PRIVATE_KEY": Path(env.path("GITHUB_PRIVATE_KEY_PATH")).read_text(),
+       ...
+   }
+   ```
 
 ## Getting Started
 
