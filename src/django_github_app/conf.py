@@ -8,7 +8,7 @@ from django.utils.text import slugify
 
 from ._typing import override
 
-GITHUB_APP_SETTINGS_NAME = "DJANGO_GITHUB_APP"
+GITHUB_APP_SETTINGS_NAME = "GITHUB_APP"
 
 
 @dataclass(frozen=True)
