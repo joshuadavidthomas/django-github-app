@@ -141,6 +141,9 @@ async def welcome_new_issue(event, gh, *args, **kwargs):
 
 In this example, we automatically label issues based on their title and post a welcome comment on newly opened issues. The router ensures each webhook is directed to the appropriate handler based on the event type and action.
 
+> [!NOTE]
+> Handlers must be async functions as django-github-app uses gidgethub for webhook event routing which only supports async operations. Sync support is planned to better integrate with Django projects that don't use async.
+
 Each handler receives two arguments:
 
 - `event`: A `gidgethub.sansio.Event` containing the webhook payload
@@ -159,9 +162,6 @@ class YourAppConfig(AppConfig):
     def ready(self):
         from . import events  # noqa: F401
 ```
-
-> [!NOTE]
-> Handlers must be async functions as django-github-app uses gidgethub for webhook event routing which only supports async operations. Sync support is planned to better integrate with Django projects that don't use async.
 
 For more information about GitHub webhook events and payloads, see these pages in the GitHub docs:
 
