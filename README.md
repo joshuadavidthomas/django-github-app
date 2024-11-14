@@ -65,6 +65,8 @@
 
    For the moment, django-github-app only supports an async webhook view, as this library is a wrapper around [gidgethub](https://github.com/gidgethub/gidgethub) which is async only. Sync support is planned.
 
+   As noted above in step 1, the path here must match the Webhook URL you entered when setting up your GitHub App.
+
 5. Add the following dictionary to your Django project's `DJANGO_SETTINGS_MODULE`, filling in the values from step 1 above. The example below uses [environs](https://github.com/sloria/environs) to load the values from an `.env` file.
 
     ```python
