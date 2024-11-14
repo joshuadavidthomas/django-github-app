@@ -66,6 +66,7 @@
     ```
 
    > [!NOTE]
+   >
    > In this example, the private key's contents are set and loaded directly from the environment. If you prefer to use the file itself, you could do something like this instead:
    >
    > ```python
