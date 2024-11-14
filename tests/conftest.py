@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -7,8 +8,10 @@ from unittest.mock import MagicMock
 import pytest
 from asgiref.sync import sync_to_async
 from django.conf import settings
+from django.test import override_settings
 from model_bakery import baker
 
+from django_github_app.conf import GITHUB_APP_SETTINGS_NAME
 from django_github_app.github import AsyncGitHubAPI
 
 from .settings import DEFAULT_SETTINGS
@@ -53,6 +56,16 @@ TEST_SETTINGS = {
         }
     ],
 }
+
+
+@pytest.fixture
+def override_app_settings():
+    @contextlib.contextmanager
+    def _override_app_settings(**kwargs):
+        with override_settings(**{GITHUB_APP_SETTINGS_NAME: {**kwargs}}):
+            yield
+
+    return _override_app_settings
 
 
 @pytest.fixture

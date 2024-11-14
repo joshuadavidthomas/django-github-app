@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 from django.conf import settings
-from django.test import override_settings
 
+from django_github_app.conf import GITHUB_APP_SETTINGS_NAME
 from django_github_app.conf import app_settings
 
 
@@ -20,7 +20,7 @@ from django_github_app.conf import app_settings
     ],
 )
 def test_default_settings(setting, default_setting):
-    user_settings = getattr(settings, "DJANGO_GITHUB_APP", {})
+    user_settings = getattr(settings, GITHUB_APP_SETTINGS_NAME, {})
 
     assert user_settings == {}
     assert getattr(app_settings, setting) == default_setting
@@ -46,10 +46,6 @@ def test_default_settings(setting, default_setting):
         ("v1.0.0-beta", "v100-beta"),
     ],
 )
-def test_slug(name, expected):
-    with override_settings(
-        DJANGO_GITHUB_APP={
-            "NAME": name,
-        },
-    ):
+def test_slug(name, expected, override_app_settings):
+    with override_app_settings(NAME=name):
         assert app_settings.SLUG == expected
