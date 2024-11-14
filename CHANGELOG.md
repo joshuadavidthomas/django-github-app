@@ -18,7 +18,17 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
-### New Contributors!
+### Added
+
+- Created initial models for GitHub App integration:
+  - `EventLog` to store webhook events
+  - `Installation` to manage GitHub App installations and generate access tokens
+  - `Repository` to interact with GitHub repositories and track issues
+- Created `AsyncWebhookView` to integrate `gidgethub` webhook handling with Django.
+- Created webhook event routing system using `gidgethub.routing.Router`.
+- Integrated `gidgethub.abc.GitHubAPI` client with `Installation` authentication.
+
+### New Contributors
 
 - Josh Thomas <josh@joshthomas.dev> (maintainer)
 
