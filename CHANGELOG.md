@@ -18,6 +18,8 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+## [0.1.0]
+
 ### Added
 
 - Created initial models for GitHub App integration:
@@ -32,4 +34,5 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 - Josh Thomas <josh@joshthomas.dev> (maintainer)
 
-[unreleased]: https://github.com/joshuadavidthomas/django-github-app/commits/main/
+[unreleased]: https://github.com/joshuadavidthomas/django-github-app/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.1.0
