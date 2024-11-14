@@ -207,14 +207,16 @@ All models and their managers provide async methods for database operations and 
 
 #### `EventLog`
 
-`django_github_app.models.EventLog` maintains a history of incoming webhook events, storing both the event type and its full payload. Automatically cleans up old events based on your configuration, via the `acleanup_events` manager method and the `GITHUB_APP["DAYS_TO_KEEP_EVENTS"]` setting.
+`django_github_app.models.EventLog` maintains a history of incoming webhook events, storing both the event type and its full payload.
 
-Manager methods:
+It also has support for automatically cleaning up old events based on your configuration, via the `acleanup_events` manager method and the `GITHUB_APP["DAYS_TO_KEEP_EVENTS"]` setting. For more details, see the sections on [`AUTO_CLEANUP_EVENTS`](#auto_cleanup_events) and [`DAYS_TO_KEEP_EVENTS`](#days_to_keep_events) in the [Configuration](#configuration) documentation below.
+
+##### Manager methods
 
 - `acreate_from_event`/`create_from_event`: Store incoming webhook events _(primarily for internal use)_
 - `acleanup_events`/`cleanup_events`: Remove events older than specified days
 
-Properties:
+##### Properties
 
 - `action`: Extract action from event payload, if present
 
@@ -234,12 +236,12 @@ async with AsyncGitHubAPI(installation_id=installation.installation_id) as gh:
     await gh.post("/repos/owner/repo/issues", data={"title": "Hello!"})
 ```
 
-Manager methods:
+##### Manager methods
 
 - `acreate_from_event`/`create_from_event`: Create from installation events _(primarily for internal use)_
 - `aget_from_event`/`get_from_event`: Retrieve installation from webhook events (`gidgethub.sansio.Event`)
 
-Methods:
+##### Model methods
 
 - `aget_access_token`/`get_access_token`: Generate GitHub access token for API calls
 
@@ -255,16 +257,16 @@ repo = await Repository.objects.aget(full_name="owner/repo")
 issues = await repo.aget_issues(params={"state": "open"})
 ```
 
-Manager methods:
+##### Manager methods
 
 - `aget_from_event`/`get_from_event`: Retrieve repository from webhook events (`gidgethub.sansio.Event`)
 
-Methods:
+##### Model methods
 
 - `get_gh_client`: Get configured API client for this repository
 - `aget_issues`/`get_issues`: Fetch repository's issues
 
-Properties:
+##### Properties
 
 - `owner`: Repository owner from full name
 - `repo`: Repository name from full name
