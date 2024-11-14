@@ -94,7 +94,7 @@ The library is async-only at the moment (following gidgethub), with sync support
 > from pathlib import Path
 > 
 > GITHUB_APP = {
->     "PRIVATE_KEY": Path(env.path("GITHUB_PRIVATE_KEY_PATH")).read_text(),
+>     "PRIVATE_KEY": env.path("GITHUB_PRIVATE_KEY_PATH"),
 > }
 > ```
 
@@ -312,45 +312,44 @@ The GitHub App's name as registered on GitHub.
 
 ### `PRIVATE_KEY`
 
-> ❗ **Required** | `str`
+> 🔴 **Required** | `str`
 
-The contents of the GitHub App's private key for authentication. Can be provided as:
+The GitHub App's private key for authentication. Can be provided as either:
 
-You can provide the key contents directly:
+- Raw key contents (e.g., from environment variable)
+- Path to key file (as string or Path object)
 
-```python
-from environs import Env
-
-env = Env()
-
-# Direct key contents from environment variable
-GITHUB_APP = {
-    "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
-}
-```
-
-Or read it from a file:
+The library will automatically detect and read the key file if a path is provided.
 
 ```python
 from pathlib import Path
-
 from environs import Env
-
-# Using pathlib.Path and a local path directly
-GITHUB_APP = {
-    "PRIVATE_KEY": Path("path/to/private-key.pem").read_text(),
-}
-
 
 env = Env()
 
-# Or with environs for environment-based path
+# Key contents from environment
 GITHUB_APP = {
-    "PRIVATE_KEY": Path(env.path("GITHUB_PRIVATE_KEY_PATH")).read_text(),
+    "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
+}
+
+# Path to local key file (as string)
+GITHUB_APP = {
+    "PRIVATE_KEY": "/path/to/private-key.pem",
+}
+
+# Path to local key file (as Path object)
+GITHUB_APP = {
+    "PRIVATE_KEY": Path("path/to/private-key.pem"),
+}
+
+# Path from environment
+GITHUB_APP = {
+    "PRIVATE_KEY": env.path("GITHUB_PRIVATE_KEY_PATH"),
 }
 ```
 
-Note that the private key should be kept secure and never committed to version control. Using environment variables or secure file storage is recommended.
+> [!NOTE]
+> The private key should be kept secure and never committed to version control. Using environment variables or secure file storage is recommended.
 
 ### `WEBHOOK_SECRET`
 
