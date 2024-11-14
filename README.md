@@ -184,9 +184,24 @@ The client automatically handles authentication and token refresh when an instal
 
 ### Models
 
+django-github-app provides models that handle the persistence and retrieval of GitHub App data. These models abstract away common patterns when working with GitHub Apps: storing webhook events, managing installation authentication, and tracking repository access.
+
+All models and their managers provide async methods for database operations and GitHub API interactions, with sync wrappers where appropriate.
+
 #### `EventLog`
 
-Stores incoming webhook events with their payload and timestamp. Includes automatic cleanup of old events based on the `DAYS_TO_KEEP_EVENTS` setting via a `EventLog.objects.acleanup_events` manager method.
+Maintains a history of incoming webhook events, storing both the event type and its full payload. Automatically cleans up old events based on your configuration, via the `acleanup_events` manager method and the `GITHUB_APP["DAYS_TO_KEEP_EVENTS"]` setting.
+
+Manager methods:
+
+- `acreate_from_event`/`create_from_event`: Store incoming webhook events _(primarily for internal use)_
+- `acleanup_events`/`cleanup_events`: Remove events older than specified days
+
+Properties:
+
+- `action`: Extract action from event payload, if present
+
+The model primarily serves the webhook handling system, but you can also use it to query past events if needed.
 
 #### `Installation`
 
@@ -198,22 +213,44 @@ from django_github_app.models import Installation
 # Get an installation and its access token
 installation = await Installation.objects.aget(repositories__full_name="owner/repo")
 async with AsyncGitHubAPI(installation_id=installation.installation_id) as gh:
-    # Do something as the installation
+    # Authenticated as this installation
+    await gh.post("/repos/owner/repo/issues", data={"title": "Hello!"})
 ```
+
+Manager methods:
+
+- `acreate_from_event`/`create_from_event`: Create from installation events _(primarily for internal use)_
+- `aget_from_event`/`get_from_event`: Retrieve installation from webhook events (`gidgethub.sansio.Event`)
+
+Methods:
+
+- `aget_access_token`/`get_access_token`: Generate GitHub access token for API calls
 
 #### `Repository`
 
-Represents repositories where your app is installed. Provides convenience methods for common GitHub operations:
+Tracks repositories where your app is installed and provides high-level methods for GitHub operations:
 
 ```python
 from django_github_app.models import Repository
 
-# Get issues for a repository
+# Get open issues for a repository
 repo = await Repository.objects.aget(full_name="owner/repo")
-issues = await repo.aget_issues()
+issues = await repo.aget_issues(params={"state": "open"})
 ```
 
-All models provide both async and sync versions of their methods, though async is recommended for better performance.
+Manager methods:
+
+- `aget_from_event`/`get_from_event`: Retrieve repository from webhook events (`gidgethub.sansio.Event`)
+
+Methods:
+
+- `get_gh_client`: Get configured API client for this repository
+- `aget_issues`/`get_issues`: Fetch repository's issues
+
+Properties:
+
+- `owner`: Repository owner from full name
+- `repo`: Repository name from full name
 
 ## Configuration
 
