@@ -47,9 +47,7 @@
 
     ```python
     INSTALLED_APPS = [
-        ...,
         "django_github_app",
-        ...,
     ]
     ```
 
@@ -91,9 +89,7 @@
 > from pathlib import Path
 > 
 > GITHUB_APP = {
->     ...,
 >     "PRIVATE_KEY": Path(env.path("GITHUB_PRIVATE_KEY_PATH")).read_text(),
->     ...,
 > }
 > ```
 
