@@ -224,7 +224,7 @@ The model primarily serves the webhook handling system, but you can also use it 
 
 #### `Installation`
 
-`django_github_app.models.Installation` represents where your GitHub App is installed. Stores the installation ID and metadata from GitHub, and provides methods for authentication:
+`django_github_app.models.Installation` represents where your GitHub App is installed. It stores the installation ID and metadata from GitHub, and provides methods for authentication:
 
 ```python
 from django_github_app.models import Installation
