@@ -9,7 +9,9 @@
 
 A Django app for building GitHub Apps, providing the foundational components needed to receive webhooks and interact with GitHub's API.
 
-Built on [gidgethub](https://github.com/gidgethub/gidgethub) and [httpx](https://github.com/encode/httpx), django-github-app handles the boilerplate of GitHub App development. Features include webhook event routing and storage, an async-first API client with automatic authentication, and models for managing GitHub App installations, repositories, and webhook event history. The library is async-only at the moment (following gidgethub), with sync support planned to better integrate with Django projects.
+Built on [gidgethub](https://github.com/gidgethub/gidgethub) and [httpx](https://github.com/encode/httpx), django-github-app handles the boilerplate of GitHub App development. Features include webhook event routing and storage, an async-first API client with automatic authentication, and models for managing GitHub App installations, repositories, and webhook event history.
+
+The library is async-only at the moment (following gidgethub), with sync support planned to better integrate with Django projects.
 
 ## Requirements
 
