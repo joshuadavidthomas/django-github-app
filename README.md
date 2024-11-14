@@ -102,9 +102,7 @@ django-github-app provides a router-based system for handling GitHub webhook eve
 Each handler receives two key arguments:
 
 - `event`: A `gidgethub.sansio.Event` containing the webhook payload
-- `gh`: A `gidgethub.abc.GitHubAPI` instance for making API calls
-  
-<add note about `django_github_app.github.AsyncGitHubAPI` which is what actually is passed as `gh`. it's an opinionated implementation of the abstract GitHubAPI provided by gidgethub and uses httpx as it's client>
+- `gh`: A GitHub API client for making API calls
 
 Here's an example:
 
