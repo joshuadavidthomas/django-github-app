@@ -17,7 +17,17 @@
 
 ## Installation
 
-1. Install the package from PyPI:
+1. Register a new GitHub App, following [these instructions](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) from the GitHub Docs. For a more detailed tutorial, there is also [this page](https://docs.github.com/en/apps/creating-github-apps/writing-code-for-a-github-app/building-a-github-app-that-responds-to-webhook-events) -- in particular the section on [Setup](https://docs.github.com/en/apps/creating-github-apps/writing-code-for-a-github-app/building-a-github-app-that-responds-to-webhook-events#setup).
+
+   Make note of the following information while setting up your new GitHub App:
+
+    - App ID
+    - Client ID
+    - Name
+    - Private Key (either the file object itself or the actual text)
+    - Webhook Secret
+
+2. Install the package from PyPI:
 
     ```bash
     python -m pip install django-github-app
@@ -28,7 +38,7 @@
     uv sync
     ```
 
-2. Add the app to your Django project's `INSTALLED_APPS`:
+3. Add the app to your Django project's `INSTALLED_APPS`:
 
     ```python
     INSTALLED_APPS = [
@@ -37,6 +47,36 @@
         ...,
     ]
     ```
+
+4. Add the following dictionary to your Django project's `DJANGO_SETTINGS_MODULE`, filling in the values from step 1 above. The example below uses [environs](https://github.com/sloria/environs) to load the values from an `.env` file.
+
+    ```python
+    import environs
+    
+    env = environs.Env()
+    env.read_env()
+
+    GITHUB_APP = {
+        "APP_ID": env.int("GITHUB_APP_ID"),
+        "CLIENT_ID": env.str("GITHUB_CLIENT_ID"),
+        "NAME": env.str("GITHUB_NAME"),
+        "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
+        "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
+    }
+    ```
+
+   > [!NOTE]
+   > In this example, the private key's contents are set and loaded directly from the environment. If you prefer to use the file itself, you could do something like this instead:
+   >
+   > ```python
+   > from pathlib import Path
+   > 
+   > GITHUB_APP = {
+   >     ...
+   >     "PRIVATE_KEY": Path(env.path("GITHUB_PRIVATE_KEY_PATH")).read_text(),
+   >     ...
+   > }
+   > ```
 
 ## Getting Started
 
