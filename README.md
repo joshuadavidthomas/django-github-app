@@ -24,8 +24,13 @@
     - App ID
     - Client ID
     - Name
-    - Private Key (either the file object itself or the actual text)
+    - Private Key
     - Webhook Secret
+    - Webhook URL
+
+   For the Private Key, you will be able to use either the file contents or the file itself to authenticate with GitHub. See step 5 below for more information about private key configuration.
+
+   For the Webhook URL, the endpoint is up to you. See step 4 below for how the endpoint is configured. Using these installation instructions as an example, you would enter `<your project's base url>/gh/` as the Webhook URL.
 
 2. Install the package from PyPI:
 
@@ -48,7 +53,21 @@
     ]
     ```
 
-4. Add the following dictionary to your Django project's `DJANGO_SETTINGS_MODULE`, filling in the values from step 1 above. The example below uses [environs](https://github.com/sloria/environs) to load the values from an `.env` file.
+4. Add django-github-app's webhook view to your Django project's urls:
+
+   ```python
+   from django.urls import path
+   
+   from django_github_app.views import AsyncWebhookView
+   
+   urlpatterns = [
+       path("gh/", AsyncWebhookView.as_view()),
+   ]
+   ```
+
+   For the moment, django-github-app only supports an async webhook view, as this library is a wrapper around [gidgethub](https://github.com/gidgethub/gidgethub) which is async only. Sync support is planned.
+
+5. Add the following dictionary to your Django project's `DJANGO_SETTINGS_MODULE`, filling in the values from step 1 above. The example below uses [environs](https://github.com/sloria/environs) to load the values from an `.env` file.
 
     ```python
     import environs
@@ -72,9 +91,9 @@
 > from pathlib import Path
 > 
 > GITHUB_APP = {
->     ...
+>     ...,
 >     "PRIVATE_KEY": Path(env.path("GITHUB_PRIVATE_KEY_PATH")).read_text(),
->     ...
+>     ...,
 > }
 > ```
 
