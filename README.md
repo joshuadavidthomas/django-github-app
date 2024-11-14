@@ -163,10 +163,12 @@ class YourAppConfig(AppConfig):
 > [!NOTE]
 > Handlers must be async functions as django-github-app uses gidgethub for webhook event routing which only supports async operations. Sync support is planned to better integrate with Django projects that don't use async.
 
-For more information about GitHub webhook events and payloads, see:
+For more information about GitHub webhook events and payloads, see these pages in the GitHub docs:
 
 - [Webhook events and payloads](https://docs.github.com/en/webhooks/webhook-events-and-payloads)
 - [About webhooks](https://docs.github.com/en/webhooks/about-webhooks)
+
+For more details about how `gidgethub.sansio.Event` and webhook routing work, see the [gidgethub documentation](https://gidgethub.readthedocs.io).
 
 ## Features
 
