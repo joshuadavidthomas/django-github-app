@@ -299,7 +299,7 @@ The following settings are required:
 
 ### `APP_ID`
 
-> ❗ **Required** | `str`
+> 🔴 **Required** | `str`
 
 The GitHub App's unique identifier. Obtained when registering your GitHub App.
 
@@ -313,7 +313,7 @@ Set to `False` to either retain events indefinitely or manage cleanup separately
 
 ### `CLIENT_ID`
 
-> ❗ **Required** | `str`
+> 🔴 **Required** | `str`
 
 The GitHub App's client ID. Obtained when registering your GitHub App.
 
@@ -325,7 +325,7 @@ Number of days to retain webhook events before cleanup. Used by both automatic c
 
 ### `NAME`
 
-> ❗ **Required** | `str`
+> 🔴 **Required** | `str`
 
 The GitHub App's name as registered on GitHub.
 
@@ -372,7 +372,7 @@ GITHUB_APP = {
 
 ### `WEBHOOK_SECRET`
 
-> **Required** | `str`
+> 🔴 **Required** | `str`
 
 Secret used to verify webhook payloads from GitHub.
 
