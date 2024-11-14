@@ -16,7 +16,7 @@ from model_bakery import baker
 from django_github_app.github import AsyncGitHubAPI
 from django_github_app.github import SyncGitHubAPI
 from django_github_app.models import EventLog
-from django_github_app.routing import Router
+from django_github_app.routing import GitHubRouter
 from django_github_app.views import AsyncWebhookView
 from django_github_app.views import BaseWebhookView
 from django_github_app.views import SyncWebhookView
@@ -70,9 +70,9 @@ def webhook_request(rf):
 
 @pytest.fixture
 def test_router():
-    router = Router()
+    router = GitHubRouter()
     yield router
-    Router._routers.remove(router.router)
+    GitHubRouter._routers.remove(router.router)
 
 
 class TestWebhookView(BaseWebhookView):

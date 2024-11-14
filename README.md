@@ -106,9 +106,9 @@ To start handling GitHub webhooks, create your event handlers in a new file (e.g
 
 ```python
 # your_app/events.py
-from django_github_app.routing import Router
+from django_github_app.routing import GitHubRouter
 
-gh = Router()
+gh = GitHubRouter()
 
 # Handle any issue event
 @gh.event("issues")

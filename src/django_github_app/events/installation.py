@@ -6,9 +6,9 @@ from gidgethub.abc import GitHubAPI
 from django_github_app.models import Installation
 from django_github_app.models import InstallationStatus
 from django_github_app.models import Repository
-from django_github_app.routing import Router
+from django_github_app.routing import GitHubRouter
 
-gh = Router()
+gh = GitHubRouter()
 
 
 @gh.event("installation", action="created")
