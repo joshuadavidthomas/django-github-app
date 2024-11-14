@@ -7,11 +7,11 @@
 <!-- django-4.2 | 5.0 | 5.1-#44B78B -->
 <!-- labelColor=%23092E20 -->
 
-A Django app for building GitHub Apps, providing the foundational components needed to receive webhooks and interact with GitHub's API.
+A Django toolkit providing the batteries needed to build GitHub Apps - from webhook handling to API integration.
 
 Built on [gidgethub](https://github.com/gidgethub/gidgethub) and [httpx](https://github.com/encode/httpx), django-github-app handles the boilerplate of GitHub App development. Features include webhook event routing and storage, an async-first API client with automatic authentication, and models for managing GitHub App installations, repositories, and webhook event history.
 
-The library is async-only at the moment (following gidgethub), with sync support planned to better integrate with Django projects.
+The library is async-only at the moment (following gidgethub), with sync support planned to better integrate with the majority of Django projects.
 
 ## Requirements
 
@@ -288,7 +288,9 @@ The GitHub App's unique identifier. Obtained when registering your GitHub App.
 
 > **Optional** | `bool` | Default: `True`
 
-Boolean flag to enable automatic cleanup of old webhook events.
+Boolean flag to enable automatic cleanup of old webhook events. If enabled, `EventLog` instances older than [`DAYS_TO_KEEP_EVENTS`](#days_to_keep_events) (default: 7 days) are deleted during webhook processing.
+
+Set to `False` to either retain events indefinitely or manage cleanup separately using `EventLog.objects.acleanup_events` with a task runner like [Django-Q2](https://github.com/django-q2/django-q2) or [Celery](https://github.com/celery/celery).
 
 ### `CLIENT_ID`
 
@@ -300,7 +302,7 @@ The GitHub App's client ID. Obtained when registering your GitHub App.
 
 > **Optional** | `int` | Default: `7`
 
-Number of days to retain webhook events before cleanup.
+Number of days to retain webhook events before cleanup. Used by both automatic cleanup (when [`AUTO_CLEANUP_EVENTS`](#auto_cleanup_events) is `True`) and the `EventLog.objects.acleanup_events` manager method.
 
 ### `NAME`
 
@@ -312,10 +314,43 @@ The GitHub App's name as registered on GitHub.
 
 > ❗ **Required** | `str`
 
-The GitHub App's private key for authentication. Can be provided as:
+The contents of the GitHub App's private key for authentication. Can be provided as:
 
-- Raw key contents in environment variable
-- File contents read from disk: `Path("path/to/key.pem").read_text()`
+You can provide the key contents directly:
+
+```python
+from environs import Env
+
+env = Env()
+
+# Direct key contents from environment variable
+GITHUB_APP = {
+    "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
+}
+```
+
+Or read it from a file:
+
+```python
+from pathlib import Path
+
+from environs import Env
+
+# Using pathlib.Path and a local path directly
+GITHUB_APP = {
+    "PRIVATE_KEY": Path("path/to/private-key.pem").read_text(),
+}
+
+
+env = Env()
+
+# Or with environs for environment-based path
+GITHUB_APP = {
+    "PRIVATE_KEY": Path(env.path("GITHUB_PRIVATE_KEY_PATH")).read_text(),
+}
+```
+
+Note that the private key should be kept secure and never committed to version control. Using environment variables or secure file storage is recommended.
 
 ### `WEBHOOK_SECRET`
 
