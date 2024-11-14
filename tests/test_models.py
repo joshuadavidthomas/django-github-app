@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import datetime
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
 
 import pytest
 from asgiref.sync import sync_to_async
@@ -25,117 +23,9 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def create_event():
     def _create_event(data, event):
-        return sansio.Event(data=data, event=event, delivery_id=seq("delivery-"))
+        return sansio.Event(data=data, event=event, delivery_id=seq.next())
 
     return _create_event
-
-
-@pytest.fixture
-def create_installation(installation_id):
-    def _create_installation(**kwargs):
-        return baker.make(
-            "django_github_app.Installation",
-            installation_id=kwargs.pop("installation_id", installation_id),
-            **kwargs,
-        )
-
-    return _create_installation
-
-
-@pytest.fixture
-def acreate_installation(installation_id):
-    async def _acreate_installation(**kwargs):
-        return await sync_to_async(baker.make)(
-            "django_github_app.Installation",
-            installation_id=kwargs.pop("installation_id", installation_id),
-            **kwargs,
-        )
-
-    return _acreate_installation
-
-
-@pytest.fixture
-def mock_github_api():
-    mock_api = AsyncMock(spec=AsyncGitHubAPI)
-
-    async def mock_getiter(*args, **kwargs):
-        test_issues = [
-            {
-                "number": 1,
-                "title": "Test Issue 1",
-                "state": "open",
-            },
-            {
-                "number": 2,
-                "title": "Test Issue 2",
-                "state": "closed",
-            },
-        ]
-        for issue in test_issues:
-            yield issue
-
-    mock_api.getiter = mock_getiter
-    mock_api.__aenter__.return_value = mock_api
-    mock_api.__aexit__.return_value = None
-
-    return mock_api
-
-
-@pytest.fixture
-def create_repository(installation, mock_github_api, repository_id):
-    def _create_repository(**kwargs):
-        repository = baker.make(
-            "django_github_app.Repository",
-            repository_id=repository_id,
-            full_name=kwargs.pop("full_name", "owner/repo"),
-            installation=kwargs.pop("installation", installation),
-            **kwargs,
-        )
-
-        mock_github_api.installation_id = repository.installation.installation_id
-
-        if isinstance(repository, list):
-            for repo in repository:
-                repo.get_gh_client = MagicMock(mock_github_api)
-        else:
-            repository.get_gh_client = MagicMock(return_value=mock_github_api)
-        return repository
-
-    return _create_repository
-
-
-@pytest.fixture
-def acreate_repository(ainstallation, mock_github_api, repository_id):
-    async def _acreate_repository(**kwargs):
-        repository = await sync_to_async(baker.make)(
-            "django_github_app.Repository",
-            repository_id=repository_id,
-            full_name=kwargs.pop("full_name", "owner/repo"),
-            installation=kwargs.pop("installation", await ainstallation),
-            **kwargs,
-        )
-
-        mock_github_api.installation_id = repository.installation.installation_id
-
-        if isinstance(repository, list):
-            for repo in repository:
-                repo.get_gh_client = MagicMock(mock_github_api)
-        else:
-            repository.get_gh_client = MagicMock(return_value=mock_github_api)
-
-        return repository
-
-    return _acreate_repository
-
-
-@pytest.fixture
-def repository(create_repository):
-    return create_repository()
-
-
-@pytest.fixture
-async def arepository(acreate_repository):
-    return await acreate_repository()
 
 
 class TestEventLogManager:
@@ -221,12 +111,12 @@ class TestInstallationManager:
     @pytest.mark.asyncio
     async def test_acreate_from_event(self, create_event):
         repositories = [
-            {"id": seq(1000), "node_id": "node1", "full_name": "owner/repo1"},
-            {"id": seq(1000), "node_id": "node2", "full_name": "owner/repo2"},
+            {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"},
+            {"id": seq.next(), "node_id": "node2", "full_name": "owner/repo2"},
         ]
         installation_data = {
-            "id": seq(1000),
-            "app_id": seq(1000),
+            "id": seq.next(),
+            "app_id": seq.next(),
         }
         event = create_event(
             {
@@ -249,12 +139,12 @@ class TestInstallationManager:
 
     def test_create_from_event(self, create_event):
         repositories = [
-            {"id": 1, "node_id": "node1", "full_name": "owner/repo1"},
-            {"id": 2, "node_id": "node2", "full_name": "owner/repo2"},
+            {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"},
+            {"id": seq.next(), "node_id": "node2", "full_name": "owner/repo2"},
         ]
         installation_data = {
-            "id": seq(1000),
-            "app_id": seq(1000),
+            "id": seq.next(),
+            "app_id": seq.next(),
         }
         event = create_event(
             {
@@ -325,185 +215,6 @@ class TestInstallationStatus:
 
         with pytest.raises(ValueError):
             InstallationStatus.from_event(event)
-
-
-# class TestInstallation:
-#     TEST_CASES_STATUS = [
-#         (InstallationStatus.ACTIVE, "created", InstallationStatus.ACTIVE),
-#         (InstallationStatus.INACTIVE, "created", InstallationStatus.ACTIVE),
-#         (InstallationStatus.ACTIVE, "deleted", InstallationStatus.INACTIVE),
-#         (InstallationStatus.INACTIVE, "deleted", InstallationStatus.INACTIVE),
-#         (
-#             InstallationStatus.ACTIVE,
-#             "new_permissions_accepted",
-#             InstallationStatus.ACTIVE,
-#         ),
-#         (
-#             InstallationStatus.INACTIVE,
-#             "new_permissions_accepted",
-#             InstallationStatus.ACTIVE,
-#         ),
-#         (InstallationStatus.ACTIVE, "suspend", InstallationStatus.INACTIVE),
-#         (InstallationStatus.INACTIVE, "suspend", InstallationStatus.INACTIVE),
-#         (InstallationStatus.ACTIVE, "unsuspend", InstallationStatus.ACTIVE),
-#         (InstallationStatus.INACTIVE, "unsuspend", InstallationStatus.ACTIVE),
-#     ]
-#
-#     @pytest.fixture
-#     def installation_event(self, create_event):
-#         def _installation_event(action, installation_id):
-#             return create_event(
-#                 {"action": action, "installation": {"id": installation_id}},
-#                 "installation",
-#             )
-#
-#         return _installation_event
-#
-#     @pytest.mark.parametrize("status,action,expected", TEST_CASES_STATUS)
-#     @pytest.mark.asyncio
-#     async def test_atoggle_status_from_event(
-#         self, status, action, expected, acreate_installation, installation_event
-#     ):
-#         installation = await acreate_installation(status=status)
-#         event = installation_event(action, installation.installation_id)
-#
-#         assert installation.status == status
-#
-#         await installation.atoggle_status_from_event(event)
-#
-#         assert installation.status == expected
-#
-#     @pytest.mark.parametrize("status,action,expected", TEST_CASES_STATUS)
-#     def test_toggle_status_from_event(
-#         self, status, action, expected, create_installation, installation_event
-#     ):
-#         installation = create_installation(status=status)
-#         event = installation_event(action, installation.installation_id)
-#
-#         assert installation.status == status
-#
-#         installation.toggle_status_from_event(event)
-#
-#         assert installation.status == expected
-#
-#     @pytest.mark.asyncio
-#     async def test_async_data_from_event(self, ainstallation, create_event):
-#         data = {"installation": {"foo": "bar"}}
-#         event = create_event(data, "installation")
-#         installation = await ainstallation
-#
-#         await installation.async_data_from_event(event)
-#
-#         assert installation.data == data["installation"]
-#
-#     def test_sync_data_from_event(self, installation, create_event):
-#         data = {"installation": {"foo": "bar"}}
-#         event = create_event(data, "installation")
-#
-#         installation.sync_data_from_event(event)
-#
-#         assert installation.data == data["installation"]
-#
-#     @pytest.mark.asyncio
-#     async def test_async_repositories_from_event(
-#         self, ainstallation, acreate_repository, create_event
-#     ):
-#         installation = await ainstallation
-#
-#         removed_repos = [
-#             {
-#                 "id": repo.repository_id,
-#                 "node_id": repo.repository_node_id,
-#                 "full_name": repo.full_name,
-#             }
-#             for repo in await acreate_repository(
-#                 installation=installation,
-#                 repository_id=itertools.cycle(seq.iter(1000)),
-#                 _quantity=2,
-#             )
-#         ]
-#         added_repos = [
-#             {
-#                 "id": i,
-#                 "node_id": f"node{i}",
-#                 "full_name": f"owner/repo{i}",
-#             }
-#             for i in itertools.islice(seq.iter(1000), 2)
-#         ]
-#
-#         event = create_event(
-#             {
-#                 "repositories_removed": removed_repos,
-#                 "repositories_added": added_repos,
-#             },
-#             "installation",
-#         )
-#
-#         await installation.async_repositories_from_event(event)
-#
-#         remaining = await Repository.objects.filter(
-#             repository_id__in=[r["id"] for r in removed_repos]
-#         ).acount()
-#         assert remaining == 0
-#
-#         new_repos = await Repository.objects.filter(
-#             repository_id__in=[r["id"] for r in added_repos]
-#         ).acount()
-#         assert new_repos == len(added_repos)
-#
-#         installation_repos = await Repository.objects.filter(
-#             installation=installation
-#         ).acount()
-#         assert installation_repos == len(added_repos)
-#
-#     def test_sync_repositories_from_event(
-#         self, installation, create_repository, create_event
-#     ):
-#         removed_repos = [
-#             {
-#                 "id": repo.repository_id,
-#                 "node_id": repo.repository_node_id,
-#                 "full_name": repo.full_name,
-#             }
-#             for repo in create_repository(
-#                 installation=installation,
-#                 repository_id=itertools.cycle(seq.iter(1000)),
-#                 _quantity=2,
-#             )
-#         ]
-#         added_repos = [
-#             {
-#                 "id": i,
-#                 "node_id": f"node{i}",
-#                 "full_name": f"owner/repo{i}",
-#             }
-#             for i in itertools.islice(seq.iter(1000), 2)
-#         ]
-#
-#         event = create_event(
-#             {
-#                 "repositories_removed": removed_repos,
-#                 "repositories_added": added_repos,
-#             },
-#             "installation",
-#         )
-#
-#         installation.sync_repositories_from_event(event)
-#
-#         remaining = Repository.objects.filter(
-#             repository_id__in=[r["id"] for r in removed_repos]
-#         )
-#         assert remaining.count() == 0
-#
-#         new_repos = Repository.objects.filter(
-#             repository_id__in=[r["id"] for r in added_repos]
-#         ).count()
-#         assert new_repos == len(added_repos)
-#
-#         installation_repos = Repository.objects.filter(
-#             installation=installation
-#         ).count()
-#         assert installation_repos == len(added_repos)
 
 
 class TestRepositoryManager:

@@ -23,7 +23,7 @@ async def test_create_installation(installation_id, repository_id):
     data = {
         "installation": {
             "id": installation_id,
-            "app_id": seq(1000),
+            "app_id": seq.next(),
         },
         "repositories": [
             {"id": repository_id, "node_id": "node1234", "full_name": "owner/repo"}
@@ -107,12 +107,12 @@ async def test_sync_installation_data(ainstallation):
     assert installation.data == data["installation"]
 
 
-async def test_sync_installation_repositories(ainstallation, repository_id_iter):
+async def test_sync_installation_repositories(ainstallation):
     installation = await ainstallation
     existing_repo = await sync_to_async(baker.make)(
         "django_github_app.Repository",
         installation=installation,
-        repository_id=next(repository_id_iter),
+        repository_id=seq.next(),
     )
 
     data = {
@@ -126,7 +126,7 @@ async def test_sync_installation_repositories(ainstallation, repository_id_iter)
         ],
         "repositories_added": [
             {
-                "id": next(repository_id_iter),
+                "id": seq.next(),
                 "node_id": "repo1234",
                 "full_name": "owner/repo",
             }
