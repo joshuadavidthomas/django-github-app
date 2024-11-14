@@ -102,14 +102,10 @@ The library is async-only at the moment (following gidgethub), with sync support
 
 django-github-app provides a router-based system for handling GitHub webhook events, built on top of [gidgethub](https://github.com/gidgethub/gidgethub). The router matches incoming webhooks to your handler functions based on the event type and optional action.
 
-Each handler receives two key arguments:
-
-- `event`: A `gidgethub.sansio.Event` containing the webhook payload
-- `gh`: A GitHub API client for making API calls
-
-Here's an example:
+To start handling GitHub webhooks, create your event handlers in a new file (e.g. `events.py`) within your Django app:
 
 ```python
+# your_app/events.py
 from django_github_app.routing import Router
 
 gh = Router()
@@ -144,6 +140,25 @@ async def welcome_new_issue(event, gh, *args, **kwargs):
 ```
 
 In this example, we automatically label issues based on their title and post a welcome comment on newly opened issues. The router ensures each webhook is directed to the appropriate handler based on the event type and action.
+
+Each handler receives two arguments:
+
+- `event`: A `gidgethub.sansio.Event` containing the webhook payload
+- `gh`: A GitHub API client for making API calls
+
+To activate your webhook handlers, import them in your app's `AppConfig.ready()` method, similar to how Django signals are registered:
+
+```python
+# your_app/apps.py
+from django.apps import AppConfig
+
+class YourAppConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'your_app'
+
+    def ready(self):
+        from . import events  # noqa: F401
+```
 
 > [!NOTE]
 > Handlers must be async functions as django-github-app uses gidgethub for webhook event routing which only supports async operations. Sync support is planned to better integrate with Django projects that don't use async.
