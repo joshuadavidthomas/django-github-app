@@ -10,13 +10,6 @@ from django.urls import clear_url_caches
 from django.urls import path
 from django.urls import reverse
 
-from django_github_app.admin import EventLogModelAdmin
-from django_github_app.admin import InstallationModelAdmin
-from django_github_app.admin import RepositoryModelAdmin
-from django_github_app.models import EventLog
-from django_github_app.models import Installation
-from django_github_app.models import Repository
-
 
 class TestAdminSite(AdminSite):
     def __init__(self):
@@ -24,13 +17,16 @@ class TestAdminSite(AdminSite):
 
 
 admin_site = TestAdminSite()
-admin_site.register(EventLog, EventLogModelAdmin)
-admin_site.register(Installation, InstallationModelAdmin)
-admin_site.register(Repository, RepositoryModelAdmin)
+
+
+@pytest.fixture(scope="session")
+def test_admin_site():
+    return admin_site
 
 
 @pytest.fixture(autouse=True)
-def setup():
+def setup_admin_urls():
+    """Set up admin URLs for testing."""
     urlpatterns = [
         path("admin/", admin_site.urls),
     ]
@@ -51,6 +47,7 @@ def setup():
 
 @pytest.fixture
 def admin_client(django_user_model, client):
+    """Create and return an admin client."""
     admin_user = django_user_model.objects.create_superuser(
         username="admin", email="admin@example.com", password="test"
     )
@@ -64,14 +61,17 @@ def admin_client(django_user_model, client):
         pytest.param(
             model,
             model_admin,
-            id=f"{str(model_admin).replace('.', '_')}",
+            id=f"{model._meta.app_label}_{model._meta.model_name}",
         )
         for model, model_admin in admin_site._registry.items()
     ],
 )
 @pytest.mark.django_db
 class TestModelAdmins:
+    """Test suite for Django model admins."""
+
     def test_changelist(self, admin_client, model, model_admin):
+        """Test the changelist view for each model admin."""
         url = reverse(
             f"{admin_site.name}:{model._meta.app_label}_{model._meta.model_name}_changelist"
         )
@@ -81,6 +81,7 @@ class TestModelAdmins:
         assert response.status_code == HTTPStatus.OK
 
     def test_add(self, admin_client, model, model_admin):
+        """Test the add view for each model admin."""
         url = reverse(
             f"{admin_site.name}:{model._meta.app_label}_{model._meta.model_name}_add"
         )

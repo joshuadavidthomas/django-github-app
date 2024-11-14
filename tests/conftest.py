@@ -17,7 +17,7 @@ from django_github_app.github import AsyncGitHubAPI
 from .settings import DEFAULT_SETTINGS
 from .utils import seq
 
-pytest_plugins = []
+pytest_plugins = ["tests.plugins.django_modeladmin"]
 
 
 def pytest_configure(config):
@@ -66,6 +66,20 @@ def override_app_settings():
             yield
 
     return _override_app_settings
+
+
+@pytest.fixture(scope="session", autouse=True)
+def register_modeladmins(test_admin_site):
+    from django_github_app.admin import EventLogModelAdmin
+    from django_github_app.admin import InstallationModelAdmin
+    from django_github_app.admin import RepositoryModelAdmin
+    from django_github_app.models import EventLog
+    from django_github_app.models import Installation
+    from django_github_app.models import Repository
+
+    test_admin_site.register(EventLog, EventLogModelAdmin)
+    test_admin_site.register(Installation, InstallationModelAdmin)
+    test_admin_site.register(Repository, RepositoryModelAdmin)
 
 
 @pytest.fixture
