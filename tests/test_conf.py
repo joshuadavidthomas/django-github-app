@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from django.conf import settings
 
@@ -27,6 +29,37 @@ def test_default_settings(setting, default_setting):
 
 
 @pytest.mark.parametrize(
+    "private_key,expected",
+    [
+        (
+            "-----BEGIN RSA PRIVATE KEY-----\nkey content\n-----END RSA PRIVATE KEY-----",
+            "-----BEGIN RSA PRIVATE KEY-----\nkey content\n-----END RSA PRIVATE KEY-----",
+        ),
+        ("/path/that/does/not/exist.pem", "/path/that/does/not/exist.pem"),
+        (Path("/path/that/does/not/exist.pem"), "/path/that/does/not/exist.pem"),
+        ("", ""),
+        ("/path/with/BEGIN/in/it/key.pem", "/path/with/BEGIN/in/it/key.pem"),
+        ("////", "////"),
+        (123, "123"),
+        (None, ""),
+    ],
+)
+def test_private_key_handling(private_key, expected, override_app_settings):
+    with override_app_settings(PRIVATE_KEY=private_key):
+        assert app_settings.PRIVATE_KEY == expected
+
+
+def test_private_key_from_file(tmp_path, override_app_settings):
+    key_content = "-----BEGIN RSA PRIVATE KEY-----\ntest key content\n-----END RSA PRIVATE KEY-----"
+    key_file = tmp_path / "test_key.pem"
+    key_file.write_text(key_content)
+
+    for key_path in (str(key_file), key_file):
+        with override_app_settings(PRIVATE_KEY=key_path):
+            assert app_settings.PRIVATE_KEY == key_content
+
+
+@pytest.mark.parametrize(
     "name,expected",
     [
         ("@username - app name", "username-app-name"),
@@ -40,8 +73,8 @@ def test_default_settings(setting, default_setting):
         ("special-&*()-chars", "special-chars"),
         ("emoji🚀app", "emojiapp"),
         ("@user/multiple/slashes/app", "usermultipleslashesapp"),
-        ("", ""),  # Empty string case
-        ("   ", ""),  # Whitespace only case
+        ("", ""),
+        ("   ", ""),
         ("app-name_123", "app-name_123"),
         ("v1.0.0-beta", "v100-beta"),
     ],
