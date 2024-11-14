@@ -102,7 +102,7 @@ The library is async-only at the moment (following gidgethub), with sync support
 
 django-github-app provides a router-based system for handling GitHub webhook events, built on top of [gidgethub](https://github.com/gidgethub/gidgethub). The router matches incoming webhooks to your handler functions based on the event type and optional action.
 
-To start handling GitHub webhooks, create your event handlers in a new file (e.g. `events.py`) within your Django app:
+To start handling GitHub webhooks, create your event handlers in a new file (e.g., `events.py`) within your Django app:
 
 ```python
 # your_app/events.py
