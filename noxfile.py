@@ -108,8 +108,12 @@ def coverage(session):
     try:
         session.run("python", "-m", "pytest", "--cov", "--cov-report=")
     finally:
+        # 0 -> OK
+        # 2 -> code coverage percent unmet
+        success_codes = [0, 2]
+
         report_cmd = ["python", "-m", "coverage", "report"]
-        session.run(*report_cmd)
+        session.run(*report_cmd, success_codes=success_codes)
 
         if summary := os.getenv("GITHUB_STEP_SUMMARY"):
             report_cmd.extend(["--skip-covered", "--skip-empty", "--format=markdown"])
@@ -118,10 +122,18 @@ def coverage(session):
                 output_buffer.write("")
                 output_buffer.write("### Coverage\n\n")
                 output_buffer.flush()
-                session.run(*report_cmd, stdout=output_buffer)
+                session.run(
+                    *report_cmd, stdout=output_buffer, success_codes=success_codes
+                )
         else:
             session.run(
-                "python", "-m", "coverage", "html", "--skip-covered", "--skip-empty"
+                "python",
+                "-m",
+                "coverage",
+                "html",
+                "--skip-covered",
+                "--skip-empty",
+                success_codes=success_codes,
             )
 
 
