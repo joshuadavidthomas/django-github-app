@@ -139,6 +139,33 @@ class Installation(models.Model):
 
 
 class RepositoryManager(models.Manager["Repository"]):
+    async def acreate_from_gh_data(
+        self, data: dict[str, str] | list[dict[str, str]], installation: Installation
+    ):
+        if isinstance(data, list):
+            repositories = [
+                Repository(
+                    installation=installation,
+                    repository_id=repository["id"],
+                    repository_node_id=repository["node_id"],
+                    full_name=repository["full_name"],
+                )
+                for repository in data
+            ]
+            return await Repository.objects.abulk_create(repositories)
+        else:
+            return await self.acreate(
+                installation=installation,
+                repository_id=data["id"],
+                repository_node_id=data["node_id"],
+                full_name=data["full_name"],
+            )
+
+    def create_from_gh_data(
+        self, data: dict[str, str] | list[dict[str, str]], installation: Installation
+    ):
+        return async_to_sync(self.acreate_from_gh_data)(data, installation)
+
     async def aget_from_event(self, event: sansio.Event):
         try:
             repository_id = event.data["repository"]["id"]
