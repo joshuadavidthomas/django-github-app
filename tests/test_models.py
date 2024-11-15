@@ -255,7 +255,7 @@ class TestRepositoryManager:
             assert repo.full_name == data[i]["full_name"]
             assert repo.installation_id == installation.id
 
-    def test_acreate_from_gh_data_list(self, installation):
+    def test_create_from_gh_data_list(self, installation):
         data = [
             {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"},
             {"id": seq.next(), "node_id": "node2", "full_name": "owner/repo2"},
@@ -269,6 +269,28 @@ class TestRepositoryManager:
             assert repo.repository_node_id == data[i]["node_id"]
             assert repo.full_name == data[i]["full_name"]
             assert repo.installation_id == installation.id
+
+    @pytest.mark.asyncio
+    async def test_acreate_from_gh_data_single(self, ainstallation):
+        installation = await ainstallation
+        data = {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"}
+
+        repository = await Repository.objects.acreate_from_gh_data(data, installation)
+
+        assert repository.repository_id == data["id"]
+        assert repository.repository_node_id == data["node_id"]
+        assert repository.full_name == data["full_name"]
+        assert repository.installation_id == installation.id
+
+    def test_create_from_gh_data_single(self, installation):
+        data = {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"}
+
+        repository = Repository.objects.create_from_gh_data(data, installation)
+
+        assert repository.repository_id == data["id"]
+        assert repository.repository_node_id == data["node_id"]
+        assert repository.full_name == data["full_name"]
+        assert repository.installation_id == installation.id
 
     @pytest.mark.asyncio
     async def test_aget_from_event(self, arepository, create_event):
