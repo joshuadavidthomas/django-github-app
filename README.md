@@ -270,6 +270,7 @@ issues = await repo.aget_issues(params={"state": "open"})
 
 ##### Manager methods
 
+- `acreate_from_gh_data`/`create_from_gh_data`: Create from GitHub API response data _(primarily for internal use)_
 - `aget_from_event`/`get_from_event`: Retrieve repository from webhook events (`gidgethub.sansio.Event`)
 
 ##### Model methods
