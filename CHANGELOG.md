@@ -18,6 +18,10 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Added
+
+- Added `acreate_from_gh_data`/`create_from_gh_data` manager methods to `Installation` and `Repository` models.
+
 ## [0.1.0]
 
 ### Added
