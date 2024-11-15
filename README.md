@@ -54,6 +54,16 @@ The library is async-only at the moment (following gidgethub), with sync support
     ]
     ```
 
+4. Run the `migrate` management command to add django-github-app's models to your database:
+
+   ```bash
+   python manage.py migrate
+
+   # or for those living on the bleeding edge
+
+   uv run manage.py migrate
+   ```
+
 4. Add django-github-app's webhook view to your Django project's urls:
 
    ```python
