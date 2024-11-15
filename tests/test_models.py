@@ -351,69 +351,6 @@ class TestRepository:
         assert isinstance(client, AsyncGitHubAPI)
         assert client.installation_id == repository.installation.installation_id
 
-    # @pytest.mark.asyncio
-    # async def test_async_fields_from_event(self, arepository, create_event):
-    #     repository = await arepository
-    #     data = {
-    #         "repository": {
-    #             "full_name": "owner/new_name",
-    #         }
-    #     }
-    #
-    #     assert repository.full_name != data["repository"]["full_name"]
-    #
-    #     await repository.async_fields_from_event(
-    #         create_event(data, "repository"), data["repository"].keys()
-    #     )
-    #
-    #     assert repository.full_name == data["repository"]["full_name"]
-    #
-    # @pytest.mark.asyncio
-    # async def test_async_fields_from_event_no_fields(self, arepository, create_event):
-    #     repository = await arepository
-    #     data = {
-    #         "repository": {
-    #             "full_name": "owner/new_name",
-    #         }
-    #     }
-    #
-    #     assert repository.full_name != data["repository"]["full_name"]
-    #
-    #     await repository.async_fields_from_event(create_event(data, "repository"))
-    #
-    #     assert repository.full_name != data["repository"]["full_name"]
-    #
-    # @pytest.mark.asyncio
-    # async def test_async_fields_from_event_invalid_field(
-    #     self, arepository, create_event
-    # ):
-    #     repository = await arepository
-    #     data = {
-    #         "repository": {
-    #             "invalid_field": "foo",
-    #         }
-    #     }
-    #
-    #     with pytest.raises(ValueError):
-    #         await repository.async_fields_from_event(
-    #             create_event(data, "repository"), data["repository"].keys()
-    #         )
-    #
-    # def test_sync_fields_from_event(self, repository, create_event):
-    #     data = {
-    #         "repository": {
-    #             "full_name": "owner/new_name",
-    #         }
-    #     }
-    #
-    #     assert repository.full_name != data["repository"]["full_name"]
-    #
-    #     repository.sync_fields_from_event(
-    #         create_event(data, "repository"), data["repository"].keys()
-    #     )
-    #
-    #     assert repository.full_name == data["repository"]["full_name"]
-
     @pytest.mark.asyncio
     async def test_aget_issues(self, arepository):
         repository = await arepository
