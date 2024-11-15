@@ -64,33 +64,25 @@ class EventLog(models.Model):
 
 class InstallationManager(models.Manager["Installation"]):
     async def acreate_from_event(self, event: sansio.Event):
-        installation_data = event.data["installation"]
-
-        app_id = installation_data["app_id"]
+        app_id = event.data["installation"]["app_id"]
 
         if str(app_id) == app_settings.APP_ID:
-            installation = await self.acreate(
-                installation_id=installation_data["id"],
-                data=installation_data,
+            installation = await self.acreate_from_gh_data(event.data["installation"])
+
+            await Repository.objects.acreate_from_gh_data(
+                event.data["repositories"], installation
             )
-
-            repository_data = event.data["repositories"]
-
-            repositories = [
-                Repository(
-                    installation=installation,
-                    repository_id=repository["id"],
-                    repository_node_id=repository["node_id"],
-                    full_name=repository["full_name"],
-                )
-                for repository in repository_data
-            ]
-            await Repository.objects.abulk_create(repositories)
 
             return installation
 
     def create_from_event(self, event: sansio.Event):
         return async_to_sync(self.acreate_from_event)(event)
+
+    async def acreate_from_gh_data(self, data: dict[str, str]):
+        return await self.acreate(installation_id=data["id"], data=data)
+
+    def create_from_gh_data(self, data: dict[str, str]):
+        return async_to_sync(self.acreate_from_gh_data)(data)
 
     async def aget_from_event(self, event: sansio.Event):
         try:

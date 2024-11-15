@@ -161,6 +161,31 @@ class TestInstallationManager:
         )
 
     @pytest.mark.asyncio
+    async def test_acreate_from_gh_data(self):
+        installation_data = {
+            "id": seq.next(),
+            "app_id": seq.next(),
+        }
+
+        installation = await Installation.objects.acreate_from_gh_data(
+            installation_data
+        )
+
+        assert installation.installation_id == installation_data["id"]
+        assert installation.data == installation_data
+
+    def test_create_from_gh_data(self):
+        installation_data = {
+            "id": seq.next(),
+            "app_id": seq.next(),
+        }
+
+        installation = Installation.objects.create_from_gh_data(installation_data)
+
+        assert installation.installation_id == installation_data["id"]
+        assert installation.data == installation_data
+
+    @pytest.mark.asyncio
     async def test_aget_from_event(self, ainstallation, create_event):
         installation = await ainstallation
         event = create_event(

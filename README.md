@@ -249,6 +249,7 @@ async with AsyncGitHubAPI(installation_id=installation.installation_id) as gh:
 ##### Manager methods
 
 - `acreate_from_event`/`create_from_event`: Create from installation events _(primarily for internal use)_
+- `acreate_from_gh_data`/`create_from_gh_data`: Create from GitHub API response data _(primarily for internal use)_
 - `aget_from_event`/`get_from_event`: Retrieve installation from webhook events (`gidgethub.sansio.Event`)
 
 ##### Model methods
