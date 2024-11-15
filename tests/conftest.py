@@ -93,23 +93,69 @@ def repository_id():
 
 
 @pytest.fixture
-def installation():
-    return baker.make("django_github_app.Installation", installation_id=seq.next())
+def get_mock_github_api():
+    def _get_mock_github_api(return_data):
+        mock_api = AsyncMock(spec=AsyncGitHubAPI)
+
+        async def mock_getitem(*args, **kwargs):
+            return return_data
+
+        async def mock_getiter(*args, **kwargs):
+            for data in return_data:
+                yield data
+
+        mock_api.getitem = mock_getitem
+        mock_api.getiter = mock_getiter
+        mock_api.__aenter__.return_value = mock_api
+        mock_api.__aexit__.return_value = None
+
+        return mock_api
+
+    return _get_mock_github_api
 
 
 @pytest.fixture
-async def ainstallation():
-    return await sync_to_async(baker.make)(
+def installation(get_mock_github_api):
+    installation = baker.make(
         "django_github_app.Installation", installation_id=seq.next()
     )
+    mock_github_api = get_mock_github_api(
+        [
+            {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"},
+            {"id": seq.next(), "node_id": "node2", "full_name": "owner/repo2"},
+        ]
+    )
+    mock_github_api.installation_id = installation.installation_id
+    installation.get_gh_client = MagicMock(return_value=mock_github_api)
+    return installation
 
 
 @pytest.fixture
-def mock_github_api():
-    mock_api = AsyncMock(spec=AsyncGitHubAPI)
+async def ainstallation(get_mock_github_api):
+    installation = await sync_to_async(baker.make)(
+        "django_github_app.Installation", installation_id=seq.next()
+    )
+    mock_github_api = get_mock_github_api(
+        [
+            {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"},
+            {"id": seq.next(), "node_id": "node2", "full_name": "owner/repo2"},
+        ]
+    )
+    mock_github_api.installation_id = installation.installation_id
+    installation.get_gh_client = MagicMock(return_value=mock_github_api)
+    return installation
 
-    async def mock_getiter(*args, **kwargs):
-        test_issues = [
+
+@pytest.fixture
+def repository(installation, get_mock_github_api):
+    repository = baker.make(
+        "django_github_app.Repository",
+        repository_id=seq.next(),
+        full_name="owner/repo",
+        installation=installation,
+    )
+    mock_github_api = get_mock_github_api(
+        [
             {
                 "number": 1,
                 "title": "Test Issue 1",
@@ -121,38 +167,14 @@ def mock_github_api():
                 "state": "closed",
             },
         ]
-        for issue in test_issues:
-            yield issue
-
-    mock_api.getiter = mock_getiter
-    mock_api.__aenter__.return_value = mock_api
-    mock_api.__aexit__.return_value = None
-
-    return mock_api
-
-
-@pytest.fixture
-def repository(installation, mock_github_api):
-    repository = baker.make(
-        "django_github_app.Repository",
-        repository_id=seq.next(),
-        full_name="owner/repo",
-        installation=installation,
     )
-
     mock_github_api.installation_id = repository.installation.installation_id
-
-    if isinstance(repository, list):
-        for repo in repository:
-            repo.get_gh_client = MagicMock(mock_github_api)
-    else:
-        repository.get_gh_client = MagicMock(return_value=mock_github_api)
-
+    repository.get_gh_client = MagicMock(return_value=mock_github_api)
     return repository
 
 
 @pytest.fixture
-async def arepository(ainstallation, mock_github_api):
+async def arepository(ainstallation, get_mock_github_api):
     installation = await ainstallation
     repository = await sync_to_async(baker.make)(
         "django_github_app.Repository",
@@ -160,13 +182,20 @@ async def arepository(ainstallation, mock_github_api):
         full_name="owner/repo",
         installation=installation,
     )
-
+    mock_github_api = get_mock_github_api(
+        [
+            {
+                "number": 1,
+                "title": "Test Issue 1",
+                "state": "open",
+            },
+            {
+                "number": 2,
+                "title": "Test Issue 2",
+                "state": "closed",
+            },
+        ]
+    )
     mock_github_api.installation_id = repository.installation.installation_id
-
-    if isinstance(repository, list):
-        for repo in repository:
-            repo.get_gh_client = MagicMock(mock_github_api)
-    else:
-        repository.get_gh_client = MagicMock(return_value=mock_github_api)
-
+    repository.get_gh_client = MagicMock(return_value=mock_github_api)
     return repository

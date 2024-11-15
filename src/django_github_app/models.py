@@ -125,6 +125,12 @@ class Installation(models.Model):
     def __str__(self) -> str:
         return str(self.installation_id)
 
+    def get_gh_client(self, requester: str | None = None):
+        return AsyncGitHubAPI(  # pragma: no cover
+            requester or self.app_slug,
+            installation_id=self.installation_id,
+        )
+
     async def aget_access_token(self, gh: abc.GitHubAPI):  # pragma: no cover
         data = await get_installation_access_token(
             gh,
@@ -136,6 +142,25 @@ class Installation(models.Model):
 
     def get_access_token(self, gh: abc.GitHubAPI):  # pragma: no cover
         return async_to_sync(self.aget_access_token)(gh)
+
+    async def aget_repos(self, params: dict[str, Any] | None = None):
+        url = GitHubAPIUrl(
+            GitHubAPIEndpoint.INSTALLATION_REPOS,
+            params=params,
+        )
+        async with self.get_gh_client() as gh:
+            repos = [
+                repo
+                async for repo in gh.getiter(url.full_url, iterable_key="repositories")
+            ]
+        return repos
+
+    def get_repos(self, params: dict[str, Any] | None = None):
+        return async_to_sync(self.aget_repos)(params)
+
+    @property
+    def app_slug(self):
+        return self.data.get("app_slug", app_settings.SLUG)
 
 
 class RepositoryManager(models.Manager["Repository"]):
@@ -198,9 +223,7 @@ class Repository(models.Model):
         return self.full_name
 
     def get_gh_client(self):
-        return AsyncGitHubAPI(  # pragma: no cover
-            self.full_name, installation_id=self.installation.installation_id
-        )
+        return self.installation.get_gh_client(self.full_name)  # pragma: no cover
 
     async def aget_issues(self, params: dict[str, Any] | None = None):
         url = GitHubAPIUrl(
