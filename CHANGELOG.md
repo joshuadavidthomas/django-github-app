@@ -21,6 +21,11 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 ### Added
 
 - Added `acreate_from_gh_data`/`create_from_gh_data` manager methods to `Installation` and `Repository` models.
+- Added new methods to `Installation` model:
+  - `get_gh_client` for retrieving a `GitHubAPI` client preconfigured for an `Installation` instance.
+  - `aget_repos`/`get_repos` for retrieving all repositories accessible to an app installation.
+- Added `get_gh_client` model method to `Installation` model.
+- Added `aget_repos`/`get_repos` model method to `installation`
 
 ## [0.1.0]
 

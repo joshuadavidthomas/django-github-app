@@ -84,6 +84,7 @@ class SyncGitHubAPI(AsyncGitHubAPI):
 
 
 class GitHubAPIEndpoint(Enum):
+    INSTALLATION_REPOS = "/installation/repositories"
     REPO_ISSUES = "/repos/{owner}/{repo}/issues"
 
 

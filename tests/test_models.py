@@ -237,6 +237,45 @@ class TestInstallationStatus:
             InstallationStatus.from_event(event)
 
 
+class TestInstallation:
+    def test_get_gh_client(self, installation):
+        client = installation.get_gh_client()
+
+        assert isinstance(client, AsyncGitHubAPI)
+        assert client.installation_id == installation.installation_id
+
+    @pytest.mark.asyncio
+    async def test_aget_repos(self, ainstallation):
+        installation = await ainstallation
+
+        repos = await installation.aget_repos()
+
+        assert len(repos) == 2
+        assert repos[0]["node_id"] == "node1"
+        assert repos[0]["full_name"] == "owner/repo1"
+        assert repos[1]["node_id"] == "node2"
+        assert repos[1]["full_name"] == "owner/repo2"
+
+    def test_get_repos(self, installation):
+        repos = installation.get_repos()
+
+        assert len(repos) == 2
+        assert repos[0]["node_id"] == "node1"
+        assert repos[0]["full_name"] == "owner/repo1"
+        assert repos[1]["node_id"] == "node2"
+        assert repos[1]["full_name"] == "owner/repo2"
+
+    def test_app_slug(self):
+        app_slug = "foo"
+        installation = baker.make(
+            "django_github_app.Installation",
+            installation_id=seq.next(),
+            data={"app_slug": app_slug},
+        )
+
+        assert installation.app_slug == app_slug
+
+
 class TestRepositoryManager:
     @pytest.mark.asyncio
     async def test_acreate_from_gh_data_list(self, ainstallation):
