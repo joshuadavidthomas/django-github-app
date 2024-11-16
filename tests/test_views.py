@@ -11,6 +11,7 @@ from django.core.exceptions import BadRequest
 from django.http import JsonResponse
 from django.utils import timezone
 from gidgethub import sansio
+from gidgethub.abc import GitHubAPI
 from model_bakery import baker
 
 from django_github_app.github import AsyncGitHubAPI
@@ -75,7 +76,9 @@ def test_router():
     GitHubRouter._routers.remove(router.router)
 
 
-class TestWebhookView(BaseWebhookView):
+class WebhookView(BaseWebhookView[GitHubAPI]):
+    github_api_class = GitHubAPI
+
     def post(self, request):
         return JsonResponse({})
 
@@ -87,7 +90,7 @@ class TestBaseWebhookView:
         delivery_id = 4321
 
         request = webhook_request(event_type, body, delivery_id)
-        view = TestWebhookView()
+        view = WebhookView()
         event = view.get_event(request)
 
         assert isinstance(event, sansio.Event)
@@ -98,7 +101,7 @@ class TestBaseWebhookView:
     # @pytest.mark.parametrize("github_api_class", [AsyncGitHubAPI, SyncGitHubAPI])
     # def test_get_github_api_async(self, github_api_class, installation):
     def test_get_github_api_async(self, installation):
-        view = TestWebhookView()
+        view = WebhookView()
         view.github_api_class = AsyncGitHubAPI
 
         gh = view.get_github_api(installation)
@@ -107,14 +110,14 @@ class TestBaseWebhookView:
         assert gh.installation_id == installation.installation_id
 
     def test_get_github_api_sync(self, installation):
-        view = TestWebhookView()
+        view = WebhookView()
         view.github_api_class = SyncGitHubAPI
 
         with pytest.raises(NotImplementedError):
             view.get_github_api(installation)
 
     def test_get_response(self, webhook_request):
-        view = TestWebhookView()
+        view = WebhookView()
 
         response = view.get_response(baker.make("django_github_app.EventLog"))
 
