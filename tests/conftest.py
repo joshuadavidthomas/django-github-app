@@ -17,7 +17,10 @@ from django_github_app.github import AsyncGitHubAPI
 from .settings import DEFAULT_SETTINGS
 from .utils import seq
 
-pytest_plugins = ["tests.plugins.django_modeladmin"]
+pytest_plugins = [
+    "tests.plugins.django_modeladmin",
+    "tests.plugins.integration",
+]
 
 
 def pytest_configure(config):
