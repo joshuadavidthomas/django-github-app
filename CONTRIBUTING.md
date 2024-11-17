@@ -158,11 +158,11 @@ Configuration for these tools can be found in:
 
 This project uses GitHub Actions for CI/CD. The workflows can be found in [`.github/workflows/`](.github/workflows/):
 
-- [`test.yml`](.github/workflows/test.yml) - Runs on pushes to the `main` branch and on all PRs:
+- [`test.yml`](.github/workflows/test.yml) - Runs on pushes to the `main` branch and on all PRs
   - Tests across Python/Django version matrix
   - Static type checking
   - Coverage reporting
-- [`release.yml`](.github/workflows/release.yml) - Runs on GitHub release creation:
+- [`release.yml`](.github/workflows/release.yml) - Runs on GitHub release creation
   - Runs the [`test.yml`](.github/workflows/test.yml) workflow
   - Builds package
   - Publishes to PyPI
