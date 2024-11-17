@@ -139,7 +139,7 @@ uv run nox --session test -- --integration
 
 #### Setting up a Test GitHub App
 
-1. Create a new GitHub App:
+1. Create a new GitHub App.
    - Go to GitHub Developer Settings > GitHub Apps > New GitHub App
    - Name: `@<username> - django-github-app tests` (must be unique on GitHub, max 34 characters)
    - Homepage URL: Your fork's URL (e.g., `https://github.com/<username>/django-github-app`)
@@ -147,14 +147,13 @@ uv run nox --session test -- --integration
    - Permissions:
      - Repository: Metadata (Read-only)
    - Installation: "Only on this account"
-
 2. After creation, collect these values:
    - App ID (from app settings)
    - Client ID (from app settings)
    - Private key (generate and download)
    - Installation ID (from URL after installing: `https://github.com/settings/installations/<ID>`)
 
-3. Configure environment variables:
+3. Configure environment variables.
 
    Using direnv (recommended):
 
