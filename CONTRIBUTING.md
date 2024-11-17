@@ -127,9 +127,9 @@ All pull requests must include tests to maintain 100% coverage. Coverage configu
 
 Integration tests are contained in the [`tests/integration`](tests/integration) directory and test actual interactions with GitHub's API and webhooks.
 
-These tests are skipped by default and must be explicitly enabled by passing `--integration` as a pytest argument. Running them requires both a GitHub App and a Personal Access Token (PAT) configured in your environment.
+These tests are skipped by default and must be explicitly enabled by passing `--integration` as a pytest argument. Running them requires a GitHub App in your user account and configured in your environment.
 
-Follow these steps to set up your environment for integration tests:
+Follow these steps to get set up for integration tests:
 
 1. Create a test GitHub App:
    - Go to GitHub Developer Settings > GitHub Apps > New GitHub App
@@ -148,7 +148,6 @@ Follow these steps to set up your environment for integration tests:
 3. Install the new test GitHub App on your user account by selecting "Install App" from the GitHub App admin panel.
    - After installation, make note of the unique ID in the URL, e.g. `https://github.com/settings/installations/<unique ID>`
 5. Configure the following environment variables:
-
    - `TEST_ACCOUNT_NAME` - your GitHub username
    - `TEST_ACCOUNT_TYPE` - user
    - `TEST_APP_ID` - the App ID of the GitHub App from step 2
@@ -174,8 +173,7 @@ After setup, you can run the test suite with the integration tests enabled by pa
 
 ```bash
 uv run nox --session test -- --integration
-# or
-just test --integration
+# just test --integration
 ```
 
 ## Linting and Formatting
