@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 from typing import Any
+from typing import Literal
 
 from asgiref.sync import async_to_sync
 from django.db import models
@@ -9,6 +10,7 @@ from django.utils import timezone
 from gidgethub import abc
 from gidgethub import sansio
 from gidgethub.apps import get_installation_access_token
+from gidgethub.apps import get_jwt
 
 from ._typing import override
 from .conf import app_settings
@@ -142,6 +144,32 @@ class Installation(models.Model):
 
     def get_access_token(self, gh: abc.GitHubAPI):  # pragma: no cover
         return async_to_sync(self.aget_access_token)(gh)
+
+    async def arefresh_from_gh(
+        self, account_type: Literal["org", "user"], account_name: str
+    ):
+        match account_type:
+            case "org":
+                endpoint = GitHubAPIEndpoint.ORG_APP_INSTALLATION
+                url_var = "org"
+            case "user":
+                endpoint = GitHubAPIEndpoint.USER_APP_INSTALLATION
+                url_var = "username"
+            case _:
+                msg = f"`account_type` must be either 'org' or 'user', received: {account_type}"
+                raise ValueError(msg)
+
+        url = GitHubAPIUrl(endpoint=endpoint, url_vars={url_var: account_name})
+        jwt = get_jwt(app_id=app_settings.APP_ID, private_key=app_settings.PRIVATE_KEY)
+
+        async with self.get_gh_client() as gh:
+            data = await gh.getitem(url.full_url, jwt=jwt)
+
+        self.data = data
+        await self.asave()
+
+    def refresh_from_gh(self, account_type: Literal["org", "user"], account_name: str):
+        return async_to_sync(self.arefresh_from_gh)(account_type, account_name)
 
     async def aget_repos(self, params: dict[str, Any] | None = None):
         url = GitHubAPIUrl(

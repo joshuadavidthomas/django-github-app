@@ -24,8 +24,8 @@ bootstrap:
     uv python install
     uv sync --locked
 
-coverage:
-    @just nox coverage
+coverage *ARGS:
+    @just nox coverage {{ ARGS }}
 
 lint:
     @just nox lint
