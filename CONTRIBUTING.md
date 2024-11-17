@@ -32,7 +32,6 @@ output_list = output_raw.stdout.decode("utf-8").split("\n")
 cog.outl("""\
 ```bash
 $ just
-$ # or explicitly
 $ # just --list --list-submodules
 """)
 
@@ -47,7 +46,6 @@ cog.out("```")
 ]]] -->
 ```bash
 $ just
-$ # or explicitly
 $ # just --list --list-submodules
 
 Available recipes:
