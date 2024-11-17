@@ -109,3 +109,16 @@ uv run nox --session tests -- --failed-first --maxfail=1
 # just test -v --last-failed
 # just testall --failed-first --maxfail=1
 ```
+
+### Coverage
+
+The project uses [`coverage.py`](https://github.com/nedbat/coverage.py) to measure code coverage and aims to maintain 100% coverage across the codebase.
+
+To run the test suite and measure code coverage:
+
+```bash
+uv run nox --session coverage
+# just coverage
+```
+
+All pull requests must include tests to maintain 100% coverage. Coverage configuration can be found in the `[tools.coverage.*]` sections of [`pyproject.toml`](pyproject.toml).
