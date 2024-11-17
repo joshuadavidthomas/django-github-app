@@ -125,56 +125,53 @@ All pull requests must include tests to maintain 100% coverage. Coverage configu
 
 ### Integration Tests
 
-Integration tests are contained in the [`tests/integration`](tests/integration) directory and test actual interactions with GitHub's API and webhooks.
+Integration tests in [`tests/integration`](tests/integration) verify actual interactions with GitHub's API and webhooks. These tests are skipped by default and require:
 
-These tests are skipped by default and must be explicitly enabled by passing `--integration` as a pytest argument. Running them requires a GitHub App in your user account and configured in your environment.
+- A GitHub App in your account
+- Environment variables configured with the App's credentials
 
-Follow these steps to get set up for integration tests:
+To enable integration tests, pass `--integration` to any test command:
 
-1. Create a test GitHub App:
+```bash
+uv run nox --session test -- --integration
+# or
+just test --integration
+```
+
+#### Setting up a Test GitHub App
+
+1. Create a new GitHub App:
    - Go to GitHub Developer Settings > GitHub Apps > New GitHub App
-   - Set the Name to `@<username> - django-github-app tests` (this can be anything, but needs to be unique across GitHub and under 34 characters in length)
-   - Set Homepage URL to your fork's URL, e.g. `https://github.com/<username>/django-github-app`
-   - Turn webhooks off by toggling the Active checkbox under Webhook (there are currently no Webhook integration tests, this may need to be adjusted if/when they are added)
-   - Set the following permissions:
-     - Repository permissions:
-       - Metadata: Read only
-   - Select "Only on this account" for where the GitHub App can be installed
-2. After creating the test GitHub App:
-   - Grab the following information from the admin panel:
-     - App ID
-     - Client ID
-   - Generate and download private key
-3. Install the new test GitHub App on your user account by selecting "Install App" from the GitHub App admin panel.
-   - After installation, make note of the unique ID in the URL, e.g. `https://github.com/settings/installations/<unique ID>`
-5. Configure the following environment variables:
-   - `TEST_ACCOUNT_NAME` - your GitHub username
-   - `TEST_ACCOUNT_TYPE` - user
-   - `TEST_APP_ID` - the App ID of the GitHub App from step 2
-   - `TEST_CLIENT_ID` - the Client ID of the GitHub App from step 2
-   - `TEST_INSTALLATION_ID` - the ID of the installation of the GitHub App from step 3
-   - `TEST_NAME` - the Name of the GitHub App from step 1
-   - `TEST_WEBHOOK_SECRET` - can be left blank for now
+   - Name: `@<username> - django-github-app tests` (must be unique on GitHub, max 34 characters)
+   - Homepage URL: Your fork's URL (e.g., `https://github.com/<username>/django-github-app`)
+   - Webhooks: Disable by unchecking "Active" (no webhook tests currently implemented)
+   - Permissions:
+     - Repository: Metadata (Read-only)
+   - Installation: "Only on this account"
 
-   If you are using direnv, there is an `.env.example` file in the repository with all the required environment variables:
+2. After creation, collect these values:
+   - App ID (from app settings)
+   - Client ID (from app settings)
+   - Private key (generate and download)
+   - Installation ID (from URL after installing: `https://github.com/settings/installations/<ID>`)
+
+3. Configure environment variables:
+
+   Using direnv (recommended):
 
    ```bash
    cp .env.example .env
+   direnv allow
    ```
 
-   Otherwise export the variables in your development environment:
+   Or manually export:
 
    ```bash
    export TEST_ACCOUNT_NAME="<username>"
    # etc...
    ```
 
-After setup, you can run the test suite with the integration tests enabled by passing the `--integration` argument to any of the test commands:
-
-```bash
-uv run nox --session test -- --integration
-# just test --integration
-```
+See [`.env.example`](.env.example) for all required variables and their descriptions.
 
 ## Linting and Formatting
 
