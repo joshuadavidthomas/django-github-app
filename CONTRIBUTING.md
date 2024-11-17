@@ -193,8 +193,6 @@ If you want integration tests to run in CI on your fork:
 > [!NOTE]
 > Integration tests in CI will only run with access to these environment secrets. This is a security feature - fork PRs cannot access these secrets unless explicitly granted by repository maintainers.
 
-There is a simple check in the CI workflow that skips the integration test job if `TEST_PRIVATE_KEY` is not configured, preventing unnecessary job runs on unconfigured forks.
-
 #### Security Considerations
 
 The integration test setup is designed to be secure:
