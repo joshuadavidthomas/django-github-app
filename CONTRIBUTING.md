@@ -122,3 +122,49 @@ uv run nox --session coverage
 ```
 
 All pull requests must include tests to maintain 100% coverage. Coverage configuration can be found in the `[tools.coverage.*]` sections of [`pyproject.toml`](pyproject.toml).
+
+## Linting and Formatting
+
+This project enforces code quality standards using [`pre-commit`](https://github.com/pre-commit/pre-commit).
+
+To run all formatters and linters:
+
+```bash
+uv run nox --session lint
+# or
+just lint
+```
+
+The following checks are run:
+
+- [ruff](https://github.com/astral-sh/ruff) - Fast Python linter and formatter
+- Code formatting for Python files in documentation ([blacken-docs](https://github.com/adamchainz/blacken-docs))
+- Django compatibility checks ([django-upgrade](https://github.com/adamchainz/django-upgrade))
+- TOML and YAML validation
+- Basic file hygiene (trailing whitespace, file endings)
+
+To enable pre-commit hooks after cloning:
+
+```bash
+uv run --with pre-commit pre-commit install
+```
+
+Configuration for these tools can be found in:
+
+- [`.pre-commit-config.yaml`](.pre-commit-config.yaml) - Pre-commit hook configuration
+- [`pyproject.toml`](pyproject.toml) - Ruff and other tool settings
+
+## Continuous Integration
+
+This project uses GitHub Actions for CI/CD. The workflows can be found in [`.github/workflows/`](.github/workflows/):
+
+- [`test.yml`](.github/workflows/test.yml) - Runs on pushes to the `main` branch and on all PRs:
+  - Tests across Python/Django version matrix
+  - Static type checking
+  - Coverage reporting
+- [`release.yml`](.github/workflows/release.yml) - Runs on GitHub release creation:
+  - Runs the [`test.yml`](.github/workflows/test.yml) workflow
+  - Builds package
+  - Publishes to PyPI
+
+PRs must pass all CI checks before being merged.
