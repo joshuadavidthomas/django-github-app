@@ -80,8 +80,7 @@ Alternatively, any Python package manager that supports installing from `pyproje
 ```bash
 uv python install
 uv sync --locked
-# or
-just bootstrap
+# just bootstrap
 ```
 
    This will install the correct Python version, create and configure a virtual environment, and install all dependencies.
@@ -94,16 +93,14 @@ To run the test suite against the default versions of Python (lower bound of sup
 
 ```bash
 uv run nox --session test
-# or
-just test
+# just test
 ```
 
 To run the test suite against the entire matrix of supported versions of Python and Django:
 
 ```bash
 uv run nox --session tests
-# or
-just testall
+# just testall
 ```
 
 Both can be passed additional arguments that will be provided to `pytest`:
@@ -111,7 +108,6 @@ Both can be passed additional arguments that will be provided to `pytest`:
 ```bash
 uv run nox --session test -- -v --last-failed
 uv run nox --session tests -- --failed-first --maxfail=1
-# or
-just test -v --last-failed
-just testall --failed-first --maxfail=1
+# just test -v --last-failed
+# just testall --failed-first --maxfail=1
 ```
