@@ -159,8 +159,9 @@ uv run nox --session test -- --integration
 
    ```bash
    cp .env.example .env
-   direnv allow
    ```
+
+   Edit the new `.env` file with the values collected above.
 
    Or manually export:
 
