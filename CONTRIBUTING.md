@@ -8,7 +8,7 @@ Not all contributions need to start with an issue, such as typo fixes in documen
 
 We adhere to Django's Code of Conduct in all interactions and expect all contributors to do the same. Please read the [Code of Conduct](https://www.djangoproject.com/conduct/) before contributing.
 
-### Requirements
+## Requirements
 
 - [uv](https://github.com/astral-sh/uv) - Modern Python toolchain that handles:
   - Python version management and installation
@@ -42,10 +42,9 @@ for i, line in enumerate(output_list):
 ]]] -->
 Available recipes:
     bootstrap
-    coverage *ARGS
+    coverage
     lint
     lock *ARGS
-    manage *COMMAND
     test *ARGS
     testall *ARGS
     types *ARGS
@@ -62,6 +61,7 @@ All commands below will contain the full command as well as its `just` counterpa
 The following instructions will use `uv` and assume a Unix-like operating system (Linux or macOS).
 
 Windows users will need to adjust commands accordingly, though the core workflow remains the same.
+
 Alternatively, any Python package manager that supports installing from `pyproject.toml` ([PEP 621](https://peps.python.org/pep-0621/)) can be used. If not using `uv`, ensure you have Python installed from [python.org](https://www.python.org/).
 
 1. Fork the repository and clone it locally.
@@ -80,7 +80,7 @@ just bootstrap
 
 The project uses [`pytest`](https://docs.pytest.org/) for testing and [`nox`](https://nox.thea.codes/) to run the tests in multiple environments.
 
-To run the test suite against the default versions of Python (lower bound of supported versions) and Django (lower bound of LTS versions), run:
+To run the test suite against the default versions of Python (lower bound of supported versions) and Django (lower bound of LTS versions):
 
 ```bash
 uv run nox --session test
@@ -88,7 +88,7 @@ uv run nox --session test
 just test
 ```
 
-To run the test suite against the entire matrix of supported versions of Python and Django, run:
+To run the test suite against the entire matrix of supported versions of Python and Django:
 
 ```bash
 uv run nox --session tests
@@ -96,7 +96,7 @@ uv run nox --session tests
 just testall
 ```
 
-Both can be passed additional arguments that will be provided to pytest:
+Both can be passed additional arguments that will be provided to `pytest`:
 
 ```bash
 uv run nox --session test -- -v --last-failed
