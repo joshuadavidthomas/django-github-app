@@ -390,6 +390,12 @@ GITHUB_APP = {
 
 Secret used to verify webhook payloads from GitHub.
 
+## Development
+
+For detailed instructions on setting up a development environment and contributing to this project, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+For release procedures, see [RELEASING.md](RELEASING.md).
+
 ## License
 
 django-github-app is licensed under the MIT license. See the [`LICENSE`](LICENSE) file for more information.
