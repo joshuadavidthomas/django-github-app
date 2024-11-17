@@ -22,24 +22,34 @@ We adhere to Django's Code of Conduct in all interactions and expect all contrib
 
 The repository includes a `Justfile` that provides all common development tasks with a consistent interface. Running `just` without arguments shows all available commands and their descriptions:
 
-```bash
-$ just
-# or explicitly
-$ just --list --list-submodules
 <!-- [[[cog
 import subprocess
 import cog
 
-output_raw = subprocess.run(['just', '--list', '--list-submodules'], stdout=subprocess.PIPE)
-output_list = output_raw.stdout.decode('utf-8').split('\n')
+output_raw = subprocess.run(["just", "--list", "--list-submodules"], stdout=subprocess.PIPE)
+output_list = output_raw.stdout.decode("utf-8").split("\n")
+
+cog.outl("""\
+```bash
+$ just
+$ # or explicitly
+$ # just --list --list-submodules
+""")
 
 for i, line in enumerate(output_list):
     if not line:
         continue
     cog.out(line)
     if i < len(output_list):
-        cog.out('\n')
+        cog.out("\n")
+
+cog.out("```")
 ]]] -->
+```bash
+$ just
+$ # or explicitly
+$ # just --list --list-submodules
+
 Available recipes:
     bootstrap
     coverage
@@ -51,8 +61,8 @@ Available recipes:
     docs:
         build LOCATION="docs/_build/html" # Build documentation using Sphinx
         serve PORT="8000"                 # Serve documentation locally
-<!-- [[[end]]] -->
 ```
+<!-- [[[end]]] -->
 
 All commands below will contain the full command as well as its `just` counterpart.
 
