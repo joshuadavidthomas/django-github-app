@@ -14,7 +14,6 @@ from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-from gidgethub.abc import GitHubAPI
 from gidgethub.routing import Router as GidgetHubRouter
 from gidgethub.sansio import Event
 
@@ -26,7 +25,7 @@ from .models import EventLog
 from .models import Installation
 from .routing import GitHubRouter
 
-GitHubAPIType = TypeVar("GitHubAPIType", AsyncGitHubAPI, GitHubAPI, SyncGitHubAPI)
+GitHubAPIType = TypeVar("GitHubAPIType", AsyncGitHubAPI, SyncGitHubAPI)
 
 
 class BaseWebhookView(View, ABC, Generic[GitHubAPIType]):
