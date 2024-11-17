@@ -134,8 +134,7 @@ To enable integration tests, pass `--integration` to any test command:
 
 ```bash
 uv run nox --session test -- --integration
-# or
-just test --integration
+# just test --integration
 ```
 
 #### Setting up a Test GitHub App
