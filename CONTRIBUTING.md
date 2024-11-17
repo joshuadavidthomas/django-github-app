@@ -172,6 +172,39 @@ uv run nox --session test -- --integration
 
 See [`.env.example`](.env.example) for all required variables and their descriptions.
 
+#### Setting up CI Integration Tests
+
+If you want integration tests to run in CI on your fork:
+
+1. Go to your fork's repository settings on GitHub
+2. Under "Environments", create a new environment named `integration`
+3. Add the following secrets and variables to the environment:
+   - Secrets
+     - `TEST_PRIVATE_KEY`
+     - `TEST_WEBHOOK_SECRET`
+   - Variables
+     - `TEST_ACCOUNT_NAME`
+     - `TEST_ACCOUNT_TYPE`
+     - `TEST_APP_ID`
+     - `TEST_CLIENT_ID`
+     - `TEST_INSTALLATION_ID`
+     - `TEST_NAME`
+
+> [!NOTE]
+> Integration tests in CI will only run with access to these environment secrets. This is a security feature - fork PRs cannot access these secrets unless explicitly granted by repository maintainers.
+
+There is a simple check in the CI workflow that skips the integration test job if `TEST_PRIVATE_KEY` is not configured, preventing unnecessary job runs on unconfigured forks.
+
+#### Security Considerations
+
+The integration test setup is designed to be secure:
+
+- The test GitHub App requires minimal permissions (read-only metadata access)
+- It's installed only on your personal account
+- Webhooks are disabled to prevent external callbacks
+- In CI, tests run in a protected GitHub Environment with restricted secret access
+- Fork PRs cannot access integration test secrets (managed automatically by GitHub Actions)
+
 ## Linting and Formatting
 
 This project enforces code quality standards using [`pre-commit`](https://github.com/pre-commit/pre-commit).
