@@ -131,8 +131,7 @@ To run all formatters and linters:
 
 ```bash
 uv run nox --session lint
-# or
-just lint
+# just lint
 ```
 
 The following checks are run:
