@@ -245,6 +245,14 @@ class TestInstallation:
         assert client.installation_id == installation.installation_id
 
     @pytest.mark.asyncio
+    async def test_arefresh_from_gh(self): ...
+    def test_refresh_from_gh(self): ...
+
+    def test_refresh_from_gh_invalid_account_type(self, installation):
+        with pytest.raises(ValueError):
+            installation.refresh_from_gh("invalid", "test")
+
+    @pytest.mark.asyncio
     async def test_aget_repos(self, ainstallation):
         installation = await ainstallation
 
