@@ -68,6 +68,7 @@ jobs:
   integration:
     runs-on: ubuntu-latest
     environment: integration
+    if: secrets.TEST_PRIVATE_KEY != ''
     steps:
       - uses: actions/checkout@v4
 
