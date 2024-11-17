@@ -5,7 +5,11 @@ mod docs ".just/documentation.just"
 
 [private]
 default:
-    @just --list
+    @just --list --list-submodules
+
+[private]
+cog:
+    uv run --with cogapp cog -r CONTRIBUTING.md
 
 [private]
 fmt:
