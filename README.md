@@ -31,7 +31,7 @@ The library is async-only at the moment (following gidgethub), with sync support
     uv sync
     ```
 
-2. Add the app to your Django project's `INSTALLED_APPS`.
+2. Add the app to `INSTALLED_APPS` in your Django project's `DJANGO_SETTINGS_MODULE`.
 
     ```python
     INSTALLED_APPS = [
