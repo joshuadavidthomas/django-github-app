@@ -35,7 +35,7 @@ The library is async-only at the moment (following gidgethub), with sync support
 
    For the Webhook URL, the endpoint is up to you. See step 4 below for how the endpoint is configured. Using these installation instructions as an example, you would enter `<your project's base url>/gh/` as the Webhook URL.
 
-> [!NOTE] Have an existing GitHub App?
+> [!NOTE]
 > To use an existing GitHub App with django-github-app, see [Import an Existing GitHub App](#importing-an-existing-github-app).
 
 2. Install the package from PyPI:
