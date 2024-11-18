@@ -70,11 +70,11 @@ The following instructions will use `uv` and assume a Unix-like operating system
 
 Windows users will need to adjust commands accordingly, though the core workflow remains the same.
 
-Alternatively, any Python package manager that supports installing from `pyproject.toml` ([PEP 621](https://peps.python.org/pep-0621/)) can be used. If not using `uv`, ensure you have Python installed from [python.org](https://www.python.org/).
+Alternatively, any Python package manager that supports installing from `pyproject.toml` ([PEP 621](https://peps.python.org/pep-0621/)) can be used. If not using `uv`, ensure you have Python installed from [python.org](https://www.python.org/) or another source such as [`pyenv`](https://github.com/pyenv/pyenv).
 
 1. Fork the repository and clone it locally.
 
-2. Use `uv` too bootstrap your development environment:
+2. Use `uv` to bootstrap your development environment:
 
    ```bash
    uv python install
@@ -174,7 +174,7 @@ uv run nox --session test -- --integration
    # etc...
    ```
 
-See [`.env.example`](.env.example) for all required variables and their descriptions.
+See [`.env.example`](.env.example) for all required variables.
 
 #### Setting up CI Integration Tests
 
@@ -206,7 +206,6 @@ The integration test setup is designed to be secure:
 
 - The test GitHub App requires minimal permissions (read-only metadata access)
 - It's installed only on your personal account
-- Webhooks are disabled to prevent external callbacks
 - In CI, tests run in a protected GitHub Environment with restricted secret access
 - Fork PRs cannot access integration test secrets (managed automatically by GitHub Actions)
 

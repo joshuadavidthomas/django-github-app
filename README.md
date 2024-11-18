@@ -20,7 +20,7 @@ The library is async-only at the moment (following gidgethub), with sync support
 
 ## Installation
 
-1. Install the package from PyPI:
+1. Install the package from [PyPI](https://pypi.org/project/django-github-app).
 
     ```bash
     python -m pip install django-github-app
@@ -31,7 +31,7 @@ The library is async-only at the moment (following gidgethub), with sync support
     uv sync
     ```
 
-2. Add the app to your Django project's `INSTALLED_APPS`:
+2. Add the app to your Django project's `INSTALLED_APPS`.
 
     ```python
     INSTALLED_APPS = [
@@ -39,7 +39,7 @@ The library is async-only at the moment (following gidgethub), with sync support
     ]
     ```
 
-3. Run the `migrate` management command to add django-github-app's models to your database:
+3. Run the `migrate` management command to add django-github-app's models to your database.
 
    ```bash
    python manage.py migrate
@@ -49,7 +49,7 @@ The library is async-only at the moment (following gidgethub), with sync support
    uv run manage.py migrate
    ```
 
-4. Add django-github-app's webhook view to your Django project's urls:
+4. Add django-github-app's webhook view to your Django project's urls.
 
    ```python
    from django.urls import path
@@ -77,7 +77,7 @@ The library is async-only at the moment (following gidgethub), with sync support
    All examples below use [environs](https://github.com/sloria/environs) to load the values from an `.env` file. Adjust the code to your preferred way of loading Django settings.
 
 > [!NOTE]
-> By default, examples use the private key contents loaded directly from environment. To use a key file instead:
+> All examples will use the private key contents loaded directly from environment. To use a key file instead:
 >
 > ```python
 > import environs
@@ -90,7 +90,7 @@ The library is async-only at the moment (following gidgethub), with sync support
 > }
 > ```
 >
-> django-github-app will automatically detect if `GITHUB_APP["PRIVATE_KEY"]` is a path and load the file contents.
+> django-github-app will automatically detect if `GITHUB_APP["PRIVATE_KEY"]` is a path and load the file contents. For more information, see the [`PRIVATE_KEY`](#private_key) section in the [Configuration](#configuration) documentation below.
 
 ### Create a New GitHub App
 
@@ -100,7 +100,7 @@ The library is async-only at the moment (following gidgethub), with sync support
 
    For the Webhook URL, use the endpoint you configured in step 4 (e.g., `<your project's base url>/gh/`).
 
-2. Configure your Django settings by adding the following dictionary to your `DJANGO_SETTINGS_MODULE`, filling in the values from the previous setup.
+2. Configure your Django settings by adding the following dictionary to your `DJANGO_SETTINGS_MODULE`, filling in the values from the previous step.
 
    ```python
    import environs
@@ -117,7 +117,7 @@ The library is async-only at the moment (following gidgethub), with sync support
    }
    ```
 
-3. Install the GitHub App on your account:
+3. Install the GitHub App on your account.
 
    - Go to your GitHub App's settings
    - Click "Install App"
@@ -128,10 +128,10 @@ The library is async-only at the moment (following gidgethub), with sync support
 
 ### Use an Existing GitHub App and Installation
 
-1. Collect your existing app and installation's information:
+1. Collect your existing app and installation's information.
 
-   - All GitHub App information and credentials listed above
-     - Make sure the Webhook URL matches the endpoint configured in step 4
+   - All GitHub App information and credentials listed above in step 5 of [Installation](#instalation)
+     - Make sure the Webhook URL matches the endpoint configured in step 4 of [Installation](#installation)
    - Account type where installed (`org` or `user`)
    - Account name (username or organization name)
    - Installation ID (e.g. `https://github.com/settings/installations/<ID>` for an user installation)
@@ -153,7 +153,7 @@ The library is async-only at the moment (following gidgethub), with sync support
    }
    ```
 
-3. Import your existing GitHub App by using the provided management command:
+3. Import your existing GitHub App by using the provided management command.
 
    ```bash
    python manage.py github import-app --type user --name <username> --installation-id 123456
@@ -167,7 +167,7 @@ The library is async-only at the moment (following gidgethub), with sync support
 
 django-github-app provides a router-based system for handling GitHub webhook events, built on top of [gidgethub](https://github.com/gidgethub/gidgethub). The router matches incoming webhooks to your handler functions based on the event type and optional action.
 
-To start handling GitHub webhooks, create your event handlers in a new file (e.g., `events.py`) within your Django app:
+To start handling GitHub webhooks, create your event handlers in a new file (e.g., `events.py`) within your Django app.
 
 ```python
 # your_app/events.py
@@ -214,7 +214,7 @@ Each handler receives two arguments:
 - `event`: A `gidgethub.sansio.Event` containing the webhook payload
 - `gh`: A GitHub API client for making API calls
 
-To activate your webhook handlers, import them in your app's `AppConfig.ready()` method, similar to how Django signals are registered:
+To activate your webhook handlers, import them in your app's `AppConfig.ready()` method, similar to how Django signals are registered.
 
 ```python
 # your_app/apps.py
@@ -239,7 +239,7 @@ For more details about how `gidgethub.sansio.Event` and webhook routing work, se
 
 ### GitHub API Client
 
-The library provides `AsyncGitHubAPI`, an implementation of gidgethub's abstract `GitHubAPI` class that handles authentication and uses [httpx](https://github.com/encode/httpx) as its HTTP client. While it's automatically provided in webhook handlers, you can also use it directly in your code:
+The library provides `AsyncGitHubAPI`, an implementation of gidgethub's abstract `GitHubAPI` class that handles authentication and uses [httpx](https://github.com/encode/httpx) as its HTTP client. While it's automatically provided in webhook handlers, you can also use it directly in your code.
 
 ```python
 from django_github_app.github import AsyncGitHubAPI
@@ -289,9 +289,10 @@ The model primarily serves the webhook handling system, but you can also use it 
 
 #### `Installation`
 
-`django_github_app.models.Installation` represents where your GitHub App is installed. It stores the installation ID and metadata from GitHub, and provides methods for authentication:
+`django_github_app.models.Installation` represents where your GitHub App is installed. It stores the installation ID and metadata from GitHub, and provides methods for authentication.
 
 ```python
+from django_github_app.github import AsyncGitHubAPI
 from django_github_app.models import Installation
 
 # Get an installation and its access token
@@ -316,7 +317,7 @@ async with AsyncGitHubAPI(installation_id=installation.installation_id) as gh:
 
 #### `Repository`
 
-`django_github_app.models.Repository` tracks repositories where your app is installed and provides high-level methods for GitHub operations:
+`django_github_app.models.Repository` tracks repositories where your app is installed and provides high-level methods for GitHub operations.
 
 ```python
 from django_github_app.models import Repository
