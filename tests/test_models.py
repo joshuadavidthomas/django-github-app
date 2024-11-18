@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import datetime
+from unittest.mock import MagicMock
 
 import pytest
 from asgiref.sync import sync_to_async
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from django.utils import timezone
 from gidgethub import sansio
 from model_bakery import baker
@@ -25,6 +29,21 @@ def create_event():
         return sansio.Event(data=data, event=event, delivery_id=seq.next())
 
     return _create_event
+
+
+@pytest.fixture
+def private_key():
+    private_key = rsa.generate_private_key(
+        public_exponent=65537, key_size=2048, backend=default_backend()
+    )
+
+    pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+
+    return pem.decode("utf-8")
 
 
 class TestEventLogManager:
@@ -244,9 +263,42 @@ class TestInstallation:
         assert isinstance(client, AsyncGitHubAPI)
         assert client.installation_id == installation.installation_id
 
+    @pytest.mark.parametrize("account_type", ["org", "user"])
     @pytest.mark.asyncio
-    async def test_arefresh_from_gh(self): ...
-    def test_refresh_from_gh(self): ...
+    async def test_arefresh_from_gh(
+        self,
+        account_type,
+        private_key,
+        ainstallation,
+        get_mock_github_api,
+        override_app_settings,
+    ):
+        installation = await ainstallation
+
+        mock_github_api = get_mock_github_api({"foo": "bar"})
+        installation.get_gh_client = MagicMock(return_value=mock_github_api)
+
+        with override_app_settings(PRIVATE_KEY=private_key):
+            await installation.arefresh_from_gh(account_type, "test")
+
+        assert installation.data == {"foo": "bar"}
+
+    @pytest.mark.parametrize("account_type", ["org", "user"])
+    def test_refresh_from_gh(
+        self,
+        account_type,
+        private_key,
+        installation,
+        get_mock_github_api,
+        override_app_settings,
+    ):
+        mock_github_api = get_mock_github_api({"foo": "bar"})
+        installation.get_gh_client = MagicMock(return_value=mock_github_api)
+
+        with override_app_settings(PRIVATE_KEY=private_key):
+            installation.refresh_from_gh(account_type, "test")
+
+        assert installation.data == {"foo": "bar"}
 
     def test_refresh_from_gh_invalid_account_type(self, installation):
         with pytest.raises(ValueError):
