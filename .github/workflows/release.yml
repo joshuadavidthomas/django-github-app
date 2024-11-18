@@ -35,5 +35,14 @@ jobs:
         run: |
           uv build
 
+      - name: Upload release assets to GitHub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for file in dist/*; do
+            gh release upload ${{ github.event.release.tag_name }} "$file" --clobber
+          done
+
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        run: |
+          uv publish
