@@ -73,13 +73,14 @@ Windows users will need to adjust commands accordingly, though the core workflow
 Alternatively, any Python package manager that supports installing from `pyproject.toml` ([PEP 621](https://peps.python.org/pep-0621/)) can be used. If not using `uv`, ensure you have Python installed from [python.org](https://www.python.org/).
 
 1. Fork the repository and clone it locally.
+
 2. Use `uv` too bootstrap your development environment:
 
-```bash
-uv python install
-uv sync --locked
-# just bootstrap
-```
+   ```bash
+   uv python install
+   uv sync --locked
+   # just bootstrap
+   ```
 
    This will install the correct Python version, create and configure a virtual environment, and install all dependencies.
 
@@ -140,6 +141,7 @@ uv run nox --session test -- --integration
 #### Setting up a Test GitHub App
 
 1. Create a new GitHub App.
+
    - Go to GitHub Developer Settings > GitHub Apps > New GitHub App
    - Name: `@<username> - django-github-app tests` (must be unique on GitHub, max 34 characters)
    - Homepage URL: Your fork's URL (e.g., `https://github.com/<username>/django-github-app`)
@@ -147,7 +149,9 @@ uv run nox --session test -- --integration
    - Permissions:
      - Repository: Metadata (Read-only)
    - Installation: "Only on this account"
+
 2. After creation, collect these values:
+
    - App ID (from app settings)
    - Client ID (from app settings)
    - Private key (generate and download)
@@ -177,8 +181,11 @@ See [`.env.example`](.env.example) for all required variables and their descript
 If you want integration tests to run in CI on your fork:
 
 1. Go to your fork's repository settings on GitHub
+
 2. Under "Environments", create a new environment named `integration`
+
 3. Add the following secrets and variables to the environment:
+
    - Secrets
      - `TEST_PRIVATE_KEY`
      - `TEST_WEBHOOK_SECRET`
