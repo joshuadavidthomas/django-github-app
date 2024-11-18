@@ -89,8 +89,11 @@ def tests(session, django):
         session.install(f"django=={django}")
 
     command = ["python", "-m", "pytest"]
-    if session.posargs and all(arg for arg in session.posargs):
-        command.append(*session.posargs)
+    if session.posargs:
+        args = []
+        for arg in session.posargs:
+            args.extend(arg.split(" "))
+        command.extend(args)
     session.run(*command)
 
 
@@ -106,7 +109,15 @@ def coverage(session):
     )
 
     try:
-        session.run("python", "-m", "pytest", "--cov", "--cov-report=")
+        command = ["python", "-m", "pytest", "--cov", "--cov-report="]
+        if session.posargs:
+            args = []
+            for arg in session.posargs:
+                args.extend(arg.split(" "))
+            command.extend(args)
+        if "--integration" not in command:
+            command.append("--cov-fail-under=99")
+        session.run(*command)
     finally:
         # 0 -> OK
         # 2 -> code coverage percent unmet

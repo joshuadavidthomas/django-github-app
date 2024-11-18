@@ -26,6 +26,9 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
   - `aget_repos`/`get_repos` for retrieving all repositories accessible to an app installation.
 - Added `get_gh_client` model method to `Installation` model.
 - Added `aget_repos`/`get_repos` model method to `installation`
+- Added `arefresh_from_gh`/`refresh_from_gh` model methods to `Installation` model for syncing local data with GitHub.
+- Created a new management command namespace, `python manage.py github`, for all django-github-app management commands.
+- Added a new management command to `github` namespace, `python manage.py github import-app`, for importing an existing GitHub App and installation.
 
 ## [0.1.0]
 

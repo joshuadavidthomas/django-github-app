@@ -65,6 +65,31 @@ jobs:
         if: ${{ contains(needs.*.result, 'failure') }}
         run: exit 1
 
+  integration:
+    runs-on: ubuntu-latest
+    environment: integration
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          version: ${{ env.UV_VERSION }}
+
+      - name: Run tests with integration tests enabled
+        env:
+          TEST_ACCOUNT_NAME: ${{ vars.TEST_ACCOUNT_NAME }}
+          TEST_ACCOUNT_TYPE: ${{ vars.TEST_ACCOUNT_TYPE }}
+          TEST_APP_ID: ${{ vars.TEST_APP_ID }}
+          TEST_CLIENT_ID: ${{ vars.TEST_CLIENT_ID }}
+          TEST_INSTALLATION_ID: ${{ vars.TEST_INSTALLATION_ID }}
+          TEST_NAME: ${{ vars.TEST_NAME }}
+          TEST_PRIVATE_KEY: ${{ secrets.TEST_PRIVATE_KEY }}
+          TEST_WEBHOOK_SECRET: ${{ secrets.TEST_WEBHOOK_SECRET }}
+        run: |
+          uv run nox --session "coverage" -- --integration
+
   types:
     runs-on: ubuntu-latest
     steps:
