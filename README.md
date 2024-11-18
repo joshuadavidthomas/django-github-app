@@ -413,6 +413,7 @@ The library will automatically detect and read the key file if a path is provide
 
 ```python
 from pathlib import Path
+
 from environs import Env
 
 env = Env()
