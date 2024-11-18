@@ -153,7 +153,7 @@ The library is async-only at the moment (following gidgethub), with sync support
    }
    ```
 
-3. Import your existing GitHub App by using the provided management command.
+3. Import your existing GitHub App by using the `github import-app` management command.
 
    ```bash
    python manage.py github import-app --type user --name <username> --installation-id 123456
