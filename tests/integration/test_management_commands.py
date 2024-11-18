@@ -80,3 +80,23 @@ def test_import_app_management_command(settings):
         len(installation.get_repos())
         == Repository.objects.filter(installation=installation).count()
     )
+
+
+def test_import_app_transaction(settings, monkeypatch):
+    def mock_create_from_gh_data(*args, **kwargs):
+        raise ValueError
+
+    monkeypatch.setattr(
+        Repository.objects, "create_from_gh_data", mock_create_from_gh_data
+    )
+
+    with pytest.raises(ValueError):
+        import_app(
+            type=settings.account_type,
+            name=settings.account_name,
+            installation_id=int(settings.installation_id),
+        )
+
+    assert not Installation.objects.filter(
+        installation_id=settings.installation_id
+    ).exists()
