@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 from typing import Any
 
+from django.db import transaction
 from django_typer.management import Typer
 from typer import Option
 
@@ -34,7 +35,8 @@ def import_app(
     """
     Import an existing GitHub App to database Models.
     """
-    installation = Installation.objects.create(installation_id=installation_id)
-    installation.refresh_from_gh(account_type=type, account_name=name)
-    repository_data = installation.get_repos()
-    Repository.objects.create_from_gh_data(repository_data, installation)
+    with transaction.atomic():
+        installation = Installation.objects.create(installation_id=installation_id)
+        installation.refresh_from_gh(account_type=type, account_name=name)
+        repository_data = installation.get_repos()
+        Repository.objects.create_from_gh_data(repository_data, installation)

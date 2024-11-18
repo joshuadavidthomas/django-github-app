@@ -18,6 +18,10 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Fixed
+
+- `github import-app` management command is now wrapped in an atomic transaction, in case any import steps fail.
+
 ## [0.2.0]
 
 ### Added
