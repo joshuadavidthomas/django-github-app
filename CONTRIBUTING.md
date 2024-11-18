@@ -20,7 +20,7 @@ We adhere to Django's Code of Conduct in all interactions and expect all contrib
 
 ### `Justfile`
 
-The repository includes a `Justfile` that provides all common development tasks with a consistent interface. Running `just` without arguments shows all available commands and their descriptions:
+The repository includes a `Justfile` that provides all common development tasks with a consistent interface. Running `just` without arguments shows all available commands and their descriptions.
 
 <!-- [[[cog
 import subprocess
@@ -74,7 +74,7 @@ Alternatively, any Python package manager that supports installing from `pyproje
 
 1. Fork the repository and clone it locally.
 
-2. Use `uv` to bootstrap your development environment:
+2. Use `uv` to bootstrap your development environment.
 
    ```bash
    uv python install
@@ -102,7 +102,7 @@ uv run nox --session tests
 # just testall
 ```
 
-Both can be passed additional arguments that will be provided to `pytest`:
+Both can be passed additional arguments that will be provided to `pytest`.
 
 ```bash
 uv run nox --session test -- -v --last-failed
@@ -241,7 +241,7 @@ Configuration for these tools can be found in:
 
 ## Continuous Integration
 
-This project uses GitHub Actions for CI/CD. The workflows can be found in [`.github/workflows/`](.github/workflows/):
+This project uses GitHub Actions for CI/CD. The workflows can be found in [`.github/workflows/`](.github/workflows/).
 
 - [`test.yml`](.github/workflows/test.yml) - Runs on pushes to the `main` branch and on all PRs
   - Tests across Python/Django version matrix
