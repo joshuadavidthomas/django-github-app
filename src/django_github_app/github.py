@@ -86,14 +86,8 @@ class SyncGitHubAPI(AsyncGitHubAPI):
 class GitHubAPIEndpoint(Enum):
     INSTALLATION_REPOS = "/installation/repositories"
     ORG_APP_INSTALLATION = "/orgs/{org}/installation"
-    ORG_APP_INSTALLATIONS = "/orgs/{org}/installations"
-    REPO_APP_INSTALLATION = "/repos/{owner}/{repo}/installation"
-    REPO_APP_INSTALLATIONS = "/repos/{owner}/{repo}/installations"
-    REPO_ISSUE = "/repos/{owner}/{repo}/issues/{issue_number}"
     REPO_ISSUES = "/repos/{owner}/{repo}/issues"
     USER_APP_INSTALLATION = "/users/{username}/installation"
-    USER_APP_INSTALLATIONS = "/users/{username}/installations"
-    USER_INSTALLATIONS = "/user/installations"
 
 
 @dataclass(frozen=True, slots=True)
