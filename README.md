@@ -92,76 +92,76 @@ The library is async-only at the moment (following gidgethub), with sync support
 >
 > django-github-app will automatically detect if `GITHUB_APP["PRIVATE_KEY"]` is a path and load the file contents.
 
-   **Option A: Create a new Github App**
+### Create a New GitHub App
 
-   1. Register a new GitHub App, following [these instructions](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) from the GitHub Docs. For a more detailed tutorial, there is also [this page](https://docs.github.com/en/apps/creating-github-apps/writing-code-for-a-github-app/building-a-github-app-that-responds-to-webhook-events) -- in particular the section on [Setup](https://docs.github.com/en/apps/creating-github-apps/writing-code-for-a-github-app/building-a-github-app-that-responds-to-webhook-events#setup).
+1. Register a new GitHub App, following [these instructions](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) from the GitHub Docs. For a more detailed tutorial, there is also [this page](https://docs.github.com/en/apps/creating-github-apps/writing-code-for-a-github-app/building-a-github-app-that-responds-to-webhook-events) -- in particular the section on [Setup](https://docs.github.com/en/apps/creating-github-apps/writing-code-for-a-github-app/building-a-github-app-that-responds-to-webhook-events#setup).
 
-      For the Private Key, you will be able to use either the file contents or the file itself to authenticate with GitHub, as described in the note above.
+   For the Private Key, you will be able to use either the file contents or the file itself to authenticate with GitHub, as described in the note above.
 
-      For the Webhook URL, use the endpoint you configured in step 4 (e.g., `<your project's base url>/gh/`).
+   For the Webhook URL, use the endpoint you configured in step 4 (e.g., `<your project's base url>/gh/`).
 
-   2. Configure your Django settings by adding the following dictionary to your `DJANGO_SETTINGS_MODULE`, filling in the values from the previous setup.
+2. Configure your Django settings by adding the following dictionary to your `DJANGO_SETTINGS_MODULE`, filling in the values from the previous setup.
 
-      ```python
-      import environs
+   ```python
+   import environs
 
-      env = environs.Env()
-      env.read_env()
+   env = environs.Env()
+   env.read_env()
 
-      GITHUB_APP = {
-          "APP_ID": env.int("GITHUB_APP_ID"),
-          "CLIENT_ID": env.str("GITHUB_CLIENT_ID"),
-          "NAME": env.str("GITHUB_NAME"),
-          "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
-          "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
-      }
-      ```
+   GITHUB_APP = {
+       "APP_ID": env.int("GITHUB_APP_ID"),
+       "CLIENT_ID": env.str("GITHUB_CLIENT_ID"),
+       "NAME": env.str("GITHUB_NAME"),
+       "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
+       "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
+   }
+   ```
 
-   3. Install the GitHub App on your account:
+3. Install the GitHub App on your account:
 
-      - Go to your GitHub App's settings
-      - Click "Install App"
-      - Select the account to install it on
-      - Choose which repositories to give it access to
+   - Go to your GitHub App's settings
+   - Click "Install App"
+   - Select the account to install it on
+   - Choose which repositories to give it access to
 
-      When you install the app, django-github-app will automatically create the necessary `Installation` and `Repository` models when it receives the `installation.created` webhook event.
+   When you install the app, django-github-app will automatically create the necessary `Installation` and `Repository` models when it receives the `installation.created` webhook event.
 
-   **Option B: Use an existing GitHub App and Installation**
+### Use an Existing GitHub App and Installation
 
-   1. Collect your existing app and installation's information:
+1. Collect your existing app and installation's information:
 
-      - All GitHub App information and credentials listed above
-        - Make sure the Webhook URL matches the endpoint configured in step 4
-      - Account type where installed (`org` or `user`)
-      - Account name (username or organization name)
-      - Installation ID (e.g. `https://github.com/settings/installations/<ID>` for an user installation)
+   - All GitHub App information and credentials listed above
+     - Make sure the Webhook URL matches the endpoint configured in step 4
+   - Account type where installed (`org` or `user`)
+   - Account name (username or organization name)
+   - Installation ID (e.g. `https://github.com/settings/installations/<ID>` for an user installation)
 
-   2. Configure your Django settings by adding the following dictionary to your `DJANGO_SETTINGS_MODULE`, filling in the values from your existing GitHub App.
+2. Configure your Django settings by adding the following dictionary to your `DJANGO_SETTINGS_MODULE`, filling in the values from your existing GitHub App.
 
-      ```python
-      import environs
+   ```python
+   import environs
 
-      env = environs.Env()
-      env.read_env()
+   env = environs.Env()
+   env.read_env()
 
-      GITHUB_APP = {
-          "APP_ID": env.int("GITHUB_APP_ID"),
-          "CLIENT_ID": env.str("GITHUB_CLIENT_ID"),
-          "NAME": env.str("GITHUB_NAME"),
-          "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
-          "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
-      }
-      ```
+   GITHUB_APP = {
+       "APP_ID": env.int("GITHUB_APP_ID"),
+       "CLIENT_ID": env.str("GITHUB_CLIENT_ID"),
+       "NAME": env.str("GITHUB_NAME"),
+       "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
+       "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
+   }
+   ```
 
-   3. Import your existing GitHub App by using the provided management command:
+3. Import your existing GitHub App by using the provided management command:
 
-      ```bash
-      python manage.py github import-app --type user --name <username> --installation-id 123456
+   ```bash
+   python manage.py github import-app --type user --name <username> --installation-id 123456
 
-      # or for you thrill seekers and early adopters
+   # or for you thrill seekers and early adopters
 
-      uv run manage.py github import-app --type user --name <username> --installation-id 123456
-      ```
+   uv run manage.py github import-app --type user --name <username> --installation-id 123456
+   ```
 
 ## Getting Started
 
