@@ -6,6 +6,7 @@ from typing import Any
 from django_typer.management import Typer
 from typer import Option
 
+from django_github_app.models import AccountType
 from django_github_app.models import Installation
 from django_github_app.models import Repository
 
@@ -19,7 +20,7 @@ def github(): ...
 @cli.command()
 def import_app(
     type: Annotated[
-        str,
+        AccountType,
         Option(help="The type of account the GitHub App is installed on"),
     ],
     name: Annotated[
