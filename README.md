@@ -259,6 +259,7 @@ async with AsyncGitHubAPI(installation_id=installation.installation_id) as gh:
 
 - `get_gh_client`: Get configured API client for this installation
 - `aget_access_token`/`get_access_token`: Generate GitHub access token for API calls
+- `arefresh_from_gh`/`refresh_from_gh`: Update an installation's data from GitHub
 - `aget_repos`/`get_repos`: Fetch installation's accessible repositories
 
 #### `Repository`
