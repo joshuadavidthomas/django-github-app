@@ -13,6 +13,7 @@ permissions:
 jobs:
   test:
     uses: ./.github/workflows/test.yml
+    secrets: inherit
 
   pypi:
     runs-on: ubuntu-latest
