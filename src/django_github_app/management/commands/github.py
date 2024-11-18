@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Annotated
 from typing import Any
-from typing import Literal
 
 from django_typer.management import Typer
 from typer import Option
@@ -13,10 +12,14 @@ from django_github_app.models import Repository
 cli: Typer[..., Any] = Typer(help="Manage your GitHub App")
 
 
+@cli.callback()
+def github(): ...
+
+
 @cli.command()
 def import_app(
     type: Annotated[
-        Literal["user", "org"],
+        str,
         Option(help="The type of account the GitHub App is installed on"),
     ],
     name: Annotated[

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Literal
 
 import pytest
+from django.core.management import call_command
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
@@ -49,6 +50,27 @@ def test_import_app(settings):
         type=settings.account_type,
         name=settings.account_name,
         installation_id=int(settings.installation_id),
+    )
+
+    installation = Installation.objects.get(installation_id=settings.installation_id)
+
+    assert installation.data
+    assert (
+        len(installation.get_repos())
+        == Repository.objects.filter(installation=installation).count()
+    )
+
+
+def test_import_app_management_command(settings):
+    call_command(
+        "github",
+        "import-app",
+        "--type",
+        settings.account_type,
+        "--name",
+        settings.account_name,
+        "--installation-id",
+        settings.installation_id,
     )
 
     installation = Installation.objects.get(installation_id=settings.installation_id)
