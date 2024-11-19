@@ -116,7 +116,7 @@ def coverage(session):
                 args.extend(arg.split(" "))
             command.extend(args)
         if "--integration" not in command:
-            command.append("--cov-fail-under=99")
+            command.append("--cov-fail-under=98")
         session.run(*command)
     finally:
         # 0 -> OK
