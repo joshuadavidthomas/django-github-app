@@ -39,7 +39,9 @@ class CommandRunner:
                 args.extend([f"--{key}", self._quote_arg(str(value))])
         return " ".join(args)
 
-    def run(self, cmd: str, name: str, *args: str, **params: Any) -> str:
+    def run(
+        self, cmd: str, name: str, *args: str, force_run: bool = False, **params: Any
+    ) -> str:
         command_parts = [cmd, name]
         command_parts.extend(self._quote_arg(arg) for arg in args)
         if params:
@@ -47,11 +49,11 @@ class CommandRunner:
         command = " ".join(command_parts)
         print(
             f"would run command: {command}"
-            if self.dry_run
+            if self.dry_run and not force_run
             else f"running command: {command}"
         )
 
-        if self.dry_run:
+        if self.dry_run and not force_run:
             return ""
 
         success, output = self._run_command(command)
@@ -85,12 +87,14 @@ def init_runner(dry_run: bool = False) -> None:
 
 
 def get_current_version():
-    tags = run("git", "tag", "--sort=-creatordate").splitlines()
+    tags = run("git", "tag", "--sort=-creatordate", force_run=True).splitlines()
     return tags[0] if tags else ""
 
 
 def get_new_version(version: Version, tag: Tag | None = None) -> str:
-    output = run("bumpver", "update", dry=True, tag=tag, **{version: True})
+    output = run(
+        "bumpver", "update", dry=True, tag=tag, force_run=True, **{version: True}
+    )
     if match := re.search(r"New Version: (.+)", output):
         return match.group(1)
     return typer.prompt("Failed to get new version. Enter manually")
@@ -163,6 +167,7 @@ def version(
         f"{current_version}..HEAD",
         "--pretty=format:'- `%h`: %s'",
         "--reverse",
+        force_run=True,
     )
 
     new_version = get_new_version(version, tag)
@@ -198,7 +203,7 @@ def release(
 ):
     init_runner(dry_run)
 
-    current_branch = run("git", "branch", "--show-current").strip()
+    current_branch = run("git", "branch", "--show-current", force_run=True).strip()
     if current_branch != "main" and not force:
         print(
             f"Must be on main branch to create release (currently on {current_branch})"
