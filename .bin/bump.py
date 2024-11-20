@@ -21,15 +21,13 @@ from typer import Option
 
 
 class CommandRunner:
-    def run_command(self, command: str) -> tuple[bool, str]:
-        print(f"about to run command: {command}")
-        try:
-            output = subprocess.check_output(
-                command, shell=True, text=True, stderr=subprocess.STDOUT
-            ).strip()
-            return True, output
-        except subprocess.CalledProcessError as e:
-            return False, e.output
+    def __init__(self, dry_run: bool = False):
+        self.dry_run = dry_run
+
+    def _quote_arg(self, arg: str) -> str:
+        if " " in arg and not (arg.startswith('"') or arg.startswith("'")):
+            return f"'{arg}'"
+        return arg
 
     def _build_command_args(self, **params: Any) -> str:
         args = []
@@ -38,40 +36,64 @@ class CommandRunner:
             if isinstance(value, bool) and value:
                 args.append(f"--{key}")
             elif value is not None:
-                args.extend([f"--{key}", str(value)])
+                args.extend([f"--{key}", self._quote_arg(str(value))])
         return " ".join(args)
 
     def run(self, cmd: str, name: str, *args: str, **params: Any) -> str:
         command_parts = [cmd, name]
-        command_parts.extend(args)
+        command_parts.extend(self._quote_arg(arg) for arg in args)
         if params:
             command_parts.append(self._build_command_args(**params))
-        success, output = self.run_command(" ".join(command_parts))
+        command = " ".join(command_parts)
+        print(
+            f"would run command: {command}"
+            if self.dry_run
+            else f"running command: {command}"
+        )
+
+        if self.dry_run:
+            return ""
+
+        success, output = self._run_command(command)
         if not success:
             print(f"{cmd} failed: {output}", file=sys.stderr)
             raise typer.Exit(1)
         return output
 
-
-_runner = CommandRunner()
-
-
-def bumpver(name: str, *args: str, **params: Any) -> str:
-    return _runner.run("bumpver", name, *args, **params)
-
-
-def git(name: str, *args: str, **params: Any) -> str:
-    return _runner.run("git", name, *args, **params)
+    def _run_command(self, command: str) -> tuple[bool, str]:
+        try:
+            output = subprocess.check_output(
+                command, shell=True, text=True, stderr=subprocess.STDOUT
+            ).strip()
+            return True, output
+        except subprocess.CalledProcessError as e:
+            return False, e.output
 
 
-def gh(name: str, *args: str, **params: Any) -> str:
-    return _runner.run("gh", name, *args, **params)
+_runner: CommandRunner | None = None
 
 
-def update_CHANGELOG(new_version: str) -> None:
-    repo_url = git("remote", "get-url", "origin").strip().replace(".git", "")
+def run(cmd: str, name: str, *args: str, **params: Any) -> str:
+    if _runner is None:
+        raise RuntimeError("CommandRunner not initialized. Call init_runner first.")
+    return _runner.run(cmd, name, *args, **params)
+
+
+def init_runner(dry_run: bool = False) -> None:
+    global _runner
+    _runner = CommandRunner(dry_run)
+
+
+def get_new_version(version: Version, tag: Tag | None = None) -> str:
+    output = run("bumpver", "update", dry=True, tag=tag, **{version: True})
+    if match := re.search(r"New Version: (.+)", output):
+        return match.group(1)
+    return typer.prompt("Failed to get new version. Enter manually")
+
+
+def update_changelog(new_version: str) -> None:
+    repo_url = run("git", "remote", "get-url", "origin").strip().replace(".git", "")
     changelog = Path("CHANGELOG.md")
-
     content = changelog.read_text()
 
     content = re.sub(
@@ -95,9 +117,8 @@ def update_CHANGELOG(new_version: str) -> None:
     )
 
     changelog.write_text(content)
-
-    git("add", ".")
-    git("commit", "-m", f"'update CHANGELOG for version {new_version}'")
+    run("git", "add", ".")
+    run("git", "commit", "-m", f"update CHANGELOG for version {new_version}")
 
 
 class Version(str, Enum):
@@ -120,33 +141,39 @@ def main(
     ],
     tag: Annotated[Tag, Option("--tag", "-t", help="The tag to add to the new version")]
     | None = None,
+    dry_run: Annotated[
+        bool, Option("--dry-run", "-d", help="Show commands without executing")
+    ] = False,
 ):
-    latest_tag = git("tag", "--sort=-creatordate", "|", "head -n 1")
-    changes = git(
-        "log", f"{latest_tag}..HEAD", "--pretty=format:'- `%h`: %s'", "--reverse"
+    init_runner(dry_run)
+
+    tags = run("git", "tag", "--sort=-creatordate").splitlines()
+    latest_tag = tags[0] if tags else ""
+    changes = run(
+        "git", "log", f"{latest_tag}..HEAD", "--pretty=format:'- `%h`: %s'", "--reverse"
     )
-    new_version = re.search(
-        r"New Version: (.+)", bumpver("update", dry=True, tag=tag, **{version: True})
-    )
-    if new_version is None:
-        new_version = typer.prompt(
-            "Failed to get the new version from `bumpver`. Please enter it manually"
-        )
-    else:
-        new_version = new_version.group(1)
+
+    new_version = get_new_version(version, tag)
     release_branch = f"release-v{new_version}"
-    git("checkout", "-b", release_branch)
-    bumpver("update", tag=tag, **{version: True})
-    title = git("log", "-1", "--pretty=%s")
-    update_CHANGELOG(new_version)
-    git("push", "--set-upstream", "'origin'", f"'{release_branch}'")
-    gh(
+
+    run("git", "checkout", "-b", release_branch)
+    run("bumpver", "update", tag=tag, **{version: True})
+    update_changelog(new_version)
+
+    run("git", "push", "--set-upstream", "origin", release_branch)
+    title = run("git", "log", "-1", "--pretty=%s")
+    run(
+        "gh",
         "pr",
         "create",
-        "--base 'main'",
-        f"--head '{release_branch}'",
-        f"--title '{title}'",
-        f"--body '{changes}'",
+        "--base",
+        "main",
+        "--head",
+        release_branch,
+        "--title",
+        title,
+        "--body",
+        changes,
     )
 
 
