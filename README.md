@@ -270,7 +270,7 @@ async def create_comment(repo_full_name: str):
 
 #### `SyncGitHubAPI`
 
-For traditional Django applications running under WSGI, the sync client provides a straightforward way to interact with GitHub's API without dealing with async/await syntax or async runtimes.
+For traditional Django applications running under WSGI, the sync client provides a straightforward way to interact with GitHub's API without dealing with `async`/`await`.
 
 ```python
 from django_github_app.github import SyncGitHubAPI
