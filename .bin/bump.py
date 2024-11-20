@@ -144,6 +144,18 @@ def update_changelog(new_version: str) -> None:
     run("git", "commit", "-m", f"update CHANGELOG for version {new_version}")
 
 
+def update_uv_lock(new_version: str) -> None:
+    run("uv", "lock")
+
+    changes = run("git", "status", "--porcelain", force_run=True)
+    if "uv.lock" not in changes:
+        print("No changes to uv.lock, skipping commit")
+        return
+
+    run("git", "add", "uv.lock")
+    run("git", "commit", "-m", f"update uv.lock for version {new_version}")
+
+
 cli = typer.Typer()
 
 
@@ -187,9 +199,14 @@ def version(
     new_version = get_new_version(version, tag)
     release_branch = f"release-v{new_version}"
 
-    run("git", "checkout", "-b", release_branch)
+    try:
+        run("git", "checkout", "-b", release_branch)
+    except Exception:
+        run("git", "checkout", release_branch)
+
     run("bumpver", "update", tag=tag, **{version: True})
     update_changelog(new_version)
+    update_uv_lock(new_version)
 
     run("git", "push", "--set-upstream", "origin", release_branch)
     title = run("git", "log", "-1", "--pretty=%s")
