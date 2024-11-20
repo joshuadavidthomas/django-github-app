@@ -12,4 +12,8 @@ fmt:
 
 [no-cd]
 @bump *ARGS:
-    {{ justfile_directory() }}/.bin/bump.py {{ ARGS }}
+    {{ justfile_directory() }}/.bin/bump.py version {{ ARGS }}
+
+[no-cd]
+@release *ARGS:
+    {{ justfile_directory() }}/.bin/bump.py release {{ ARGS }}

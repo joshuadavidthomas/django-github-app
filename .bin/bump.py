@@ -84,6 +84,11 @@ def init_runner(dry_run: bool = False) -> None:
     _runner = CommandRunner(dry_run)
 
 
+def get_current_version():
+    tags = run("git", "tag", "--sort=-creatordate").splitlines()
+    return tags[0] if tags else ""
+
+
 def get_new_version(version: Version, tag: Tag | None = None) -> str:
     output = run("bumpver", "update", dry=True, tag=tag, **{version: True})
     if match := re.search(r"New Version: (.+)", output):
@@ -121,6 +126,9 @@ def update_changelog(new_version: str) -> None:
     run("git", "commit", "-m", f"update CHANGELOG for version {new_version}")
 
 
+cli = typer.Typer()
+
+
 class Version(str, Enum):
     MAJOR = "major"
     MINOR = "minor"
@@ -135,7 +143,8 @@ class Tag(str, Enum):
     FINAL = "final"
 
 
-def main(
+@cli.command()
+def version(
     version: Annotated[
         Version, Option("--version", "-v", help="The tag to add to the new version")
     ],
@@ -147,10 +156,13 @@ def main(
 ):
     init_runner(dry_run)
 
-    tags = run("git", "tag", "--sort=-creatordate").splitlines()
-    latest_tag = tags[0] if tags else ""
+    current_version = get_current_version()
     changes = run(
-        "git", "log", f"{latest_tag}..HEAD", "--pretty=format:'- `%h`: %s'", "--reverse"
+        "git",
+        "log",
+        f"{current_version}..HEAD",
+        "--pretty=format:'- `%h`: %s'",
+        "--reverse",
     )
 
     new_version = get_new_version(version, tag)
@@ -177,5 +189,48 @@ def main(
     )
 
 
+@cli.command()
+def release(
+    dry_run: Annotated[
+        bool, Option("--dry-run", "-d", help="Show commands without executing")
+    ] = False,
+    force: Annotated[bool, Option("--force", "-f", help="Skip safety checks")] = False,
+):
+    init_runner(dry_run)
+
+    current_branch = run("git", "branch", "--show-current").strip()
+    if current_branch != "main" and not force:
+        print(
+            f"Must be on main branch to create release (currently on {current_branch})"
+        )
+        raise typer.Exit(1)
+
+    if run("git", "status", "--porcelain") and not force:
+        print("Working directory is not clean. Commit or stash changes first.")
+        raise typer.Exit(1)
+
+    run("git", "fetch", "origin", "main")
+    local_sha = run("git", "rev-parse", "@").strip()
+    remote_sha = run("git", "rev-parse", "@{u}").strip()
+    if local_sha != remote_sha and not force:
+        print("Local main is not up to date with remote. Pull changes first.")
+        raise typer.Exit(1)
+
+    current_version = get_current_version()
+
+    try:
+        run("gh", "release", "view", f"v{current_version}")
+        if not force:
+            print(f"Release v{current_version} already exists!")
+            raise typer.Exit(1)
+    except Exception:
+        pass
+
+    if not force and not dry_run:
+        typer.confirm(f"Create release v{current_version}?", abort=True)
+
+    run("gh", "release", "create", f"v{current_version}", "--generate-notes")
+
+
 if __name__ == "__main__":
-    typer.run(main)
+    cli()
