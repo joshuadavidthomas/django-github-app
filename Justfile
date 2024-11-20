@@ -2,6 +2,7 @@ set dotenv-load := true
 set unstable := true
 
 mod docs ".just/documentation.just"
+mod project ".just/project.just"
 
 [private]
 default:
