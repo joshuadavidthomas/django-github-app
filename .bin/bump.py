@@ -121,6 +121,10 @@ def main(
     tag: Annotated[Tag, Option("--tag", "-t", help="The tag to add to the new version")]
     | None = None,
 ):
+    latest_tag = git("tag", "--sort=-creatordate", "|", "head -n 1")
+    changes = git(
+        "log", f"{latest_tag}..HEAD", "--pretty=format:'- `%h`: %s'", "--reverse"
+    )
     new_version = re.search(
         r"New Version: (.+)", bumpver("update", dry=True, tag=tag, **{version: True})
     )
@@ -141,7 +145,8 @@ def main(
         "create",
         "--base 'main'",
         f"--head '{release_branch}'",
-        f" --title '{title}'",
+        f"--title '{title}'",
+        f"--body '{changes}'",
     )
 
 
