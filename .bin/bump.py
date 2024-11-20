@@ -97,7 +97,7 @@ def update_CHANGELOG(new_version: str) -> None:
     changelog.write_text(content)
 
     git("add", ".")
-    git("commit", "-m", f"update CHANGELOG for version {new_version}")
+    git("commit", "-m", f"'update CHANGELOG for version {new_version}'")
 
 
 class Version(str, Enum):
