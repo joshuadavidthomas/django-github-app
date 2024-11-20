@@ -4,7 +4,6 @@ import datetime
 from enum import Enum
 from typing import Any
 
-from asgiref.sync import async_to_sync
 from django.db import models
 from django.utils import timezone
 from gidgethub import abc
@@ -12,6 +11,7 @@ from gidgethub import sansio
 from gidgethub.apps import get_installation_access_token
 from gidgethub.apps import get_jwt
 
+from ._sync import async_to_sync_method
 from ._typing import override
 from .conf import app_settings
 from .github import AsyncGitHubAPI
@@ -27,9 +27,6 @@ class EventLogManager(models.Manager["EventLog"]):
             received_at=timezone.now(),
         )
 
-    def create_from_event(self, event: sansio.Event):
-        return async_to_sync(self.acreate_from_event)(event)
-
     async def acleanup_events(
         self, days_to_keep: int = app_settings.DAYS_TO_KEEP_EVENTS
     ):
@@ -38,8 +35,11 @@ class EventLogManager(models.Manager["EventLog"]):
         ).adelete()
         return deleted
 
-    def cleanup_events(self, days_to_keep: int = 7):
-        return async_to_sync(self.acleanup_events)(days_to_keep)
+
+EventLogManager.create_from_event = async_to_sync_method(
+    EventLogManager.acreate_from_event
+)
+EventLogManager.cleanup_events = async_to_sync_method(EventLogManager.acleanup_events)
 
 
 class EventLog(models.Model):
@@ -77,14 +77,8 @@ class InstallationManager(models.Manager["Installation"]):
 
             return installation
 
-    def create_from_event(self, event: sansio.Event):
-        return async_to_sync(self.acreate_from_event)(event)
-
     async def acreate_from_gh_data(self, data: dict[str, str]):
         return await self.acreate(installation_id=data["id"], data=data)
-
-    def create_from_gh_data(self, data: dict[str, str]):
-        return async_to_sync(self.acreate_from_gh_data)(data)
 
     async def aget_from_event(self, event: sansio.Event):
         try:
@@ -93,8 +87,16 @@ class InstallationManager(models.Manager["Installation"]):
         except (Installation.DoesNotExist, KeyError):
             return None
 
-    def get_from_event(self, event: sansio.Event):
-        return async_to_sync(self.aget_from_event)(event)
+
+InstallationManager.create_from_event = async_to_sync_method(
+    InstallationManager.acreate_from_event
+)
+InstallationManager.create_from_gh_data = async_to_sync_method(
+    InstallationManager.acreate_from_gh_data
+)
+InstallationManager.get_from_event = async_to_sync_method(
+    InstallationManager.aget_from_event
+)
 
 
 class InstallationStatus(models.IntegerChoices):
@@ -147,9 +149,6 @@ class Installation(models.Model):
         )
         return data.get("token")
 
-    def get_access_token(self, gh: abc.GitHubAPI):  # pragma: no cover
-        return async_to_sync(self.aget_access_token)(gh)
-
     async def arefresh_from_gh(self, account_type: AccountType, account_name: str):
         match account_type:
             case AccountType.ORG:
@@ -171,9 +170,6 @@ class Installation(models.Model):
         self.data = data
         await self.asave()
 
-    def refresh_from_gh(self, account_type: AccountType, account_name: str):
-        return async_to_sync(self.arefresh_from_gh)(account_type, account_name)
-
     async def aget_repos(self, params: dict[str, Any] | None = None):
         url = GitHubAPIUrl(
             GitHubAPIEndpoint.INSTALLATION_REPOS,
@@ -186,12 +182,14 @@ class Installation(models.Model):
             ]
         return repos
 
-    def get_repos(self, params: dict[str, Any] | None = None):
-        return async_to_sync(self.aget_repos)(params)
-
     @property
     def app_slug(self):
         return self.data.get("app_slug", app_settings.SLUG)
+
+
+Installation.get_access_token = async_to_sync_method(Installation.aget_access_token)
+Installation.refresh_from_gh = async_to_sync_method(Installation.arefresh_from_gh)
+Installation.get_repos = async_to_sync_method(Installation.aget_repos)
 
 
 class RepositoryManager(models.Manager["Repository"]):
@@ -217,11 +215,6 @@ class RepositoryManager(models.Manager["Repository"]):
                 full_name=data["full_name"],
             )
 
-    def create_from_gh_data(
-        self, data: dict[str, str] | list[dict[str, str]], installation: Installation
-    ):
-        return async_to_sync(self.acreate_from_gh_data)(data, installation)
-
     async def aget_from_event(self, event: sansio.Event):
         try:
             repository_id = event.data["repository"]["id"]
@@ -229,8 +222,13 @@ class RepositoryManager(models.Manager["Repository"]):
         except Repository.DoesNotExist:
             return None
 
-    def get_from_event(self, event: sansio.Event):
-        return async_to_sync(self.aget_from_event)(event)
+
+RepositoryManager.create_from_gh_data = async_to_sync_method(
+    RepositoryManager.acreate_from_gh_data
+)
+RepositoryManager.get_from_event = async_to_sync_method(
+    RepositoryManager.aget_from_event
+)
 
 
 class Repository(models.Model):
@@ -266,9 +264,6 @@ class Repository(models.Model):
             issues = [issue async for issue in gh.getiter(url.full_url)]
         return issues
 
-    def get_issues(self, params: dict[str, Any] | None = None):
-        return async_to_sync(self.aget_issues)(params)
-
     @property
     def owner(self):
         return self.full_name.split("/")[0]
@@ -276,3 +271,6 @@ class Repository(models.Model):
     @property
     def repo(self):
         return self.full_name.split("/")[1]
+
+
+Repository.get_issues = async_to_sync_method(Repository.aget_issues)
