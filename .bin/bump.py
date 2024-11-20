@@ -69,8 +69,7 @@ def gh(name: str, *args: str, **params: Any) -> str:
 
 
 def update_CHANGELOG(new_version: str) -> None:
-    _, repo_url = git("remote", "get-url", "origin")
-    repo_url = repo_url.strip().replace(".git", "")
+    repo_url = git("remote", "get-url", "origin").strip().replace(".git", "")
     changelog = Path("CHANGELOG.md")
 
     content = changelog.read_text()
