@@ -205,11 +205,13 @@ def version(
         run("git", "checkout", release_branch)
 
     run("bumpver", "update", tag=tag, **{version: True})
+
+    title = run("git", "log", "-1", "--pretty=%s")
+
     update_changelog(new_version)
     update_uv_lock(new_version)
 
     run("git", "push", "--set-upstream", "origin", release_branch)
-    title = run("git", "log", "-1", "--pretty=%s")
     run(
         "gh",
         "pr",
