@@ -18,6 +18,10 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Added
+
+- Added `SyncGitHubAPI`, a synchronous implementation of `gidgethub.abc.GitHubAPI` for Django applications running under WSGI. Maintains the familiar gidgethub interface without requiring async/await.
+
 ## [0.2.1]
 
 ### Fixed

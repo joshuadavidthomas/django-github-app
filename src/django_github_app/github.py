@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Generator
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
@@ -11,10 +12,12 @@ from urllib.parse import urlencode
 import cachetools
 import gidgethub
 import httpx
+from asgiref.sync import async_to_sync
 from gidgethub import abc as gh_abc
 from gidgethub import sansio
 from uritemplate import variable
 
+from ._sync import async_to_sync_method
 from ._typing import override
 
 cache: cachetools.LRUCache[Any, Any] = cachetools.LRUCache(maxsize=500)
@@ -64,7 +67,7 @@ class AsyncGitHubAPI(gh_abc.GitHubAPI):
         url: str,
         headers: Mapping[str, str],
         body: bytes = b"",
-    ) -> tuple[int, Mapping[str, str], bytes]:
+    ) -> tuple[int, httpx.Headers, bytes]:
         response = await self._client.request(
             method, url, headers=dict(headers), content=body
         )
@@ -76,11 +79,62 @@ class AsyncGitHubAPI(gh_abc.GitHubAPI):
 
 
 class SyncGitHubAPI(AsyncGitHubAPI):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
+    __enter__ = async_to_sync_method(AsyncGitHubAPI.__aenter__)
+    __exit__ = async_to_sync_method(AsyncGitHubAPI.__aexit__)
+    getitem = async_to_sync_method(AsyncGitHubAPI.getitem)
+    getstatus = async_to_sync_method(AsyncGitHubAPI.getstatus)  # type: ignore[arg-type]
+    post = async_to_sync_method(AsyncGitHubAPI.post)
+    patch = async_to_sync_method(AsyncGitHubAPI.patch)
+    put = async_to_sync_method(AsyncGitHubAPI.put)
+    delete = async_to_sync_method(AsyncGitHubAPI.delete)  # type: ignore[arg-type]
+    graphql = async_to_sync_method(AsyncGitHubAPI.graphql)
+
+    @override  # type: ignore[override]
+    def sleep(self, seconds: float) -> None:
         raise NotImplementedError(
-            "SyncGitHubAPI is planned for a future release. For now, please use AsyncGitHubAPI with async/await."
+            "sleep() is not supported in SyncGitHubAPI due to abstractmethod"
+            "gidgethub.abc.GitHubAPI.sleep's async requirements. "
+            "Use time.sleep() directly instead."
         )
+
+    @override
+    def getiter(  # type: ignore[override]
+        self,
+        url: str,
+        url_vars: variable.VariableValueDict | None = {},
+        *,
+        accept: str = sansio.accept_format(),
+        jwt: str | None = None,
+        oauth_token: str | None = None,
+        extra_headers: dict[str, str] | None = None,
+        iterable_key: str | None = gh_abc.ITERABLE_KEY,
+    ) -> Generator[Any, None, None]:
+        data, more, _ = async_to_sync(super()._make_request)(
+            "GET",
+            url,
+            url_vars,
+            b"",
+            accept,
+            jwt=jwt,
+            oauth_token=oauth_token,
+            extra_headers=extra_headers,
+        )
+
+        if isinstance(data, dict) and iterable_key in data:
+            data = data[iterable_key]
+
+        yield from data
+
+        if more:
+            yield from self.getiter(
+                more,
+                url_vars,
+                accept=accept,
+                jwt=jwt,
+                oauth_token=oauth_token,
+                iterable_key=iterable_key,
+                extra_headers=extra_headers,
+            )
 
 
 class GitHubAPIEndpoint(Enum):

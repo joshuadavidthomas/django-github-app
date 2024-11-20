@@ -98,23 +98,18 @@ class TestBaseWebhookView:
         assert event.data == body
         assert event.delivery_id == delivery_id
 
-    # @pytest.mark.parametrize("github_api_class", [AsyncGitHubAPI, SyncGitHubAPI])
-    # def test_get_github_api_async(self, github_api_class, installation):
-    def test_get_github_api_async(self, installation):
+    @pytest.mark.parametrize(
+        "github_api_class",
+        [AsyncGitHubAPI, SyncGitHubAPI],
+    )
+    def test_get_github_api(self, github_api_class, installation):
         view = WebhookView()
-        view.github_api_class = AsyncGitHubAPI
+        view.github_api_class = github_api_class
 
         gh = view.get_github_api(installation)
 
-        assert isinstance(gh, AsyncGitHubAPI)
+        assert isinstance(gh, github_api_class)
         assert gh.installation_id == installation.installation_id
-
-    def test_get_github_api_sync(self, installation):
-        view = WebhookView()
-        view.github_api_class = SyncGitHubAPI
-
-        with pytest.raises(NotImplementedError):
-            view.get_github_api(installation)
 
     def test_get_response(self, webhook_request):
         view = WebhookView()

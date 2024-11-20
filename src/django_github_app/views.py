@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import Coroutine
@@ -107,8 +108,8 @@ class SyncWebhookView(BaseWebhookView[SyncGitHubAPI]):
         event_log = EventLog.objects.create_from_event(event)
         installation = Installation.objects.get_from_event(event)
 
-        with self.get_github_api(installation) as gh:  # type: ignore
-            gh.sleep(1)
+        with self.get_github_api(installation) as gh:
+            time.sleep(1)
             self.router.dispatch(event, gh)  # type: ignore
 
         return self.get_response(event_log)
