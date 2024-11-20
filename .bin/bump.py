@@ -165,7 +165,7 @@ def version(
         "git",
         "log",
         f"{current_version}..HEAD",
-        "--pretty=format:'- `%h`: %s'",
+        "--pretty=format:- `%h`: %s",
         "--reverse",
         force_run=True,
     )
