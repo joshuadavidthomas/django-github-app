@@ -9,9 +9,9 @@
 
 A Django toolkit providing the batteries needed to build GitHub Apps - from webhook handling to API integration.
 
-Built on [gidgethub](https://github.com/gidgethub/gidgethub) and [httpx](https://github.com/encode/httpx), django-github-app handles the boilerplate of GitHub App development. Features include webhook event routing and storage, an async-first API client with automatic authentication, and models for managing GitHub App installations, repositories, and webhook event history.
+Built on [gidgethub](https://github.com/gidgethub/gidgethub) and [httpx](https://github.com/encode/httpx), django-github-app handles the boilerplate of GitHub App development. Features include webhook event routing and storage, API client with automatic authentication, and models for managing GitHub App installations, repositories, and webhook event history.
 
-The library is async-only at the moment (following gidgethub), with sync support planned to better integrate with the majority of Django projects.
+The library primarily uses async features (following gidgethub), with sync support in development to better integrate with the majority of Django projects.
 
 ## Requirements
 
@@ -239,7 +239,13 @@ For more details about how `gidgethub.sansio.Event` and webhook routing work, se
 
 ### GitHub API Client
 
-The library provides `AsyncGitHubAPI`, an implementation of gidgethub's abstract `GitHubAPI` class that handles authentication and uses [httpx](https://github.com/encode/httpx) as its HTTP client. While it's automatically provided in webhook handlers, you can also use it directly in your code.
+The library provides `AsyncGitHubAPI` and `SyncGitHubAPI`, implementations of gidgethub's abstract `GitHubAPI` class that handle authentication and use [httpx](https://github.com/encode/httpx) as their HTTP client. While they're automatically provided in webhook handlers, you can also use them directly in your code.
+
+The clients automatically handle authentication and token refresh when an installation ID is provided. The installation ID is GitHub's identifier for where your app is installed, which you can get from the `installation_id` field on the `Installation` model.
+
+#### `AsyncGitHubAPI`
+
+For Django projects running with ASGI or in async views, the async client provides the most efficient way to interact with GitHub's API. It's particularly useful when making multiple API calls or in webhook handlers that need to respond quickly.
 
 ```python
 from django_github_app.github import AsyncGitHubAPI
@@ -262,7 +268,30 @@ async def create_comment(repo_full_name: str):
         )
 ```
 
-The client automatically handles authentication and token refresh when an installation ID is provided. The installation ID is GitHub's identifier for where your app is installed, which you can get from the `installation_id` field on the `Installation` model.
+#### `SyncGitHubAPI`
+
+For traditional Django applications running under WSGI, the sync client provides a straightforward way to interact with GitHub's API without dealing with async/await syntax or async runtimes.
+
+```python
+from django_github_app.github import SyncGitHubAPI
+from django_github_app.models import Installation
+
+# Access public endpoints without authentication
+def get_public_repo_sync():
+    with SyncGitHubAPI() as gh:
+        return gh.getitem("/repos/django/django")
+
+# Interact as the GitHub App installation
+def create_comment_sync(repo_full_name: str):
+    # Get the installation for the repository
+    installation = Installation.objects.get(repositories__full_name=repo_full_name)
+    
+    with SyncGitHubAPI(installation_id=installation.installation_id) as gh:
+        gh.post(
+            f"/repos/{repo_full_name}/issues/1/comments",
+            data={"body": "Hello!"}
+        )
+```
 
 ### Models
 
