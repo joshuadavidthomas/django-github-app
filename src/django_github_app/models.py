@@ -35,11 +35,8 @@ class EventLogManager(models.Manager["EventLog"]):
         ).adelete()
         return deleted
 
-
-EventLogManager.create_from_event = async_to_sync_method(
-    EventLogManager.acreate_from_event
-)
-EventLogManager.cleanup_events = async_to_sync_method(EventLogManager.acleanup_events)
+    create_from_event = async_to_sync_method(acreate_from_event)
+    cleanup_events = async_to_sync_method(acleanup_events)
 
 
 class EventLog(models.Model):
@@ -87,16 +84,9 @@ class InstallationManager(models.Manager["Installation"]):
         except (Installation.DoesNotExist, KeyError):
             return None
 
-
-InstallationManager.create_from_event = async_to_sync_method(
-    InstallationManager.acreate_from_event
-)
-InstallationManager.create_from_gh_data = async_to_sync_method(
-    InstallationManager.acreate_from_gh_data
-)
-InstallationManager.get_from_event = async_to_sync_method(
-    InstallationManager.aget_from_event
-)
+    create_from_event = async_to_sync_method(acreate_from_event)
+    create_from_gh_data = async_to_sync_method(acreate_from_gh_data)
+    get_from_event = async_to_sync_method(aget_from_event)
 
 
 class InstallationStatus(models.IntegerChoices):
@@ -186,10 +176,9 @@ class Installation(models.Model):
     def app_slug(self):
         return self.data.get("app_slug", app_settings.SLUG)
 
-
-Installation.get_access_token = async_to_sync_method(Installation.aget_access_token)
-Installation.refresh_from_gh = async_to_sync_method(Installation.arefresh_from_gh)
-Installation.get_repos = async_to_sync_method(Installation.aget_repos)
+    get_access_token = async_to_sync_method(aget_access_token)
+    refresh_from_gh = async_to_sync_method(arefresh_from_gh)
+    get_repos = async_to_sync_method(aget_repos)
 
 
 class RepositoryManager(models.Manager["Repository"]):
@@ -222,13 +211,8 @@ class RepositoryManager(models.Manager["Repository"]):
         except Repository.DoesNotExist:
             return None
 
-
-RepositoryManager.create_from_gh_data = async_to_sync_method(
-    RepositoryManager.acreate_from_gh_data
-)
-RepositoryManager.get_from_event = async_to_sync_method(
-    RepositoryManager.aget_from_event
-)
+    create_from_gh_data = async_to_sync_method(acreate_from_gh_data)
+    get_from_event = async_to_sync_method(aget_from_event)
 
 
 class Repository(models.Model):
@@ -272,5 +256,4 @@ class Repository(models.Model):
     def repo(self):
         return self.full_name.split("/")[1]
 
-
-Repository.get_issues = async_to_sync_method(Repository.aget_issues)
+    get_issues = async_to_sync_method(aget_issues)
