@@ -438,6 +438,22 @@ issues = await repo.aget_issues(params={"state": "open"})
 - `owner`: Repository owner from full name
 - `repo`: Repository name from full name
 
+### Built-in Event Handlers
+
+The library includes event handlers for managing GitHub App installations and repositories. These handlers automatically update your `Installation` and `Repository` models in response to GitHub webhooks:
+
+- Installation events:
+  - `installation.created`: Creates new `Installation` record
+  - `installation.deleted`: Removes `Installation` record
+  - `installation.suspend`/`installation.unsuspend`: Updates `Installation` status
+  - `installation.new_permissions_accepted`: Updates `Installation` data
+  - `installation_repositories`: Creates and/or removes the `Repository` models associated with `Installation`
+
+- Repository events:
+  - `repository.renamed`: Updates repository details
+
+The library automatically detects whether you're using `AsyncWebhookView` or `SyncWebhookView` in your URL configuration and loads the corresponding async or sync versions of these handlers.
+
 ### System Checks
 
 The library includes Django system checks to validate your webhook configuration:
