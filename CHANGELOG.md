@@ -21,6 +21,7 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 ### Added
 
 - Added `SyncWebhookView`, a synchronous counterpart to `AsyncWebhookView` for Django applications running under WSGI. Works with `SyncGitHubAPI` and synchronous event handlers to provide a fully synchronous workflow for processing GitHub webhooks.
+- Added system check to prevent mixing async and sync webhook views in the same project (`django_github_app.E001`).
 
 ### Changed
 

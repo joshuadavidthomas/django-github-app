@@ -10,6 +10,7 @@ from asgiref.sync import sync_to_async
 from django.core.exceptions import BadRequest
 from django.http import JsonResponse
 from django.utils import timezone
+from django.views.generic import View
 from gidgethub import sansio
 from gidgethub.abc import GitHubAPI
 from model_bakery import baker
@@ -21,6 +22,7 @@ from django_github_app.routing import GitHubRouter
 from django_github_app.views import AsyncWebhookView
 from django_github_app.views import BaseWebhookView
 from django_github_app.views import SyncWebhookView
+from django_github_app.views import get_webhook_views
 
 pytestmark = pytest.mark.django_db
 
@@ -303,3 +305,39 @@ class TestSyncWebhookView:
         response = view.post(request)
 
         assert response.status_code == HTTPStatus.OK
+
+
+class TestProjectWebhookViews:
+    def test_get_async(self, urlpatterns):
+        with urlpatterns([AsyncWebhookView]):
+            views = get_webhook_views()
+
+        assert len(views) == 1
+        assert views[0] == AsyncWebhookView
+
+    def test_get_sync(self, urlpatterns):
+        with urlpatterns([SyncWebhookView]):
+            views = get_webhook_views()
+
+        assert len(views) == 1
+        assert views[0] == SyncWebhookView
+
+    def test_get_both(self, urlpatterns):
+        with urlpatterns([AsyncWebhookView, SyncWebhookView]):
+            views = get_webhook_views()
+
+        assert len(views) == 2
+        assert AsyncWebhookView in views
+        assert SyncWebhookView in views
+
+    def test_get_normal_view(self, urlpatterns):
+        with urlpatterns([View]):
+            views = get_webhook_views()
+
+        assert len(views) == 0
+
+    def test_get_none(self, urlpatterns):
+        with urlpatterns([]):
+            views = get_webhook_views()
+
+        assert len(views) == 0

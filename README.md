@@ -438,6 +438,19 @@ issues = await repo.aget_issues(params={"state": "open"})
 - `owner`: Repository owner from full name
 - `repo`: Repository name from full name
 
+### System Checks
+
+The library includes Django system checks to validate your webhook configuration:
+
+#### `django_github_app.E001`
+
+Error raised when both `AsyncWebhookView` and `SyncWebhookView` are detected in your URL configuration. You must use either async or sync webhooks consistently throughout your project, not both.
+
+To fix this error, ensure all your webhook views are of the same type:
+
+- Use `AsyncWebhookView` for all webhook endpoints in ASGI projects
+- Use `SyncWebhookView` for all webhook endpoints in WSGI projects
+
 ## Configuration
 
 Configuration of django-github-app is done through a `GITHUB_APP` dictionary in your Django project's `DJANGO_SETTINGS_MODULE`.
