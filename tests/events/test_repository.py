@@ -7,7 +7,7 @@ from model_bakery import baker
 from django_github_app.events.repository import rename_repository
 from django_github_app.models import Repository
 
-pytestmark = [pytest.mark.asyncio, pytest.mark.django_db]
+pytestmark = [pytest.mark.django_db]
 
 
 def test_rename_repository(installation, repository_id):
