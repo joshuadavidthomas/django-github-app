@@ -18,6 +18,10 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Added
+
+- Added `SyncWebhookView`, a synchronous counterpart to `AsyncWebhookView` for Django applications running under WSGI. Works with `SyncGitHubAPI` and synchronous event handlers to provide a fully synchronous workflow for processing GitHub webhooks.
+
 ### Changed
 
 - `AsyncGitHubAPI` and `SyncGitHubAPI` clients can now take an instance of `Installation` using the `installation` kwarg, in addition to the previous behavior of providing the `installation_id`. One or the other must be used for authenticated requests, not both.
