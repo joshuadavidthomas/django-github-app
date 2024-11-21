@@ -16,7 +16,7 @@ class TestGitHubAppConfig:
         return GitHubAppConfig.create("django_github_app")
 
     @pytest.mark.parametrize(
-        "urls,handler_module",
+        "urls",
         [
             [SyncWebhookView],
             [AsyncWebhookView],
