@@ -438,9 +438,9 @@ issues = await repo.aget_issues(params={"state": "open"})
 - `owner`: Repository owner from full name
 - `repo`: Repository name from full name
 
-### System Checks
+### Checks
 
-The library includes system checks to validate your webhook configuration:
+The library includes Django checks to validate your webhook configuration:
 
 #### `django_github_app.E001`
 
