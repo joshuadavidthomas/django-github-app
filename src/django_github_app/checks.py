@@ -8,7 +8,7 @@ from django_github_app.views import AsyncWebhookView
 from django_github_app.views import get_webhook_views
 
 
-@register(Tags.urls, deploy=True)
+@register(Tags.urls)
 def check_webhook_views(app_configs, **kwargs):
     errors = []
     views = get_webhook_views()
