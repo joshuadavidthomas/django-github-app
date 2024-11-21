@@ -12,19 +12,19 @@ gh = GitHubRouter()
 
 
 @gh.event("installation", action="created")
-async def create_installation(event: sansio.Event, gh: GitHubAPI, *args, **kwargs):
+async def acreate_installation(event: sansio.Event, gh: GitHubAPI, *args, **kwargs):
     await Installation.objects.acreate_from_event(event)
 
 
 @gh.event("installation", action="deleted")
-async def delete_installation(event: sansio.Event, gh: GitHubAPI, *args, **kwargs):
+async def adelete_installation(event: sansio.Event, gh: GitHubAPI, *args, **kwargs):
     installation = await Installation.objects.aget_from_event(event)
     await installation.adelete()
 
 
 @gh.event("installation", action="suspend")
 @gh.event("installation", action="unsuspend")
-async def toggle_installation_status(
+async def atoggle_installation_status(
     event: sansio.Event, gh: GitHubAPI, *args, **kwargs
 ):
     installation = await Installation.objects.aget_from_event(event)
@@ -33,14 +33,14 @@ async def toggle_installation_status(
 
 
 @gh.event("installation", action="new_permissions_accepted")
-async def sync_installation_data(event: sansio.Event, gh: GitHubAPI, *args, **kwargs):
+async def async_installation_data(event: sansio.Event, gh: GitHubAPI, *args, **kwargs):
     installation = await Installation.objects.aget_from_event(event)
     installation.data = event.data["installation"]
     await installation.asave()
 
 
 @gh.event("installation_repositories")
-async def sync_installation_repositories(
+async def async_installation_repositories(
     event: sansio.Event, gh: GitHubAPI, *args, **kwargs
 ):
     removed = [repo["id"] for repo in event.data["repositories_removed"]]

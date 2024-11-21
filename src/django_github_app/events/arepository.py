@@ -10,7 +10,7 @@ gh = GitHubRouter()
 
 
 @gh.event("repository", action="renamed")
-async def rename_repository(event: sansio.Event, gh: GitHubAPI, *args, **kwargs):
+async def arename_repository(event: sansio.Event, gh: GitHubAPI, *args, **kwargs):
     repo = await Repository.objects.aget_from_event(event)
     repo.full_name = event.data["repository"]["full_name"]
     await repo.asave()

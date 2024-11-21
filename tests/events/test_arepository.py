@@ -5,13 +5,13 @@ from asgiref.sync import sync_to_async
 from gidgethub import sansio
 from model_bakery import baker
 
-from django_github_app.events.repository import rename_repository
+from django_github_app.events.arepository import arename_repository
 from django_github_app.models import Repository
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.django_db]
 
 
-async def test_rename_repository(ainstallation, repository_id):
+async def test_arename_repository(ainstallation, repository_id):
     installation = await ainstallation
     repository = await sync_to_async(baker.make)(
         "django_github_app.Repository",
@@ -32,7 +32,7 @@ async def test_rename_repository(ainstallation, repository_id):
         full_name=data["repository"]["full_name"]
     ).aexists()
 
-    await rename_repository(event, None)
+    await arename_repository(event, None)
 
     assert await Repository.objects.filter(
         full_name=data["repository"]["full_name"]
