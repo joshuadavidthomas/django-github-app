@@ -452,7 +452,7 @@ The library includes event handlers for managing GitHub App installations and re
 - Repository events:
   - `repository.renamed`: Updates repository details
 
-The library automatically detects whether you're using `AsyncWebhookView` or `SyncWebhookView` in your URL configuration and loads the corresponding async or sync versions of these handlers. This ensures that async views use async model operations (e.g., `acreate_from_event`, `adelete`) while sync views use synchronous operations (e.g., `create_from_event`, `delete`).
+The library automatically detects whether you're using `AsyncWebhookView` or `SyncWebhookView` in your URL configuration and loads the corresponding async or sync versions of these handlers.
 
 ### System Checks
 
