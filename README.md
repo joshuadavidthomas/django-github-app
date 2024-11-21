@@ -55,6 +55,7 @@ Fully supports both sync (WSGI) and async (ASGI) Django applications.
 
    ```python
    from django.urls import path
+
    from django_github_app.views import AsyncWebhookView
    
    urlpatterns = [
@@ -66,6 +67,7 @@ Fully supports both sync (WSGI) and async (ASGI) Django applications.
 
    ```python
    from django.urls import path
+
    from django_github_app.views import SyncWebhookView
    
    urlpatterns = [
