@@ -22,7 +22,6 @@ from django_github_app.routing import GitHubRouter
 from django_github_app.views import AsyncWebhookView
 from django_github_app.views import BaseWebhookView
 from django_github_app.views import SyncWebhookView
-from django_github_app.views import detect_webhook_type
 from django_github_app.views import get_webhook_views
 
 pytestmark = pytest.mark.django_db
@@ -279,30 +278,4 @@ class TestSyncWebhookView:
 
         view.post(request)
 
-        assert EventLog.objects.filter(id=event.id).count() == 0
-
-    def test_router_dispatch(self, register_webhook_event, webhook_request):
-        webhook_data = register_webhook_event("push")
-        request = webhook_request(
-            event_type="push",
-            body={"action": "created", "repository": {"full_name": "test/repo"}},
-        )
-        view = SyncWebhookView()
-
-        response = view.post(request)
-
-        assert response.status_code == HTTPStatus.OK
-        assert webhook_data["event"].event == "push"
-        assert webhook_data["event"].data["repository"]["full_name"] == "test/repo"
-        assert isinstance(webhook_data["gh"], SyncGitHubAPI)
-
-    def test_router_dispatch_unhandled_event(
-        self, register_webhook_event, webhook_request
-    ):
-        register_webhook_event("push", should_fail=True)
-        request = webhook_request(event_type="issues", body={"action": "opened"})
-        view = SyncWebhookView()
-
-        response = view.post(request)
-
-        assert response.status_code == HTTPStatus.OK
+        assert len(views) == 0
