@@ -11,7 +11,7 @@ A Django toolkit providing the batteries needed to build GitHub Apps - from webh
 
 Built on [gidgethub](https://github.com/gidgethub/gidgethub) and [httpx](https://github.com/encode/httpx), django-github-app handles the boilerplate of GitHub App development. Features include webhook event routing and storage, API client with automatic authentication, and models for managing GitHub App installations, repositories, and webhook event history.
 
-The library primarily uses async features (following gidgethub), with sync support in active development to better integrate with the majority of Django projects.
+Fully supports both sync (WSGI) and async (ASGI) Django applications.
 
 ## Requirements
 
@@ -51,9 +51,10 @@ The library primarily uses async features (following gidgethub), with sync suppo
 
 4. Add django-github-app's webhook view to your Django project's urls.
 
+   For Django projects running on ASGI, use `django_github_app.views.AsyncWebhookView`:
+
    ```python
    from django.urls import path
-   
    from django_github_app.views import AsyncWebhookView
    
    urlpatterns = [
@@ -61,7 +62,16 @@ The library primarily uses async features (following gidgethub), with sync suppo
    ]
    ```
 
-   For the moment, django-github-app only provides an async webhook view. While sync support is being actively developed, the webhook view remains async-only.
+   For traditional Django projects running on WSGI, use `django_github_app.views.SyncWebhookView`:
+
+   ```python
+   from django.urls import path
+   from django_github_app.views import SyncWebhookView
+   
+   urlpatterns = [
+       path("gh/", SyncWebhookView.as_view()),
+   ]
+   ```
 
 5. Setup your GitHub App, either by registering a new one or importing an existing one, and configure django-github-app using your GitHub App's information.
 
@@ -169,6 +179,8 @@ django-github-app provides a router-based system for handling GitHub webhook eve
 
 To start handling GitHub webhooks, create your event handlers in a new file (e.g., `events.py`) within your Django app.
 
+For ASGI projects using `django_github_app.views.AsyncWebhookView`:
+
 ```python
 # your_app/events.py
 from django_github_app.routing import GitHubRouter
@@ -204,15 +216,52 @@ async def welcome_new_issue(event, gh, *args, **kwargs):
     })
 ```
 
-In this example, we automatically label issues based on their title and post a welcome comment on newly opened issues. The router ensures each webhook is directed to the appropriate handler based on the event type and action.
+For WSGI projects using `django_github_app.views.SyncWebhookView`:
 
-> [!NOTE]
-> Handlers must be async functions as django-github-app uses gidgethub for webhook event routing which only supports async operations. Sync support is planned to better integrate with Django projects that don't use async.
+```python
+# your_app/events.py
+from django_github_app.routing import GitHubRouter
+
+gh = GitHubRouter()
+
+# Handle any issue event
+@gh.event("issues")
+def handle_issue(event, gh, *args, **kwargs):
+    issue = event.data["issue"]
+    labels = []
+    
+    # Add labels based on issue title
+    title = issue["title"].lower()
+    if "bug" in title:
+        labels.append("bug")
+    if "feature" in title:
+        labels.append("enhancement")
+    
+    if labels:
+        gh.post(
+            issue["labels_url"], 
+            data=labels
+        )
+
+# Handle specific issue actions
+@gh.event("issues", action="opened")
+def welcome_new_issue(event, gh, *args, **kwargs):
+    """Post a comment when a new issue is opened"""
+    url = event.data["issue"]["comments_url"]
+    gh.post(url, data={
+        "body": "Thanks for opening an issue! We'll take a look soon."
+    })
+```
+
+> [!IMPORTANT]
+> Choose either async or sync handlers based on your webhook view - async handlers for `AsyncWebhookView`, sync handlers for `SyncWebhookView`. Mixing async and sync handlers is not supported.
+
+In these examples, we automatically label issues based on their title and post a welcome comment on newly opened issues. The router ensures each webhook is directed to the appropriate handler based on the event type and action.
 
 Each handler receives two arguments:
 
 - `event`: A `gidgethub.sansio.Event` containing the webhook payload
-- `gh`: A GitHub API client for making API calls
+- `gh`: A GitHub API client for making API calls (`AsyncGitHubAPI` for async handlers, `SyncGitHubAPI` for sync handlers)
 
 To activate your webhook handlers, import them in your app's `AppConfig.ready()` method, similar to how Django signals are registered.
 

@@ -71,9 +71,43 @@ def webhook_request(rf):
 
 @pytest.fixture
 def test_router():
-    router = GitHubRouter()
-    yield router
-    GitHubRouter._routers.remove(router.router)
+    GitHubRouter._routers = []
+    yield GitHubRouter()
+    GitHubRouter._routers = []
+
+
+@pytest.fixture
+def aregister_webhook_event(test_router):
+    def _make_handler(event_type, should_fail=False):
+        data = {}
+
+        @test_router.event(event_type)
+        async def handle_event(event, gh):
+            if should_fail:
+                pytest.fail("Should not be called")
+            data["event"] = event
+            data["gh"] = gh
+
+        return data
+
+    return _make_handler
+
+
+@pytest.fixture
+def register_webhook_event(test_router):
+    def _make_handler(event_type, should_fail=False):
+        data = {}
+
+        @test_router.event(event_type)
+        def handle_event(event, gh):
+            if should_fail:
+                pytest.fail("Should not be called")
+            data["event"] = event
+            data["gh"] = gh
+
+        return data
+
+    return _make_handler
 
 
 class WebhookView(BaseWebhookView[GitHubAPI]):
@@ -176,14 +210,8 @@ class TestAsyncWebhookView:
         with pytest.raises(BadRequest):
             await view.post(request)
 
-    async def test_router_dispatch(self, test_router, webhook_request):
-        called_with = {}
-
-        @test_router.event("push")
-        async def handle_push(event, gh):
-            called_with["event"] = event
-            called_with["gh"] = gh
-
+    async def test_router_dispatch(self, aregister_webhook_event, webhook_request):
+        webhook_data = aregister_webhook_event("push")
         request = webhook_request(
             event_type="push",
             body={"action": "created", "repository": {"full_name": "test/repo"}},
@@ -193,15 +221,14 @@ class TestAsyncWebhookView:
         response = await view.post(request)
 
         assert response.status_code == HTTPStatus.OK
-        assert called_with["event"].event == "push"
-        assert called_with["event"].data["repository"]["full_name"] == "test/repo"
-        assert isinstance(called_with["gh"], AsyncGitHubAPI)
+        assert webhook_data["event"].event == "push"
+        assert webhook_data["event"].data["repository"]["full_name"] == "test/repo"
+        assert isinstance(webhook_data["gh"], AsyncGitHubAPI)
 
-    async def test_router_dispatch_unhandled_event(self, test_router, webhook_request):
-        @test_router.event("push")
-        async def handle_push(event, gh):
-            pytest.fail("Should not be called")
-
+    async def test_router_dispatch_unhandled_event(
+        self, aregister_webhook_event, webhook_request
+    ):
+        aregister_webhook_event("push", should_fail=True)
         request = webhook_request(event_type="issues", body={"action": "opened"})
         view = AsyncWebhookView()
 
@@ -211,13 +238,68 @@ class TestAsyncWebhookView:
 
 
 class TestSyncWebhookView:
-    def test_not_implemented_error(self):
-        with pytest.raises(NotImplementedError):
-            SyncWebhookView()
+    def test_post(self, webhook_request):
+        request = webhook_request()
+        view = SyncWebhookView()
 
-    def test_post(self, webhook_request): ...
-    def test_csrf_exempt(self, webhook_request): ...
-    def test_event_log_created(self, webhook_request): ...
-    def test_event_log_cleanup(self, webhook_request): ...
-    def test_router_dispatch(self, test_router, webhook_request): ...
-    def test_router_dispatch_unhandled_event(self, test_router, webhook_request): ...
+        response = view.post(request)
+
+        assert isinstance(response, JsonResponse)
+        assert response.status_code == HTTPStatus.OK
+
+    def test_csrf_exempt(self, webhook_request):
+        request = webhook_request()
+        view = SyncWebhookView()
+
+        response = view.post(request)
+
+        assert response.status_code != HTTPStatus.FORBIDDEN
+
+    def test_event_log_created(self, webhook_request):
+        request = webhook_request()
+        view = SyncWebhookView()
+
+        response = view.post(request)
+
+        event_id = json.loads(response.content)["event_id"]
+        assert EventLog.objects.filter(id=event_id).count() == 1
+
+    def test_event_log_cleanup(self, webhook_request):
+        request = webhook_request()
+        view = SyncWebhookView()
+
+        event = baker.make(
+            "django_github_app.EventLog",
+            received_at=timezone.now() - datetime.timedelta(days=8),
+        )
+        assert EventLog.objects.filter(id=event.id).count() == 1
+
+        view.post(request)
+
+        assert EventLog.objects.filter(id=event.id).count() == 0
+
+    def test_router_dispatch(self, register_webhook_event, webhook_request):
+        webhook_data = register_webhook_event("push")
+        request = webhook_request(
+            event_type="push",
+            body={"action": "created", "repository": {"full_name": "test/repo"}},
+        )
+        view = SyncWebhookView()
+
+        response = view.post(request)
+
+        assert response.status_code == HTTPStatus.OK
+        assert webhook_data["event"].event == "push"
+        assert webhook_data["event"].data["repository"]["full_name"] == "test/repo"
+        assert isinstance(webhook_data["gh"], SyncGitHubAPI)
+
+    def test_router_dispatch_unhandled_event(
+        self, register_webhook_event, webhook_request
+    ):
+        register_webhook_event("push", should_fail=True)
+        request = webhook_request(event_type="issues", body={"action": "opened"})
+        view = SyncWebhookView()
+
+        response = view.post(request)
+
+        assert response.status_code == HTTPStatus.OK

@@ -15,7 +15,6 @@ from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-from gidgethub.routing import Router as GidgetHubRouter
 from gidgethub.sansio import Event
 
 from ._typing import override
@@ -59,8 +58,8 @@ class BaseWebhookView(View, ABC, Generic[GitHubAPIType]):
         )
 
     @property
-    def router(self) -> GidgetHubRouter:
-        return GidgetHubRouter(*GitHubRouter.routers)
+    def router(self) -> GitHubRouter:
+        return GitHubRouter(*GitHubRouter.routers)
 
     @abstractmethod
     def post(
@@ -84,7 +83,7 @@ class AsyncWebhookView(BaseWebhookView[AsyncGitHubAPI]):
 
         async with self.get_github_api(installation) as gh:
             await gh.sleep(1)
-            await self.router.dispatch(event, gh)
+            await self.router.adispatch(event, gh)
 
         return self.get_response(event_log)
 
@@ -92,12 +91,6 @@ class AsyncWebhookView(BaseWebhookView[AsyncGitHubAPI]):
 @method_decorator(csrf_exempt, name="dispatch")
 class SyncWebhookView(BaseWebhookView[SyncGitHubAPI]):
     github_api_class = SyncGitHubAPI
-
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-        raise NotImplementedError(
-            "SyncWebhookView is planned for a future release. For now, please use AsyncWebhookView with async/await."
-        )
 
     def post(self, request: HttpRequest) -> JsonResponse:  # pragma: no cover
         event = self.get_event(request)
@@ -110,6 +103,6 @@ class SyncWebhookView(BaseWebhookView[SyncGitHubAPI]):
 
         with self.get_github_api(installation) as gh:
             time.sleep(1)
-            self.router.dispatch(event, gh)  # type: ignore
+            self.router.dispatch(event, gh)
 
         return self.get_response(event_log)
