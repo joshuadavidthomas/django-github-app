@@ -5,11 +5,11 @@ from asgiref.sync import sync_to_async
 from gidgethub.abc import sansio
 from model_bakery import baker
 
-from django_github_app.events.installation import create_installation
-from django_github_app.events.installation import delete_installation
-from django_github_app.events.installation import sync_installation_data
-from django_github_app.events.installation import sync_installation_repositories
-from django_github_app.events.installation import toggle_installation_status
+from django_github_app.events.ainstallation import create_installation
+from django_github_app.events.ainstallation import delete_installation
+from django_github_app.events.ainstallation import sync_installation_data
+from django_github_app.events.ainstallation import sync_installation_repositories
+from django_github_app.events.ainstallation import toggle_installation_status
 from django_github_app.models import Installation
 from django_github_app.models import InstallationStatus
 from django_github_app.models import Repository

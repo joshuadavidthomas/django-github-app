@@ -5,7 +5,7 @@ from asgiref.sync import sync_to_async
 from gidgethub import sansio
 from model_bakery import baker
 
-from django_github_app.events.repository import rename_repository
+from django_github_app.events.arepository import rename_repository
 from django_github_app.models import Repository
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.django_db]

@@ -12,4 +12,4 @@ class GitHubAppConfig(AppConfig):
 
     @override
     def ready(self):
-        from . import events  # noqa: F401
+        from .events import ahandlers  # noqa: F401
