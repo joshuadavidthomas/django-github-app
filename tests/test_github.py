@@ -13,6 +13,16 @@ from django_github_app.models import Installation
 @pytest.mark.asyncio
 @pytest.mark.django_db
 class TestAsyncGitHubAPI:
+    async def test_init_with_two_installation_kwargs(self, ainstallation):
+        installation = await ainstallation
+
+        with pytest.raises(ValueError):
+            AsyncGitHubAPI(
+                "test",
+                installation=installation,
+                installation_id=installation.installation_id,
+            )
+
     async def test_request(self, httpx_mock):
         httpx_mock.add_response(json={"foo": "bar"})
 
@@ -20,7 +30,18 @@ class TestAsyncGitHubAPI:
             response = await gh.getitem("/foo")
             assert response == {"foo": "bar"}
 
-    async def test_oauth_token(self, ainstallation, monkeypatch):
+    async def test_oauth_token_installation(self, ainstallation, monkeypatch):
+        async def mock_aget_access_token(*args, **kwargs):
+            return "ABC123"
+
+        monkeypatch.setattr(Installation, "aget_access_token", mock_aget_access_token)
+
+        installation = await ainstallation
+
+        async with AsyncGitHubAPI("test", installation=installation) as gh:
+            assert gh.oauth_token == "ABC123"
+
+    async def test_oauth_token_installation_id(self, ainstallation, monkeypatch):
         async def mock_aget_access_token(*args, **kwargs):
             return "ABC123"
 
@@ -37,7 +58,7 @@ class TestAsyncGitHubAPI:
         async with AsyncGitHubAPI("test", installation_id=1234) as gh:
             assert gh.oauth_token is None
 
-    async def test_oauth_token_no_installation_id(self):
+    async def test_oauth_token_no_kwargs(self):
         async with AsyncGitHubAPI("test") as gh:
             assert gh.oauth_token is None
 
@@ -52,7 +73,42 @@ class TestAsyncGitHubAPI:
         assert (stop - start) > datetime.timedelta(seconds=delay)
 
 
+@pytest.mark.django_db
 class TestSyncGitHubAPI:
+    def test_init_with_two_installation_kwargs(self, installation):
+        with pytest.raises(ValueError):
+            SyncGitHubAPI(
+                "test",
+                installation=installation,
+                installation_id=installation.installation_id,
+            )
+
+    def test_oauth_token_installation(self, installation, monkeypatch):
+        async def mock_aget_access_token(*args, **kwargs):
+            return "ABC123"
+
+        monkeypatch.setattr(Installation, "aget_access_token", mock_aget_access_token)
+
+        with SyncGitHubAPI("test", installation=installation) as gh:
+            assert gh.oauth_token == "ABC123"
+
+    def test_oauth_token_installation_id(self, installation, monkeypatch):
+        async def mock_aget_access_token(*args, **kwargs):
+            return "ABC123"
+
+        monkeypatch.setattr(Installation, "aget_access_token", mock_aget_access_token)
+
+        with SyncGitHubAPI("test", installation_id=installation.installation_id) as gh:
+            assert gh.oauth_token == "ABC123"
+
+    def test_oauth_token_installation_doesnotexist(self):
+        with SyncGitHubAPI("test", installation_id=1234) as gh:
+            assert gh.oauth_token is None
+
+    def test_oauth_token_no_kwargs(self):
+        with SyncGitHubAPI("test") as gh:
+            assert gh.oauth_token is None
+
     def test_getitem(self, httpx_mock):
         httpx_mock.add_response(json={"foo": "bar"})
 

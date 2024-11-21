@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from types import TracebackType
+from typing import TYPE_CHECKING
 from typing import Any
 from urllib.parse import urlencode
 
@@ -20,6 +21,9 @@ from uritemplate import variable
 from ._sync import async_to_sync_method
 from ._typing import override
 
+if TYPE_CHECKING:
+    from .models import Installation
+
 cache: cachetools.LRUCache[Any, Any] = cachetools.LRUCache(maxsize=500)
 # need to create an ssl_context in the main thread, see:
 # - https://github.com/pallets/flask/discussions/5387#discussioncomment-10835348
@@ -32,24 +36,31 @@ class AsyncGitHubAPI(gh_abc.GitHubAPI):
     def __init__(
         self,
         *args: Any,
+        installation: Installation | None = None,
         installation_id: int | None = None,
         **kwargs: Any,
     ) -> None:
+        if installation is not None and installation_id is not None:
+            raise ValueError("Must use only one of installation or installation_id")
+
+        self.installation = installation
         self.installation_id = installation_id
+        self.oauth_token = None
         self._client = httpx.AsyncClient(verify=ssl_context)
         super().__init__(*args, cache=cache, **kwargs)
 
     async def __aenter__(self) -> AsyncGitHubAPI:
         from .models import Installation
 
-        if self.installation_id:
+        if self.installation or self.installation_id:
             try:
-                installation = await Installation.objects.aget(
+                installation = self.installation or await Installation.objects.aget(
                     installation_id=self.installation_id
                 )
                 self.oauth_token = await installation.aget_access_token(self)
             except (Installation.DoesNotExist, gidgethub.BadRequest):
-                self.oauth_token = None
+                pass
+
         return self
 
     async def __aexit__(

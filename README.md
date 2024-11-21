@@ -266,6 +266,14 @@ async def create_comment(repo_full_name: str):
             f"/repos/{repo_full_name}/issues/1/comments",
             data={"body": "Hello!"}
         )
+    
+    # You can either provide the `installation_id` as above, or the `Installation` instance
+    # itself
+    async with AsyncGitHubAPI(installation=installation) as gh:
+        await gh.post(
+            f"/repos/{repo_full_name}/issues/1/comments",
+            data={"body": "World!"}
+        )
 ```
 
 #### `SyncGitHubAPI`
@@ -290,6 +298,14 @@ def create_comment_sync(repo_full_name: str):
         gh.post(
             f"/repos/{repo_full_name}/issues/1/comments",
             data={"body": "Hello!"}
+        )
+
+    # You can either provide the `installation_id` as above, or the `Installation` instance
+    # itself
+    with SyncGitHubAPI(installation=installation) as gh:
+        gh.post(
+            f"/repos/{repo_full_name}/issues/1/comments",
+            data={"body": "World!"}
         )
 ```
 
