@@ -278,4 +278,66 @@ class TestSyncWebhookView:
 
         view.post(request)
 
+        assert EventLog.objects.filter(id=event.id).count() == 0
+
+    def test_router_dispatch(self, register_webhook_event, webhook_request):
+        webhook_data = register_webhook_event("push")
+        request = webhook_request(
+            event_type="push",
+            body={"action": "created", "repository": {"full_name": "test/repo"}},
+        )
+        view = SyncWebhookView()
+
+        response = view.post(request)
+
+        assert response.status_code == HTTPStatus.OK
+        assert webhook_data["event"].event == "push"
+        assert webhook_data["event"].data["repository"]["full_name"] == "test/repo"
+        assert isinstance(webhook_data["gh"], SyncGitHubAPI)
+
+    def test_router_dispatch_unhandled_event(
+        self, register_webhook_event, webhook_request
+    ):
+        register_webhook_event("push", should_fail=True)
+        request = webhook_request(event_type="issues", body={"action": "opened"})
+        view = SyncWebhookView()
+
+        response = view.post(request)
+
+        assert response.status_code == HTTPStatus.OK
+
+
+class TestProjectWebhookViews:
+    def test_get_async(self, urlpatterns):
+        with urlpatterns([AsyncWebhookView]):
+            views = get_webhook_views()
+
+        assert len(views) == 1
+        assert views[0] == AsyncWebhookView
+
+    def test_get_sync(self, urlpatterns):
+        with urlpatterns([SyncWebhookView]):
+            views = get_webhook_views()
+
+        assert len(views) == 1
+        assert views[0] == SyncWebhookView
+
+    def test_get_both(self, urlpatterns):
+        with urlpatterns([AsyncWebhookView, SyncWebhookView]):
+            views = get_webhook_views()
+
+        assert len(views) == 2
+        assert AsyncWebhookView in views
+        assert SyncWebhookView in views
+
+    def test_get_normal_view(self, urlpatterns):
+        with urlpatterns([View]):
+            views = get_webhook_views()
+
+        assert len(views) == 0
+
+    def test_get_none(self, urlpatterns):
+        with urlpatterns([]):
+            views = get_webhook_views()
+
         assert len(views) == 0
