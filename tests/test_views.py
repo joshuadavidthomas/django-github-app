@@ -10,6 +10,7 @@ from asgiref.sync import sync_to_async
 from django.core.exceptions import BadRequest
 from django.http import JsonResponse
 from django.utils import timezone
+from django.views.generic import View
 from gidgethub import sansio
 from gidgethub.abc import GitHubAPI
 from model_bakery import baker
@@ -21,6 +22,8 @@ from django_github_app.routing import GitHubRouter
 from django_github_app.views import AsyncWebhookView
 from django_github_app.views import BaseWebhookView
 from django_github_app.views import SyncWebhookView
+from django_github_app.views import detect_webhook_type
+from django_github_app.views import get_webhook_views
 
 pytestmark = pytest.mark.django_db
 

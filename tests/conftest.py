@@ -9,6 +9,8 @@ import pytest
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.test import override_settings
+from django.urls import clear_url_caches
+from django.urls import path
 from model_bakery import baker
 
 from django_github_app.conf import GITHUB_APP_SETTINGS_NAME
@@ -69,6 +71,28 @@ def override_app_settings():
             yield
 
     return _override_app_settings
+
+
+@pytest.fixture
+def urlpatterns():
+    @contextlib.contextmanager
+    def _urlpatterns(views):
+        urlpatterns = [path(f"{i}/", view.as_view()) for i, view in enumerate(views)]
+
+        clear_url_caches()
+
+        with override_settings(
+            ROOT_URLCONF=type(
+                "urls",
+                (),
+                {"urlpatterns": urlpatterns},
+            ),
+        ):
+            yield
+
+        clear_url_caches()
+
+    return _urlpatterns
 
 
 @pytest.fixture(scope="session", autouse=True)
