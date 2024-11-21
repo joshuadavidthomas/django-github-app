@@ -1,14 +1,20 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable
 from collections.abc import Callable
 from typing import Any
+from typing import TypeVar
 
 from django.utils.functional import classproperty
 from gidgethub import sansio
-from gidgethub.routing import AsyncCallback
 from gidgethub.routing import Router as GidgetHubRouter
 
 from ._typing import override
+
+AsyncCallback = Callable[..., Awaitable[None]]
+SyncCallback = Callable[..., None]
+
+CB = TypeVar("CB", AsyncCallback, SyncCallback)
 
 
 class GitHubRouter(GidgetHubRouter):
@@ -22,11 +28,9 @@ class GitHubRouter(GidgetHubRouter):
     def routers(cls):
         return list(cls._routers)
 
-    def event(
-        self, event_type: str, **kwargs: Any
-    ) -> Callable[[AsyncCallback], AsyncCallback]:
-        def decorator(func: AsyncCallback) -> AsyncCallback:
-            self.add(func, event_type, **kwargs)
+    def event(self, event_type: str, **kwargs: Any) -> Callable[[CB], CB]:
+        def decorator(func: CB) -> CB:
+            self.add(func, event_type, **kwargs)  # type: ignore[arg-type]
             return func
 
         return decorator
