@@ -12,7 +12,6 @@ import gidgethub
 from django.core.exceptions import BadRequest
 from django.http import HttpRequest
 from django.http import JsonResponse
-from django.urls import get_resolver
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
@@ -107,18 +106,3 @@ class SyncWebhookView(BaseWebhookView[SyncGitHubAPI]):
             self.router.dispatch(event, gh)
 
         return self.get_response(event_log)
-
-
-def get_webhook_views():
-    resolver = get_resolver()
-    found_views = []
-
-    for pattern in resolver.url_patterns:
-        if hasattr(pattern, "callback"):
-            callback = pattern.callback
-            view_class = getattr(callback, "view_class", None)
-            if view_class:
-                if issubclass(view_class, (AsyncWebhookView, SyncWebhookView)):
-                    found_views.append(view_class)
-
-    return found_views

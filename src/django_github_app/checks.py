@@ -3,9 +3,25 @@ from __future__ import annotations
 from django.core.checks import Error
 from django.core.checks import Tags
 from django.core.checks import register
+from django.urls import get_resolver
 
-from django_github_app.views import AsyncWebhookView
-from django_github_app.views import get_webhook_views
+from .views import AsyncWebhookView
+from .views import SyncWebhookView
+
+
+def get_webhook_views():
+    resolver = get_resolver()
+    found_views = []
+
+    for pattern in resolver.url_patterns:
+        if hasattr(pattern, "callback"):
+            callback = pattern.callback
+            view_class = getattr(callback, "view_class", None)
+            if view_class:
+                if issubclass(view_class, (AsyncWebhookView, SyncWebhookView)):
+                    found_views.append(view_class)
+
+    return found_views
 
 
 @register(Tags.urls)
