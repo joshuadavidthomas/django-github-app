@@ -26,6 +26,11 @@ class GitHubRouter(GidgetHubRouter):
         GitHubRouter._routers.append(self)
 
     @classmethod
+    def _reset(cls):
+        cls._routers = []
+        cls._library_handlers_loaded = False
+
+    @classmethod
     def _load_library_handlers(cls):
         if cls._library_handlers_loaded:
             return
