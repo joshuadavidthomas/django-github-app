@@ -19,13 +19,31 @@ CB = TypeVar("CB", AsyncCallback, SyncCallback)
 
 class GitHubRouter(GidgetHubRouter):
     _routers: list[GidgetHubRouter] = []
+    _library_handlers_loaded = False
 
     def __init__(self, *args) -> None:
         super().__init__(*args)
         GitHubRouter._routers.append(self)
 
+    @classmethod
+    def _load_library_handlers(cls):
+        if cls._library_handlers_loaded:
+            return
+
+        from .checks import get_webhook_views
+        from .views import AsyncWebhookView
+
+        views = get_webhook_views()
+        if views and issubclass(views[0], AsyncWebhookView):
+            from .events import ahandlers  # noqa: F401
+        else:
+            from .events import handlers  # noqa: F401
+
+        cls._library_handlers_loaded = True
+
     @classproperty
     def routers(cls):
+        cls._load_library_handlers()
         return list(cls._routers)
 
     def event(self, event_type: str, **kwargs: Any) -> Callable[[CB], CB]:
