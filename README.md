@@ -132,7 +132,7 @@ Fully supports both sync (WSGI) and async (ASGI) Django applications.
        "NAME": env.str("GITHUB_NAME"),
        "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
        "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
-       "WEBHOOK_TYPE": "async",  # Use "async" for ASGI projects or "sync" for WSGI projects)
+       "WEBHOOK_TYPE": "async",  # Use "async" for ASGI projects or "sync" for WSGI projects
    }
    ```
 
@@ -169,7 +169,7 @@ Fully supports both sync (WSGI) and async (ASGI) Django applications.
        "NAME": env.str("GITHUB_NAME"),
        "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
        "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
-       "WEBHOOK_TYPE": "async",  # Use "async" for ASGI projects or "sync" for WSGI projects)
+       "WEBHOOK_TYPE": "async",  # Use "async" for ASGI projects or "sync" for WSGI projects
    }
    ```
 
