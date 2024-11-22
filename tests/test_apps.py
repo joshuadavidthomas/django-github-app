@@ -11,12 +11,12 @@ class TestGitHubAppConfig:
         return GitHubAppConfig.create("django_github_app")
 
     @pytest.mark.parametrize(
-        "view_mode",
+        "webhook_type",
         [
             "async",
             "sync",
         ],
     )
-    def test_app_ready_urls(self, view_mode, app, override_app_settings):
-        with override_app_settings(VIEW_MODE=view_mode):
+    def test_app_ready_urls(self, webhook_type, app, override_app_settings):
+        with override_app_settings(WEBHOOK_TYPE=webhook_type):
             app.ready()
