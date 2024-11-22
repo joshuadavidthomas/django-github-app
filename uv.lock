@@ -313,7 +313,7 @@ wheels = [
 
 [[package]]
 name = "django-github-app"
-version = "0.4.0"
+version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "cachetools" },
