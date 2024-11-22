@@ -131,8 +131,8 @@ Fully supports both sync (WSGI) and async (ASGI) Django applications.
        "CLIENT_ID": env.str("GITHUB_CLIENT_ID"),
        "NAME": env.str("GITHUB_NAME"),
        "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
-       "WEBHOOK_TYPE": "async",  # Use "async" for ASGI projects or "sync" for WSGI projects)
        "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
+       "WEBHOOK_TYPE": "async",  # Use "async" for ASGI projects or "sync" for WSGI projects)
    }
    ```
 
@@ -168,8 +168,8 @@ Fully supports both sync (WSGI) and async (ASGI) Django applications.
        "CLIENT_ID": env.str("GITHUB_CLIENT_ID"),
        "NAME": env.str("GITHUB_NAME"),
        "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
-       "WEBHOOK_TYPE": "async",  # Use "async" for ASGI projects or "sync" for WSGI projects)
        "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
+       "WEBHOOK_TYPE": "async",  # Use "async" for ASGI projects or "sync" for WSGI projects)
    }
    ```
 
@@ -489,8 +489,8 @@ GITHUB_APP = {
     "DAYS_TO_KEEP_EVENTS": 7,
     "NAME": "",
     "PRIVATE_KEY": "",
-    "WEBHOOK_TYPE": "async",
     "WEBHOOK_SECRET": "",
+    "WEBHOOK_TYPE": "async",
 }
 ```
 
@@ -500,8 +500,8 @@ The following settings are required:
 - `CLIENT_ID`
 - `NAME`
 - `PRIVATE_KEY`
-- `WEBHOOK_TYPE`
 - `WEBHOOK_SECRET`
+- `WEBHOOK_TYPE`
 
 ### `APP_ID`
 
@@ -577,6 +577,12 @@ GITHUB_APP = {
 > [!NOTE]
 > The private key should be kept secure and never committed to version control. Using environment variables or secure file storage is recommended.
 
+### `WEBHOOK_SECRET`
+
+> 🔴 **Required** | `str`
+
+Secret used to verify webhook payloads from GitHub.
+
 ### `WEBHOOK_TYPE`
 
 > 🔴 **Required** | `Literal["async", "sync"]` | Default: `"async"`
@@ -585,12 +591,6 @@ Determines whether the library uses async or sync handlers for processing webhoo
 
 - `"async"`: Use with `AsyncWebhookView` in ASGI projects
 - `"sync"`: Use with `SyncWebhookView` in WSGI projects
-
-### `WEBHOOK_SECRET`
-
-> 🔴 **Required** | `str`
-
-Secret used to verify webhook payloads from GitHub.
 
 ## Development
 
