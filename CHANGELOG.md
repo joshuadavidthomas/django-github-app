@@ -18,6 +18,14 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Added
+
+- Added `GITHUB_APP["WEBHOOK_TYPE"]` setting to configure async/sync handler selection.
+
+### Removed
+
+- Removed automatic detection of webhook type from URL configuration.
+
 ## [0.4.0]
 
 ### Added

@@ -75,6 +75,12 @@ Fully supports both sync (WSGI) and async (ASGI) Django applications.
    ]
    ```
 
+> [!IMPORTANT]
+> Make sure your `GITHUB_APP["WEBHOOK_TYPE"]` setting matches your view choice:
+>
+> - Use `"async"` with `AsyncWebhookView`
+> - Use `"sync"` with `SyncWebhookView`
+
 5. Setup your GitHub App, either by registering a new one or importing an existing one, and configure django-github-app using your GitHub App's information.
 
    You will need the following information from your GitHub App:
@@ -125,6 +131,7 @@ Fully supports both sync (WSGI) and async (ASGI) Django applications.
        "CLIENT_ID": env.str("GITHUB_CLIENT_ID"),
        "NAME": env.str("GITHUB_NAME"),
        "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
+       "WEBHOOK_TYPE": "async",  # Use "async" for ASGI projects or "sync" for WSGI projects)
        "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
    }
    ```
@@ -161,6 +168,7 @@ Fully supports both sync (WSGI) and async (ASGI) Django applications.
        "CLIENT_ID": env.str("GITHUB_CLIENT_ID"),
        "NAME": env.str("GITHUB_NAME"),
        "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
+       "WEBHOOK_TYPE": "async",  # Use "async" for ASGI projects or "sync" for WSGI projects)
        "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
    }
    ```
@@ -452,7 +460,7 @@ The library includes event handlers for managing GitHub App installations and re
 - Repository events:
   - `repository.renamed`: Updates repository details
 
-The library automatically detects whether you're using `AsyncWebhookView` or `SyncWebhookView` in your URL configuration and loads the corresponding async or sync versions of these handlers.
+The library loads either async or sync versions of these handlers based on your `GITHUB_APP["WEBHOOK_TYPE"]` setting.
 
 ### System Checks
 
@@ -481,6 +489,7 @@ GITHUB_APP = {
     "DAYS_TO_KEEP_EVENTS": 7,
     "NAME": "",
     "PRIVATE_KEY": "",
+    "WEBHOOK_TYPE": "async",
     "WEBHOOK_SECRET": "",
 }
 ```
@@ -491,6 +500,7 @@ The following settings are required:
 - `CLIENT_ID`
 - `NAME`
 - `PRIVATE_KEY`
+- `WEBHOOK_TYPE`
 - `WEBHOOK_SECRET`
 
 ### `APP_ID`
@@ -566,6 +576,15 @@ GITHUB_APP = {
 
 > [!NOTE]
 > The private key should be kept secure and never committed to version control. Using environment variables or secure file storage is recommended.
+
+### `WEBHOOK_TYPE`
+
+> 🔴 **Required** | `Literal["async", "sync"]` | Default: `"async"`
+
+Determines whether the library uses async or sync handlers for processing webhook events:
+
+- `"async"`: Use with `AsyncWebhookView` in ASGI projects
+- `"sync"`: Use with `SyncWebhookView` in WSGI projects
 
 ### `WEBHOOK_SECRET`
 
