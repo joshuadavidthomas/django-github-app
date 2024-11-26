@@ -102,7 +102,7 @@ Fully supports both sync (WSGI) and async (ASGI) Django applications.
 >
 > env = environs.Env()
 > env.read_env()
-> 
+>
 > GITHUB_APP = {
 >     "PRIVATE_KEY": env.path("GITHUB_PRIVATE_KEY_PATH"),
 > }
@@ -202,28 +202,26 @@ gh = GitHubRouter()
 async def handle_issue(event, gh, *args, **kwargs):
     issue = event.data["issue"]
     labels = []
-    
+
     # Add labels based on issue title
     title = issue["title"].lower()
     if "bug" in title:
         labels.append("bug")
     if "feature" in title:
         labels.append("enhancement")
-    
+
     if labels:
-        await gh.post(
-            issue["labels_url"], 
-            data=labels
-        )
+        await gh.post(issue["labels_url"], data=labels)
+
 
 # Handle specific issue actions
 @gh.event("issues", action="opened")
 async def welcome_new_issue(event, gh, *args, **kwargs):
     """Post a comment when a new issue is opened"""
     url = event.data["issue"]["comments_url"]
-    await gh.post(url, data={
-        "body": "Thanks for opening an issue! We'll take a look soon."
-    })
+    await gh.post(
+        url, data={"body": "Thanks for opening an issue! We'll take a look soon."}
+    )
 ```
 
 For WSGI projects using `django_github_app.views.SyncWebhookView`:
@@ -239,28 +237,24 @@ gh = GitHubRouter()
 def handle_issue(event, gh, *args, **kwargs):
     issue = event.data["issue"]
     labels = []
-    
+
     # Add labels based on issue title
     title = issue["title"].lower()
     if "bug" in title:
         labels.append("bug")
     if "feature" in title:
         labels.append("enhancement")
-    
+
     if labels:
-        gh.post(
-            issue["labels_url"], 
-            data=labels
-        )
+        gh.post(issue["labels_url"], data=labels)
+
 
 # Handle specific issue actions
 @gh.event("issues", action="opened")
 def welcome_new_issue(event, gh, *args, **kwargs):
     """Post a comment when a new issue is opened"""
     url = event.data["issue"]["comments_url"]
-    gh.post(url, data={
-        "body": "Thanks for opening an issue! We'll take a look soon."
-    })
+    gh.post(url, data={"body": "Thanks for opening an issue! We'll take a look soon."})
 ```
 
 > [!IMPORTANT]
@@ -279,9 +273,10 @@ To activate your webhook handlers, import them in your app's `AppConfig.ready()`
 # your_app/apps.py
 from django.apps import AppConfig
 
+
 class YourAppConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'your_app'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "your_app"
 
     def ready(self):
         from . import events  # noqa: F401
@@ -315,23 +310,24 @@ async def get_public_repo():
     async with AsyncGitHubAPI() as gh:
         return await gh.getitem("/repos/django/django")
 
+
 # Interact as the GitHub App installation
 async def create_comment(repo_full_name: str):
     # Get the installation for the repository
-    installation = await Installation.objects.aget(repositories__full_name=repo_full_name)
-    
+    installation = await Installation.objects.aget(
+        repositories__full_name=repo_full_name
+    )
+
     async with AsyncGitHubAPI(installation_id=installation.installation_id) as gh:
         await gh.post(
-            f"/repos/{repo_full_name}/issues/1/comments",
-            data={"body": "Hello!"}
+            f"/repos/{repo_full_name}/issues/1/comments", data={"body": "Hello!"}
         )
-    
+
     # You can either provide the `installation_id` as above, or the `Installation` instance
     # itself
     async with AsyncGitHubAPI(installation=installation) as gh:
         await gh.post(
-            f"/repos/{repo_full_name}/issues/1/comments",
-            data={"body": "World!"}
+            f"/repos/{repo_full_name}/issues/1/comments", data={"body": "World!"}
         )
 ```
 
@@ -348,24 +344,19 @@ def get_public_repo_sync():
     with SyncGitHubAPI() as gh:
         return gh.getitem("/repos/django/django")
 
+
 # Interact as the GitHub App installation
 def create_comment_sync(repo_full_name: str):
     # Get the installation for the repository
     installation = Installation.objects.get(repositories__full_name=repo_full_name)
-    
+
     with SyncGitHubAPI(installation_id=installation.installation_id) as gh:
-        gh.post(
-            f"/repos/{repo_full_name}/issues/1/comments",
-            data={"body": "Hello!"}
-        )
+        gh.post(f"/repos/{repo_full_name}/issues/1/comments", data={"body": "Hello!"})
 
     # You can either provide the `installation_id` as above, or the `Installation` instance
     # itself
     with SyncGitHubAPI(installation=installation) as gh:
-        gh.post(
-            f"/repos/{repo_full_name}/issues/1/comments",
-            data={"body": "World!"}
-        )
+        gh.post(f"/repos/{repo_full_name}/issues/1/comments", data={"body": "World!"})
 ```
 
 ### Models
