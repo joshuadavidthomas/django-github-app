@@ -112,7 +112,7 @@ class SyncGitHubAPI(AsyncGitHubAPI):
     def getiter(  # type: ignore[override]
         self,
         url: str,
-        url_vars: variable.VariableValueDict | None = {},
+        url_vars: variable.VariableValueDict | None = None,
         *,
         accept: str = sansio.accept_format(),
         jwt: str | None = None,
@@ -120,6 +120,9 @@ class SyncGitHubAPI(AsyncGitHubAPI):
         extra_headers: dict[str, str] | None = None,
         iterable_key: str | None = gh_abc.ITERABLE_KEY,
     ) -> Generator[Any, None, None]:
+        if url_vars is None:
+            url_vars = {}
+
         data, more, _ = async_to_sync(super()._make_request)(
             "GET",
             url,
