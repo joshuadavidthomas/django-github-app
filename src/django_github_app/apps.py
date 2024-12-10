@@ -13,9 +13,3 @@ class GitHubAppConfig(AppConfig):
     @override
     def ready(self):
         from . import checks  # noqa: F401
-        from .conf import app_settings
-
-        if app_settings.WEBHOOK_TYPE == "async":
-            from .events import ahandlers  # noqa: F401
-        elif app_settings.WEBHOOK_TYPE == "sync":
-            from .events import handlers  # noqa: F401
