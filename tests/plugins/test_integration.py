@@ -13,6 +13,6 @@ def test_cli_flag_registered(pytestconfig):
 
 def test_markers_registered(pytestconfig):
     markers = pytestconfig.getini("markers")
-    assert any(
-        f"{MARK}:" in marker for marker in markers
-    ), f"{MARK} marker should be registered"
+    assert any(f"{MARK}:" in marker for marker in markers), (
+        f"{MARK} marker should be registered"
+    )
