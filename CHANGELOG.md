@@ -18,6 +18,10 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Added
+
+- Added support for Django 5.2.
+
 ### Fixed
 
 - Fixed a discrepancy between what the documentation showed about the type expected for `APP_ID` in the `GITHUB_APP` settings dictionary and how the library actually used the setting when creating a new `Installation` instance via the `acreate_from_event`/`create_from_event` custom manager methods.
