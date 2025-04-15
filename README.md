@@ -2,10 +2,17 @@
 
 [![PyPI](https://img.shields.io/pypi/v/django-github-app)](https://pypi.org/project/django-github-app/)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/django-github-app)
-![Django Version](https://img.shields.io/badge/django-4.2%20%7C%205.0%20%7C%205.1%20%7C%205.2-%2344B78B?labelColor=%23092E20)
-<!-- https://shields.io/badges -->
-<!-- django-4.2 | 5.0 | 5.1 | 5.2-#44B78B -->
-<!-- labelColor=%23092E20 -->
+<!-- [[[cog
+import subprocess
+import cog
+
+from noxfile import DJ_VERSIONS
+from noxfile import PY_VERSIONS
+
+cog.outl(f"![Django Version](https://img.shields.io/badge/django-{'%20%7C%20'.join(DJ_VERSIONS)}-%2344B78B?labelColor=%23092E20)")
+]]] -->
+![Django Version](https://img.shields.io/badge/django-4.2%20%7C%205.1%20%7C%205.2%20%7C%20main-%2344B78B?labelColor=%23092E20)
+<!-- [[[end]]] -->
 
 A Django toolkit providing the batteries needed to build GitHub Apps - from webhook handling to API integration.
 
