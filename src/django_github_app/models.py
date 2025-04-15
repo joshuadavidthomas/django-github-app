@@ -65,7 +65,7 @@ class InstallationManager(models.Manager["Installation"]):
     async def acreate_from_event(self, event: sansio.Event):
         app_id = event.data["installation"]["app_id"]
 
-        if str(app_id) == app_settings.APP_ID:
+        if app_id == int(app_settings.APP_ID):
             installation = await self.acreate_from_gh_data(event.data["installation"])
 
             await Repository.objects.acreate_from_gh_data(

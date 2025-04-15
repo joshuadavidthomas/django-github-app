@@ -100,8 +100,8 @@ class SyncGitHubAPI(AsyncGitHubAPI):
     delete = async_to_sync_method(AsyncGitHubAPI.delete)  # type: ignore[arg-type]
     graphql = async_to_sync_method(AsyncGitHubAPI.graphql)
 
-    @override  # type: ignore[override]
-    def sleep(self, seconds: float) -> None:
+    @override
+    def sleep(self, seconds: float) -> None:  # type: ignore[override]
         raise NotImplementedError(
             "sleep() is not supported in SyncGitHubAPI due to abstractmethod"
             "gidgethub.abc.GitHubAPI.sleep's async requirements. "

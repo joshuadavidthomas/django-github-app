@@ -18,8 +18,9 @@ from tests.utils import seq
 pytestmark = [pytest.mark.asyncio, pytest.mark.django_db]
 
 
+@pytest.mark.parametrize("app_settings_app_id_type", [int, str])
 async def test_acreate_installation(
-    installation_id, repository_id, override_app_settings
+    app_settings_app_id_type, installation_id, repository_id, override_app_settings
 ):
     data = {
         "installation": {
@@ -32,7 +33,11 @@ async def test_acreate_installation(
     }
     event = sansio.Event(data, event="installation", delivery_id="1234")
 
-    with override_app_settings(APP_ID=str(data["installation"]["app_id"])):
+    with override_app_settings(
+        APP_ID=data["installation"]["app_id"]
+        if isinstance(app_settings_app_id_type, int)
+        else str(data["installation"]["app_id"])
+    ):
         await acreate_installation(event, None)
 
     installation = await Installation.objects.aget(
