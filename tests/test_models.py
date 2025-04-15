@@ -127,7 +127,10 @@ class TestEventLog:
 
 class TestInstallationManager:
     @pytest.mark.asyncio
-    async def test_acreate_from_event(self, create_event, override_app_settings):
+    @pytest.mark.parametrize("app_settings_app_id_type", [int, str])
+    async def test_acreate_from_event(
+        self, app_settings_app_id_type, create_event, override_app_settings
+    ):
         repositories = [
             {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"},
             {"id": seq.next(), "node_id": "node2", "full_name": "owner/repo2"},
@@ -144,7 +147,11 @@ class TestInstallationManager:
             "installation",
         )
 
-        with override_app_settings(APP_ID=str(installation_data["app_id"])):
+        with override_app_settings(
+            APP_ID=installation_data["app_id"]
+            if isinstance(app_settings_app_id_type, int)
+            else str(installation_data["app_id"])
+        ):
             installation = await Installation.objects.acreate_from_event(event)
 
         assert installation.installation_id == installation_data["id"]
@@ -153,7 +160,10 @@ class TestInstallationManager:
             installation=installation
         ).acount() == len(repositories)
 
-    def test_create_from_event(self, create_event, override_app_settings):
+    @pytest.mark.parametrize("app_settings_app_id_type", [int, str])
+    def test_create_from_event(
+        self, app_settings_app_id_type, create_event, override_app_settings
+    ):
         repositories = [
             {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"},
             {"id": seq.next(), "node_id": "node2", "full_name": "owner/repo2"},
@@ -170,7 +180,11 @@ class TestInstallationManager:
             "installation",
         )
 
-        with override_app_settings(APP_ID=str(installation_data["app_id"])):
+        with override_app_settings(
+            APP_ID=installation_data["app_id"]
+            if isinstance(app_settings_app_id_type, int)
+            else str(installation_data["app_id"])
+        ):
             installation = Installation.objects.create_from_event(event)
 
         assert installation.installation_id == installation_data["id"]

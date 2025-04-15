@@ -17,7 +17,10 @@ from tests.utils import seq
 pytestmark = [pytest.mark.django_db]
 
 
-def test_create_installation(installation_id, repository_id, override_app_settings):
+@pytest.mark.parametrize("app_settings_app_id_type", [int, str])
+def test_create_installation(
+    app_settings_app_id_type, installation_id, repository_id, override_app_settings
+):
     data = {
         "installation": {
             "id": installation_id,
@@ -29,7 +32,11 @@ def test_create_installation(installation_id, repository_id, override_app_settin
     }
     event = sansio.Event(data, event="installation", delivery_id="1234")
 
-    with override_app_settings(APP_ID=str(data["installation"]["app_id"])):
+    with override_app_settings(
+        APP_ID=data["installation"]["app_id"]
+        if isinstance(app_settings_app_id_type, int)
+        else str(data["installation"]["app_id"])
+    ):
         create_installation(event, None)
 
     installation = Installation.objects.get(installation_id=data["installation"]["id"])

@@ -11,7 +11,6 @@ from django.conf import settings
 from django.test import override_settings
 from django.urls import clear_url_caches
 from django.urls import path
-from model_bakery import baker
 
 from django_github_app.conf import GITHUB_APP_SETTINGS_NAME
 from django_github_app.github import AsyncGitHubAPI
@@ -61,6 +60,13 @@ TEST_SETTINGS = {
         }
     ],
 }
+
+
+@pytest.fixture
+def baker():
+    from model_bakery import baker
+
+    return baker
 
 
 @pytest.fixture
@@ -142,7 +148,7 @@ def get_mock_github_api():
 
 
 @pytest.fixture
-def installation(get_mock_github_api):
+def installation(get_mock_github_api, baker):
     installation = baker.make(
         "django_github_app.Installation", installation_id=seq.next()
     )
@@ -158,7 +164,7 @@ def installation(get_mock_github_api):
 
 
 @pytest.fixture
-async def ainstallation(get_mock_github_api):
+async def ainstallation(get_mock_github_api, baker):
     installation = await sync_to_async(baker.make)(
         "django_github_app.Installation", installation_id=seq.next()
     )
@@ -174,7 +180,7 @@ async def ainstallation(get_mock_github_api):
 
 
 @pytest.fixture
-def repository(installation, get_mock_github_api):
+def repository(installation, get_mock_github_api, baker):
     repository = baker.make(
         "django_github_app.Repository",
         repository_id=seq.next(),
@@ -201,7 +207,7 @@ def repository(installation, get_mock_github_api):
 
 
 @pytest.fixture
-async def arepository(ainstallation, get_mock_github_api):
+async def arepository(ainstallation, get_mock_github_api, baker):
     installation = await ainstallation
     repository = await sync_to_async(baker.make)(
         "django_github_app.Repository",
