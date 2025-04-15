@@ -1,7 +1,5 @@
 # django-github-app
 
-[![PyPI](https://img.shields.io/pypi/v/django-github-app)](https://pypi.org/project/django-github-app/)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/django-github-app)
 <!-- [[[cog
 import subprocess
 import cog
@@ -9,8 +7,12 @@ import cog
 from noxfile import DJ_VERSIONS
 from noxfile import PY_VERSIONS
 
+cog.outl("[![PyPI](https://img.shields.io/pypi/v/django-github-app)](https://pypi.org/project/django-github-app/)")
+cog.outl("![PyPI - Python Version](https://img.shields.io/pypi/pyversions/django-github-app)")
 cog.outl(f"![Django Version](https://img.shields.io/badge/django-{'%20%7C%20'.join(DJ_VERSIONS)}-%2344B78B?labelColor=%23092E20)")
 ]]] -->
+[![PyPI](https://img.shields.io/pypi/v/django-github-app)](https://pypi.org/project/django-github-app/)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/django-github-app)
 ![Django Version](https://img.shields.io/badge/django-4.2%20%7C%205.1%20%7C%205.2%20%7C%20main-%2344B78B?labelColor=%23092E20)
 <!-- [[[end]]] -->
 
