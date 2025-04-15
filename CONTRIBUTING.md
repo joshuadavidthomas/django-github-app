@@ -50,15 +50,19 @@ $ # just --list --list-submodules
 
 Available recipes:
     bootstrap
-    coverage
+    coverage *ARGS
     lint
     lock *ARGS
+    manage *COMMAND
     test *ARGS
     testall *ARGS
     types *ARGS
     docs:
         build LOCATION="docs/_build/html" # Build documentation using Sphinx
         serve PORT="8000"                 # Serve documentation locally
+    project:
+        bump *ARGS
+        release *ARGS
 ```
 <!-- [[[end]]] -->
 

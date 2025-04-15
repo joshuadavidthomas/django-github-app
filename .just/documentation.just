@@ -28,4 +28,4 @@ serve PORT="8000": cog
 [no-cd]
 [private]
 cog:
-    uv run --extra docs cog -r docs/development/just.md
+    uv run --with cogapp cog -r CONTRIBUTING.md README.md pyproject.toml

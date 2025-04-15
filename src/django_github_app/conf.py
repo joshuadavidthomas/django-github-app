@@ -39,7 +39,7 @@ class AppSettings:
         if not value:
             return ""
 
-        if not isinstance(value, (str, Path)):
+        if not isinstance(value, str | Path):
             return str(value)
 
         if isinstance(value, str) and value.startswith("-----BEGIN"):

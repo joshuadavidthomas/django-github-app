@@ -18,7 +18,7 @@ def get_webhook_views():
             callback = pattern.callback
             view_class = getattr(callback, "view_class", None)
             if view_class:
-                if issubclass(view_class, (AsyncWebhookView, SyncWebhookView)):
+                if issubclass(view_class, AsyncWebhookView | SyncWebhookView):
                     found_views.append(view_class)
 
     return found_views
