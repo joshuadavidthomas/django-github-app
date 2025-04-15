@@ -13,7 +13,6 @@ concurrency:
 env:
   PYTHONUNBUFFERED: "1"
   FORCE_COLOR: "1"
-  UV_VERSION: "0.4.x"
 
 jobs:
   generate-matrix:
@@ -27,7 +26,6 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          version: ${{ env.UV_VERSION }}
 
       - id: set-matrix
         run: |
@@ -47,7 +45,6 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          version: ${{ env.UV_VERSION }}
 
       - name: Run tests
         run: |
@@ -75,7 +72,6 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          version: ${{ env.UV_VERSION }}
 
       - name: Run tests with integration tests enabled
         env:
@@ -99,7 +95,6 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          version: ${{ env.UV_VERSION }}
 
       - name: Run type checks
         run: |
@@ -114,7 +109,6 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          version: ${{ env.UV_VERSION }}
 
       - name: Generate code coverage
         run: |
