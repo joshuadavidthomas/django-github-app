@@ -24,8 +24,3 @@ serve PORT="8000": cog
         HOST="0.0.0.0"
     fi
     uv run --extra docs sphinx-autobuild docs docs/_build/html --host "$HOST" --port {{ PORT }}
-
-[no-cd]
-[private]
-cog:
-    uv run --with cogapp cog -r CONTRIBUTING.md README.md pyproject.toml

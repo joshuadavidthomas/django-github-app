@@ -10,7 +10,7 @@ default:
 
 [private]
 cog:
-    uv run --with cogapp cog -r CONTRIBUTING.md
+    uv run --with cogapp cog -r CONTRIBUTING.md README.md pyproject.toml
 
 [private]
 fmt:
