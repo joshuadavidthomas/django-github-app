@@ -12,10 +12,10 @@ class GitHubAppConfig(AppConfig):
 
     @override
     def ready(self):
+        # Import checks to ensure they are registered.
         from . import checks  # noqa: F401
-        from .conf import app_settings
 
-        if app_settings.WEBHOOK_TYPE == "async":
-            from .events import ahandlers  # noqa: F401
-        elif app_settings.WEBHOOK_TYPE == "sync":
-            from .events import handlers  # noqa: F401
+        # Handler loading is now deferred to the view level (AsyncWebhookView/SyncWebhookView)
+        # to support lazy loading and potentially mixing view types.
+        # See PLAN.md for Issue #38 for details.
+        pass

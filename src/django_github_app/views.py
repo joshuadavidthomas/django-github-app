@@ -59,6 +59,9 @@ class BaseWebhookView(View, ABC, Generic[GitHubAPIType]):
 
     @property
     def router(self) -> GitHubRouter:
+        # This property now implicitly relies on the ensure_..._loaded methods
+        # being called in the post methods before dispatching.
+        # It aggregates all routers registered during handler loading.
         return GitHubRouter(*GitHubRouter.routers)
 
     @abstractmethod
@@ -75,6 +78,9 @@ class AsyncWebhookView(BaseWebhookView[AsyncGitHubAPI]):
     async def post(self, request: HttpRequest) -> JsonResponse:
         event = self.get_event(request)
 
+        # Ensure async handlers are loaded before dispatching
+        GitHubRouter.ensure_async_handlers_loaded()
+
         if app_settings.AUTO_CLEANUP_EVENTS:
             await EventLog.objects.acleanup_events()
 
@@ -82,7 +88,9 @@ class AsyncWebhookView(BaseWebhookView[AsyncGitHubAPI]):
         installation = await Installation.objects.aget_from_event(event)
 
         async with self.get_github_api(installation) as gh:
+            # The sleep is often used for debugging or rate limiting simulation; keeping it.
             await gh.sleep(1)
+            # Dispatch using the aggregated router
             await self.router.adispatch(event, gh)
 
         return self.get_response(event_log)
@@ -95,6 +103,9 @@ class SyncWebhookView(BaseWebhookView[SyncGitHubAPI]):
     def post(self, request: HttpRequest) -> JsonResponse:  # pragma: no cover
         event = self.get_event(request)
 
+        # Ensure sync handlers are loaded before dispatching
+        GitHubRouter.ensure_sync_handlers_loaded()
+
         if app_settings.AUTO_CLEANUP_EVENTS:
             EventLog.objects.cleanup_events()
 
@@ -102,7 +113,9 @@ class SyncWebhookView(BaseWebhookView[SyncGitHubAPI]):
         installation = Installation.objects.get_from_event(event)
 
         with self.get_github_api(installation) as gh:
+            # The sleep is often used for debugging or rate limiting simulation; keeping it.
             time.sleep(1)
+            # Dispatch using the aggregated router
             self.router.dispatch(event, gh)
 
         return self.get_response(event_log)
