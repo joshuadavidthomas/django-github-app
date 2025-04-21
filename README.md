@@ -26,8 +26,8 @@ Projects using django-github-app:
 
 - [psf/clabot](https://github.com/psf/clabot)
 
-> [!NOTE] Using django-github-app in production?
-> Are you using django-github-app in a production application? Open a PR to add it to this list!
+> [!NOTE]
+> Are you using this project in a production application? Open a PR to add it to this list!
 
 ## Requirements
 
