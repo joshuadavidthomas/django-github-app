@@ -331,9 +331,10 @@ For Django projects running with ASGI or in async views, the async client provid
 from django_github_app.github import AsyncGitHubAPI
 from django_github_app.models import Installation
 
+
 # Access public endpoints without authentication
 async def get_public_repo():
-    async with AsyncGitHubAPI() as gh:
+    async with AsyncGitHubAPI("example-github-app") as gh:
         return await gh.getitem("/repos/django/django")
 
 
@@ -344,14 +345,16 @@ async def create_comment(repo_full_name: str):
         repositories__full_name=repo_full_name
     )
 
-    async with AsyncGitHubAPI(installation_id=installation.installation_id) as gh:
+    async with AsyncGitHubAPI(
+        "example-github-app", installation_id=installation.installation_id
+    ) as gh:
         await gh.post(
             f"/repos/{repo_full_name}/issues/1/comments", data={"body": "Hello!"}
         )
 
     # You can either provide the `installation_id` as above, or the `Installation` instance
     # itself
-    async with AsyncGitHubAPI(installation=installation) as gh:
+    async with AsyncGitHubAPI("example-github-app", installation=installation) as gh:
         await gh.post(
             f"/repos/{repo_full_name}/issues/1/comments", data={"body": "World!"}
         )
@@ -365,9 +368,10 @@ For traditional Django applications running under WSGI, the sync client provides
 from django_github_app.github import SyncGitHubAPI
 from django_github_app.models import Installation
 
+
 # Access public endpoints without authentication
 def get_public_repo_sync():
-    with SyncGitHubAPI() as gh:
+    with SyncGitHubAPI("example-github-app") as gh:
         return gh.getitem("/repos/django/django")
 
 
@@ -376,12 +380,14 @@ def create_comment_sync(repo_full_name: str):
     # Get the installation for the repository
     installation = Installation.objects.get(repositories__full_name=repo_full_name)
 
-    with SyncGitHubAPI(installation_id=installation.installation_id) as gh:
+    with SyncGitHubAPI(
+        "example-github-app", installation_id=installation.installation_id
+    ) as gh:
         gh.post(f"/repos/{repo_full_name}/issues/1/comments", data={"body": "Hello!"})
 
     # You can either provide the `installation_id` as above, or the `Installation` instance
     # itself
-    with SyncGitHubAPI(installation=installation) as gh:
+    with SyncGitHubAPI("example-github-app", installation=installation) as gh:
         gh.post(f"/repos/{repo_full_name}/issues/1/comments", data={"body": "World!"})
 ```
 
