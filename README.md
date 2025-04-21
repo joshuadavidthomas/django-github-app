@@ -26,7 +26,7 @@ Fully supports both sync (WSGI) and async (ASGI) Django applications.
 
 - [psf/clabot](https://github.com/psf/clabot)
 
-Are you using this project in a production application? Open a PR to add it to this list!
+Are you using django-github-app in a production application? Open a PR to add it to this list!
 
 ## Requirements
 
