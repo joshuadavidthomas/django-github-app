@@ -22,6 +22,13 @@ Built on [gidgethub](https://github.com/gidgethub/gidgethub) and [httpx](https:/
 
 Fully supports both sync (WSGI) and async (ASGI) Django applications.
 
+Projects using django-github-app:
+
+- [psf/clabot](https://github.com/psf/clabot)
+
+> [!NOTE] Using django-github-app in production?
+> Are you using django-github-app in a production application? Open a PR to add it to this list!
+
 ## Requirements
 
 <!-- [[[cog
