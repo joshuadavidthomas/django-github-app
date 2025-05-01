@@ -16,9 +16,10 @@ dev = [
   "pytest-cov>=6.0.0",
   "pytest-django>=4.9.0",
   "pytest-httpx>=0.33.0",
+  "pytest-memray>=1.7.0",
   "pytest-randomly>=3.16.0",
   "pytest-xdist>=3.6.1",
-  "ruff>=0.7.3"
+  "ruff>=0.7.3",
 ]
 types = [
   "django-stubs>=5.1.1",

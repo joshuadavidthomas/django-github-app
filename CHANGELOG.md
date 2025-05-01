@@ -18,6 +18,10 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed excessive memory usage in `AsyncWebhookView` and `SyncWebhookView` caused by creating a new `GitHubRouter` instance on each request.
+
 ## [0.6.0]
 
 ### Added
