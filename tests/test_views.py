@@ -17,7 +17,6 @@ from model_bakery import baker
 from django_github_app.github import AsyncGitHubAPI
 from django_github_app.github import SyncGitHubAPI
 from django_github_app.models import EventLog
-from django_github_app.routing import GitHubRouter
 from django_github_app.views import AsyncWebhookView
 from django_github_app.views import BaseWebhookView
 from django_github_app.views import SyncWebhookView
@@ -71,26 +70,21 @@ def webhook_request(rf):
 
 @pytest.fixture
 def test_router():
-    # Reset both the class router collections and the instance router
-    old_routers = GitHubRouter._routers
+    import django_github_app.views
+    from django_github_app.routing import GitHubRouter
+
+    old_routers = GitHubRouter._routers.copy()
     GitHubRouter._routers = []
 
-    # Reset the router on view classes
-    old_router_async = AsyncWebhookView._router
-    old_router_sync = SyncWebhookView._router
-    old_router_base = WebhookView._router
-    AsyncWebhookView._router = None
-    SyncWebhookView._router = None
-    WebhookView._router = None
+    old_router = django_github_app.views._router
 
-    # Create test router
-    yield GitHubRouter()
+    test_router = GitHubRouter()
+    django_github_app.views._router = test_router
 
-    # Restore state
+    yield test_router
+
     GitHubRouter._routers = old_routers
-    AsyncWebhookView._router = old_router_async
-    SyncWebhookView._router = old_router_sync
-    WebhookView._router = old_router_base
+    django_github_app.views._router = old_router
 
 
 @pytest.fixture
@@ -325,6 +319,7 @@ class TestSyncWebhookView:
         response = view.post(request)
 
         assert response.status_code == HTTPStatus.OK
+        print(f"{webhook_data=}")
         assert webhook_data["event"].event == "push"
         assert webhook_data["event"].data["repository"]["full_name"] == "test/repo"
         assert isinstance(webhook_data["gh"], SyncGitHubAPI)
