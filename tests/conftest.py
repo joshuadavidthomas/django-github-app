@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
+import pytest_asyncio
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.test import override_settings
@@ -163,7 +164,7 @@ def installation(get_mock_github_api, baker):
     return installation
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def ainstallation(get_mock_github_api, baker):
     installation = await sync_to_async(baker.make)(
         "django_github_app.Installation", installation_id=seq.next()
@@ -206,14 +207,13 @@ def repository(installation, get_mock_github_api, baker):
     return repository
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def arepository(ainstallation, get_mock_github_api, baker):
-    installation = await ainstallation
     repository = await sync_to_async(baker.make)(
         "django_github_app.Repository",
         repository_id=seq.next(),
         full_name="owner/repo",
-        installation=installation,
+        installation=ainstallation,
     )
     mock_github_api = get_mock_github_api(
         [

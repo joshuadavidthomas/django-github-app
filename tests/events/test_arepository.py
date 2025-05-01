@@ -13,10 +13,9 @@ pytestmark = [pytest.mark.asyncio, pytest.mark.django_db]
 
 
 async def test_arename_repository(ainstallation, repository_id):
-    installation = await ainstallation
     repository = await sync_to_async(baker.make)(
         "django_github_app.Repository",
-        installation=installation,
+        installation=ainstallation,
         repository_id=repository_id,
         full_name=f"owner/old_name_{seq.next()}",
     )

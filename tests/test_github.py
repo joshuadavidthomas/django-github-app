@@ -14,13 +14,11 @@ from django_github_app.models import Installation
 @pytest.mark.django_db
 class TestAsyncGitHubAPI:
     async def test_init_with_two_installation_kwargs(self, ainstallation):
-        installation = await ainstallation
-
         with pytest.raises(ValueError):
             AsyncGitHubAPI(
                 "test",
-                installation=installation,
-                installation_id=installation.installation_id,
+                installation=ainstallation,
+                installation_id=ainstallation.installation_id,
             )
 
     async def test_request(self, httpx_mock):
@@ -36,9 +34,7 @@ class TestAsyncGitHubAPI:
 
         monkeypatch.setattr(Installation, "aget_access_token", mock_aget_access_token)
 
-        installation = await ainstallation
-
-        async with AsyncGitHubAPI("test", installation=installation) as gh:
+        async with AsyncGitHubAPI("test", installation=ainstallation) as gh:
             assert gh.oauth_token == "ABC123"
 
     async def test_oauth_token_installation_id(self, ainstallation, monkeypatch):
@@ -47,10 +43,8 @@ class TestAsyncGitHubAPI:
 
         monkeypatch.setattr(Installation, "aget_access_token", mock_aget_access_token)
 
-        installation = await ainstallation
-
         async with AsyncGitHubAPI(
-            "test", installation_id=installation.installation_id
+            "test", installation_id=ainstallation.installation_id
         ) as gh:
             assert gh.oauth_token == "ABC123"
 

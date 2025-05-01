@@ -220,14 +220,13 @@ class TestInstallationManager:
 
     @pytest.mark.asyncio
     async def test_aget_from_event(self, ainstallation, create_event):
-        installation = await ainstallation
         event = create_event(
-            {"installation": {"id": installation.installation_id}}, "installation"
+            {"installation": {"id": ainstallation.installation_id}}, "installation"
         )
 
         result = await Installation.objects.aget_from_event(event)
 
-        assert result == installation
+        assert result == ainstallation
 
     @pytest.mark.asyncio
     async def test_aget_from_event_doesnotexist(self, installation_id, create_event):
@@ -287,15 +286,13 @@ class TestInstallation:
         get_mock_github_api,
         override_app_settings,
     ):
-        installation = await ainstallation
-
         mock_github_api = get_mock_github_api({"foo": "bar"})
-        installation.get_gh_client = MagicMock(return_value=mock_github_api)
+        ainstallation.get_gh_client = MagicMock(return_value=mock_github_api)
 
         with override_app_settings(PRIVATE_KEY=private_key):
-            await installation.arefresh_from_gh(account_type, "test")
+            await ainstallation.arefresh_from_gh(account_type, "test")
 
-        assert installation.data == {"foo": "bar"}
+        assert ainstallation.data == {"foo": "bar"}
 
     @pytest.mark.parametrize("account_type", ["org", "user"])
     def test_refresh_from_gh(
@@ -320,9 +317,7 @@ class TestInstallation:
 
     @pytest.mark.asyncio
     async def test_aget_repos(self, ainstallation):
-        installation = await ainstallation
-
-        repos = await installation.aget_repos()
+        repos = await ainstallation.aget_repos()
 
         assert len(repos) == 2
         assert repos[0]["node_id"] == "node1"
@@ -353,20 +348,21 @@ class TestInstallation:
 class TestRepositoryManager:
     @pytest.mark.asyncio
     async def test_acreate_from_gh_data_list(self, ainstallation):
-        installation = await ainstallation
         data = [
             {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"},
             {"id": seq.next(), "node_id": "node2", "full_name": "owner/repo2"},
         ]
 
-        repositories = await Repository.objects.acreate_from_gh_data(data, installation)
+        repositories = await Repository.objects.acreate_from_gh_data(
+            data, ainstallation
+        )
 
         assert len(repositories) == len(data)
         for i, repo in enumerate(repositories):
             assert repo.repository_id == data[i]["id"]
             assert repo.repository_node_id == data[i]["node_id"]
             assert repo.full_name == data[i]["full_name"]
-            assert repo.installation_id == installation.id
+            assert repo.installation_id == ainstallation.id
 
     def test_create_from_gh_data_list(self, installation):
         data = [
@@ -385,15 +381,14 @@ class TestRepositoryManager:
 
     @pytest.mark.asyncio
     async def test_acreate_from_gh_data_single(self, ainstallation):
-        installation = await ainstallation
         data = {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"}
 
-        repository = await Repository.objects.acreate_from_gh_data(data, installation)
+        repository = await Repository.objects.acreate_from_gh_data(data, ainstallation)
 
         assert repository.repository_id == data["id"]
         assert repository.repository_node_id == data["node_id"]
         assert repository.full_name == data["full_name"]
-        assert repository.installation_id == installation.id
+        assert repository.installation_id == ainstallation.id
 
     def test_create_from_gh_data_single(self, installation):
         data = {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"}
@@ -407,13 +402,11 @@ class TestRepositoryManager:
 
     @pytest.mark.asyncio
     async def test_aget_from_event(self, arepository, create_event):
-        repository = await arepository
-
         data = {
             "repository": {
-                "id": repository.repository_id,
-                "node_id": repository.repository_node_id,
-                "full_name": repository.full_name,
+                "id": arepository.repository_id,
+                "node_id": arepository.repository_node_id,
+                "full_name": arepository.full_name,
             }
         }
 
@@ -424,7 +417,7 @@ class TestRepositoryManager:
         assert repo.repository_id == data["repository"]["id"]
         assert repo.repository_node_id == data["repository"]["node_id"]
         assert repo.full_name == data["repository"]["full_name"]
-        assert repo.installation_id == repository.installation.id
+        assert repo.installation_id == arepository.installation.id
 
     @pytest.mark.asyncio
     async def test_aget_from_event_doesnotexist(self, repository_id, create_event):
@@ -466,9 +459,7 @@ class TestRepository:
 
     @pytest.mark.asyncio
     async def test_aget_issues(self, arepository):
-        repository = await arepository
-
-        issues = await repository.aget_issues()
+        issues = await arepository.aget_issues()
 
         assert len(issues) == 2
         assert issues[0]["number"] == 1
