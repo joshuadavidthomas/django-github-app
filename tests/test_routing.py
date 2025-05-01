@@ -62,15 +62,10 @@ class TestGitHubRouter:
     def test_no_duplicate_routers(self):
         router_ids = set()
 
-        for _ in range(100):
+        for _ in range(1000):
             view = FixedTestView()
+            router_ids.add(id(view.router))
 
-            # really goose it up with adding duplicate routers
-            for _ in range(10):
-                router_ids.add(id(view.router))
-
-        # we should have exactly ONE router instance despite
-        # creating it 100 views x 10 accesses = 1000 times
         assert len(router_ids) == 1
 
     def test_duplicate_routers_without_module_level_router(self):
@@ -84,20 +79,24 @@ class TestGitHubRouter:
 
     @pytest.mark.limit_memory("2.5MB")
     def test_router_memory_stress_test(self):
+        view_count = 50000
         views = []
 
-        for _ in range(50000):
+        for _ in range(view_count):
             view = FixedTestView()
             views.append(view)
 
+        assert len(views) == view_count
         assert all(view.router is views[0].router for view in views)
 
     @pytest.mark.limit_memory("4MB")
     def test_router_memory_stress_test_broken(self):
+        view_count = 50000
         views = []
 
-        for _ in range(50000):
+        for _ in range(view_count):
             view = BrokenTestView()
             views.append(view)
 
+        assert len(views) == view_count
         assert not all(view.router is views[0].router for view in views)
