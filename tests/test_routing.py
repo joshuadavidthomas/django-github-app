@@ -28,14 +28,14 @@ def test_router():
     django_github_app.views._router = old_router
 
 
-class FixedTestView(BaseWebhookView[SyncGitHubAPI]):
+class View(BaseWebhookView[SyncGitHubAPI]):
     github_api_class = SyncGitHubAPI
 
     def post(self, request: HttpRequest) -> JsonResponse:
         return JsonResponse({})
 
 
-class BrokenTestView(BaseWebhookView[SyncGitHubAPI]):
+class LegacyView(BaseWebhookView[SyncGitHubAPI]):
     github_api_class = SyncGitHubAPI
 
     @property
@@ -49,8 +49,8 @@ class BrokenTestView(BaseWebhookView[SyncGitHubAPI]):
 
 class TestGitHubRouter:
     def test_router_single_instance(self):
-        view1 = FixedTestView()
-        view2 = FixedTestView()
+        view1 = View()
+        view2 = View()
 
         router1 = view1.router
         router2 = view2.router
@@ -63,7 +63,7 @@ class TestGitHubRouter:
         router_ids = set()
 
         for _ in range(1000):
-            view = FixedTestView()
+            view = View()
             router_ids.add(id(view.router))
 
         assert len(router_ids) == 1
@@ -72,7 +72,7 @@ class TestGitHubRouter:
         router_ids = set()
 
         for _ in range(5):
-            view = BrokenTestView()
+            view = LegacyView()
             router_ids.add(id(view.router))
 
         assert len(router_ids) == 5
@@ -83,7 +83,7 @@ class TestGitHubRouter:
         views = []
 
         for _ in range(view_count):
-            view = FixedTestView()
+            view = View()
             views.append(view)
 
         assert len(views) == view_count
@@ -95,7 +95,7 @@ class TestGitHubRouter:
         views = []
 
         for _ in range(view_count):
-            view = BrokenTestView()
+            view = LegacyView()
             views.append(view)
 
         assert len(views) == view_count
