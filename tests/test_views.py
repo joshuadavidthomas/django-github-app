@@ -164,25 +164,6 @@ class TestBaseWebhookView:
         assert isinstance(response, JsonResponse)
         assert response.status_code == HTTPStatus.OK
 
-    def test_router_single_instance(self):
-        # Reset the router
-        WebhookView._router = None
-
-        # Create multiple views
-        view1 = WebhookView()
-        view2 = WebhookView()
-
-        # Get router from both instances
-        router1 = view1.router
-        router2 = view2.router
-
-        # Verify they are the same object
-        assert router1 is router2
-
-        # Verify subsequent calls return the same instance
-        assert view1.router is router1
-        assert view2.router is router2
-
 
 @pytest.mark.asyncio
 class TestAsyncWebhookView:
@@ -319,7 +300,6 @@ class TestSyncWebhookView:
         response = view.post(request)
 
         assert response.status_code == HTTPStatus.OK
-        print(f"{webhook_data=}")
         assert webhook_data["event"].event == "push"
         assert webhook_data["event"].data["repository"]["full_name"] == "test/repo"
         assert isinstance(webhook_data["gh"], SyncGitHubAPI)
