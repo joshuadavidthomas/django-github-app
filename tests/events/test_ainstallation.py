@@ -48,10 +48,9 @@ async def test_acreate_installation(
 
 
 async def test_adelete_installation(ainstallation):
-    installation = await ainstallation
     data = {
         "installation": {
-            "id": installation.installation_id,
+            "id": ainstallation.installation_id,
         }
     }
     event = sansio.Event(data, event="installation", delivery_id="1234")
@@ -73,55 +72,51 @@ async def test_adelete_installation(ainstallation):
 async def test_atoggle_installation_status_suspend(
     status, action, expected, ainstallation
 ):
-    installation = await ainstallation
-    installation.status = status
-    await installation.asave()
+    ainstallation.status = status
+    await ainstallation.asave()
 
     data = {
         "action": action,
         "installation": {
-            "id": installation.installation_id,
+            "id": ainstallation.installation_id,
         },
     }
     event = sansio.Event(data, event="installation", delivery_id="1234")
 
-    assert installation.status != expected
+    assert ainstallation.status != expected
 
     await atoggle_installation_status(event, None)
 
-    await installation.arefresh_from_db()
-    assert installation.status == expected
+    await ainstallation.arefresh_from_db()
+    assert ainstallation.status == expected
 
 
 async def test_async_installation_data(ainstallation):
-    installation = await ainstallation
-
     data = {
         "installation": {
-            "id": installation.installation_id,
+            "id": ainstallation.installation_id,
         },
     }
     event = sansio.Event(data, event="installation", delivery_id="1234")
 
-    assert installation.data != data
+    assert ainstallation.data != data
 
     await async_installation_data(event, None)
 
-    await installation.arefresh_from_db()
-    assert installation.data == data["installation"]
+    await ainstallation.arefresh_from_db()
+    assert ainstallation.data == data["installation"]
 
 
 async def test_async_installation_repositories(ainstallation):
-    installation = await ainstallation
     existing_repo = await sync_to_async(baker.make)(
         "django_github_app.Repository",
-        installation=installation,
+        installation=ainstallation,
         repository_id=seq.next(),
     )
 
     data = {
         "installation": {
-            "id": installation.installation_id,
+            "id": ainstallation.installation_id,
         },
         "repositories_removed": [
             {
