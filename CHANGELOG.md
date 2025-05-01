@@ -20,7 +20,7 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ### Fixed
 
-- Fixed a memory leak in `AsyncWebhookView` and `SyncWebhookView` caused by creating a new `GitHubRouter` instance on each request.
+- Fixed excessive memory consumption in `AsyncWebhookView` and `SyncWebhookView` caused by creating a new `GitHubRouter` instance on each request.
 
 ## [0.6.0]
 
