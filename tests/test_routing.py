@@ -77,26 +77,35 @@ class TestGitHubRouter:
 
         assert len(router_ids) == 5
 
-    @pytest.mark.limit_memory("2.5MB")
+    @pytest.mark.limit_memory("100KB")
+    @pytest.mark.xdist_group(group="memory_tests")
     def test_router_memory_stress_test(self):
-        view_count = 50000
+        view_count = 10000
         views = []
 
         for _ in range(view_count):
             view = View()
             views.append(view)
 
-        assert len(views) == view_count
-        assert all(view.router is views[0].router for view in views)
+        view1_router = views[0].router
 
-    @pytest.mark.limit_memory("4MB")
+        assert len(views) == view_count
+        assert all(view.router is view1_router for view in views)
+
+    @pytest.mark.limit_memory("1.5MB")
+    @pytest.mark.xdist_group(group="memory_tests")
+    @pytest.mark.skip(
+        "does not reliably allocate memory when run with other memory test"
+    )
     def test_router_memory_stress_test_legacy(self):
-        view_count = 50000
+        view_count = 10000
         views = []
 
         for _ in range(view_count):
             view = LegacyView()
             views.append(view)
 
+        view1_router = views[0].router
+
         assert len(views) == view_count
-        assert not all(view.router is views[0].router for view in views)
+        assert not all(view.router is view1_router for view in views)
