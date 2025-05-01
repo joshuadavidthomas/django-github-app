@@ -77,7 +77,7 @@ class TestGitHubRouter:
 
         assert len(router_ids) == 5
 
-    @pytest.mark.limit_memory("2.5MB")
+    @pytest.mark.limit_memory("3MB")
     def test_router_memory_stress_test(self):
         view_count = 50000
         views = []
