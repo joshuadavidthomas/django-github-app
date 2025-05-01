@@ -30,6 +30,7 @@ GitHubAPIType = TypeVar("GitHubAPIType", AsyncGitHubAPI, SyncGitHubAPI)
 
 class BaseWebhookView(View, ABC, Generic[GitHubAPIType]):
     github_api_class: type[GitHubAPIType]
+    _router: GitHubRouter | None = None
 
     def get_event(self, request: HttpRequest) -> Event:
         try:
@@ -59,7 +60,9 @@ class BaseWebhookView(View, ABC, Generic[GitHubAPIType]):
 
     @property
     def router(self) -> GitHubRouter:
-        return GitHubRouter(*GitHubRouter.routers)
+        if self.__class__._router is None:
+            self.__class__._router = GitHubRouter(*GitHubRouter.routers)
+        return self.__class__._router
 
     @abstractmethod
     def post(
