@@ -17,13 +17,18 @@ from .models import Installation
 from .models import Repository
 
 
-class EventLogCleanupForm(forms.Form):
-    days_to_keep = forms.IntegerField(
-        label="Days to keep",
-        min_value=0,
-        initial=app_settings.DAYS_TO_KEEP_EVENTS,
-        help_text="Events older than this number of days will be deleted.",
-    )
+def get_cleanup_form(model_meta):
+    """Create a cleanup form with model-specific help text."""
+
+    class CleanupForm(forms.Form):
+        days_to_keep = forms.IntegerField(
+            label="Days to keep",
+            min_value=0,
+            initial=app_settings.DAYS_TO_KEEP_EVENTS,
+            help_text=f"{model_meta.verbose_name_plural.capitalize()} older than this number of days will be deleted.",
+        )
+
+    return CleanupForm
 
 
 @admin.register(EventLog)
@@ -57,9 +62,11 @@ class EventLogModelAdmin(admin.ModelAdmin):
                 reverse("admin:django_github_app_eventlog_changelist")
             )
 
+        CleanupForm = get_cleanup_form(self.model._meta)
+
         # show form or confirmation
         if request.method == "POST":
-            form = EventLogCleanupForm(request.POST)
+            form = CleanupForm(request.POST)
             if form.is_valid():
                 days_to_keep = form.cleaned_data["days_to_keep"]
                 cutoff_date = timezone.now() - datetime.timedelta(days=days_to_keep)
@@ -68,7 +75,7 @@ class EventLogModelAdmin(admin.ModelAdmin):
 
                 context = {
                     **self.admin_site.each_context(request),
-                    "title": "Confirm Event Cleanup",
+                    "title": f"Confirm {self.model._meta.verbose_name} deletion",
                     "days_to_keep": days_to_keep,
                     "delete_count": delete_count,
                     "cutoff_date": cutoff_date,
@@ -87,12 +94,12 @@ class EventLogModelAdmin(admin.ModelAdmin):
                     "admin/django_github_app/eventlog/cleanup_confirmation.html",
                     context,
                 )
-        else:
-            form = EventLogCleanupForm()
+
+        form = CleanupForm()
 
         context = {
             **self.admin_site.each_context(request),
-            "title": "Clean up Events",
+            "title": f"Clean up {self.model._meta.verbose_name_plural}",
             "form": form,
             "opts": self.model._meta,
         }

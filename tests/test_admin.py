@@ -57,8 +57,8 @@ class TestEventLogModelAdmin:
         response = eventlog_admin.cleanup_view(request)
 
         assert response.status_code == 200
-        assert b"Clean up Events" in response.content
-        assert b"Days to keep events" in response.content
+        assert b"Clean up event logs" in response.content
+        assert b"Days to keep" in response.content
 
     def test_cleanup_view_post_shows_confirmation(self, client, admin_user, baker):
         # Create some test events
@@ -73,7 +73,7 @@ class TestEventLogModelAdmin:
         )
 
         assert response.status_code == 200
-        assert b"You are about to delete 3 events" in response.content
+        assert b"You are about to delete 3 event logs" in response.content
         assert b"Yes, I" in response.content and b"m sure" in response.content
 
     @patch("django_github_app.models.EventLog.objects.cleanup_events")
@@ -162,7 +162,7 @@ class TestEventLogModelAdmin:
             {"days_to_keep": "5"},
         )
         assert response.status_code == 200
-        assert b"You are about to delete 1 event" in response.content
+        assert b"You are about to delete 1 event log" in response.content
 
         # Test POST request - Step 2: Confirm deletion
         response = client.post(

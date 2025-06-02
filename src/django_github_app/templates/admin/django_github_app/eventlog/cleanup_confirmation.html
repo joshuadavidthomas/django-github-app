@@ -1,19 +1,14 @@
 {% extends "admin/delete_confirmation.html" %}
 {% load i18n admin_urls %}
 {% block breadcrumbs %}
-    <div class="breadcrumbs">
-        <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
-        &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
-        &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
-        &rsaquo; {% translate 'Clean up Events' %}
-    </div>
+    {% include "admin/django_github_app/eventlog/includes/cleanup_breadcrumbs.html" %}
 {% endblock %}
 {% block delete_confirm %}
     <p>
-        {% blocktranslate count counter=delete_count %}You are about to delete {{ counter }} event older than {{ days_to_keep }} days.{% plural %}You are about to delete {{ counter }} events older than {{ days_to_keep }} days.{% endblocktranslate %}
+        {% blocktranslate count counter=delete_count with verbose_name=opts.verbose_name verbose_name_plural=opts.verbose_name_plural %}You are about to delete {{ counter }} {{ verbose_name }} older than {{ days_to_keep }} days.{% plural %}You are about to delete {{ counter }} {{ verbose_name_plural }} older than {{ days_to_keep }} days.{% endblocktranslate %}
     </p>
     <p>
-        {% blocktranslate %}All events received before {{ cutoff_date }} will be permanently deleted.{% endblocktranslate %}
+        {% blocktranslate with verbose_name_plural=opts.verbose_name_plural %}All {{ verbose_name_plural }} received before {{ cutoff_date }} will be permanently deleted.{% endblocktranslate %}
     </p>
     {% if model_count %}
         {% include "admin/includes/object_delete_summary.html" %}

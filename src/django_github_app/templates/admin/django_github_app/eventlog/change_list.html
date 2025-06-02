@@ -3,7 +3,7 @@
 {% block object-tools-items %}
     <li>
         {% url opts|admin_urlname:'cleanup' as cleanup_url %}
-        <a href="{{ cleanup_url }}">{% translate 'Clean up Events' %}</a>
+        <a href="{{ cleanup_url }}">{% blocktranslate with verbose_name_plural=opts.verbose_name_plural %}Clean up {{ verbose_name_plural }}{% endblocktranslate %}</a>
     </li>
     {{ block.super }}
 {% endblock %}
