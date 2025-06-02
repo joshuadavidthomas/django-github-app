@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from django.contrib import admin
+from django.contrib import messages
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from django.urls import path
+from django.urls import reverse
 
+from .conf import app_settings
 from .models import EventLog
 from .models import Installation
 from .models import Repository
@@ -11,6 +17,46 @@ from .models import Repository
 class EventLogModelAdmin(admin.ModelAdmin):
     list_display = ["id", "event", "action", "received_at"]
     readonly_fields = ["event", "payload", "received_at"]
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "cleanup/",
+                self.admin_site.admin_view(self.cleanup_view),
+                name="django_github_app_eventlog_cleanup",
+            ),
+        ]
+        return custom_urls + urls
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context["cleanup_url"] = reverse(
+            "admin:django_github_app_eventlog_cleanup"
+        )
+        return super().changelist_view(request, extra_context=extra_context)
+
+    def cleanup_view(self, request):
+        if request.method == "POST":
+            days_to_keep = int(
+                request.POST.get("days_to_keep", app_settings.DAYS_TO_KEEP_EVENTS)
+            )
+            deleted_count, _ = EventLog.objects.cleanup_events(days_to_keep)
+            messages.success(
+                request,
+                f"Successfully deleted {deleted_count} event(s) older than {days_to_keep} days.",
+            )
+            return HttpResponseRedirect(
+                reverse("admin:django_github_app_eventlog_changelist")
+            )
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Clean up Events",
+            "days_to_keep": app_settings.DAYS_TO_KEEP_EVENTS,
+            "opts": self.model._meta,
+        }
+        return render(request, "admin/django_github_app/eventlog/cleanup.html", context)
 
 
 @admin.register(Installation)

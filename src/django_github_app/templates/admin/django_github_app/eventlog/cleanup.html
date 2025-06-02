@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="module">
+        <div class="form-row">
+            <label for="id_days_to_keep">Days to keep events:</label>
+            <input type="number" name="days_to_keep" value="{{ days_to_keep }}" id="id_days_to_keep" min="0" required>
+            <p class="help">Events older than this number of days will be deleted.</p>
+        </div>
+    </div>
+
+    <div class="submit-row">
+        <input type="submit" value="Delete Events" class="default">
+        <a href="{% url 'admin:django_github_app_eventlog_changelist' %}" class="button cancel-link">Cancel</a>
+    </div>
+</form>
+{% endblock %}
