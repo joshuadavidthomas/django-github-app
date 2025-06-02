@@ -42,11 +42,13 @@ def factory():
 
 
 class TestEventLogModelAdmin:
-    def test_cleanup_url_in_changelist_context(self, factory, admin_user, eventlog_admin):
+    def test_cleanup_url_in_changelist_context(
+        self, factory, admin_user, eventlog_admin
+    ):
         request = factory.get("/admin/django_github_app/eventlog/")
         request.user = admin_user
         response = eventlog_admin.changelist_view(request)
-        
+
         assert "cleanup_url" in response.context_data
         assert response.context_data["cleanup_url"] == reverse(
             "admin:django_github_app_eventlog_cleanup"
@@ -56,7 +58,7 @@ class TestEventLogModelAdmin:
         request = factory.get("/admin/django_github_app/eventlog/cleanup/")
         request.user = admin_user
         response = eventlog_admin.cleanup_view(request)
-        
+
         assert response.status_code == 200
         assert b"Clean up Events" in response.content
         assert b"Days to keep events" in response.content
@@ -70,11 +72,11 @@ class TestEventLogModelAdmin:
             reverse("admin:django_github_app_eventlog_cleanup"),
             {"days_to_keep": "3"},
         )
-        
+
         assert response.status_code == 302
         assert response.url == reverse("admin:django_github_app_eventlog_changelist")
         mock_cleanup.assert_called_once_with(3)
-        
+
         # Check success message
         messages = list(get_messages(response.wsgi_request))
         assert len(messages) == 1
@@ -82,7 +84,7 @@ class TestEventLogModelAdmin:
 
     def test_cleanup_view_integration(self, client, admin_user, baker):
         now = timezone.now()
-        
+
         # Create test EventLog entries using baker
         old_event = baker.make(
             EventLog,
@@ -98,22 +100,22 @@ class TestEventLogModelAdmin:
         )
 
         client.login(username="admin", password="adminpass")
-        
+
         # Test GET request
         response = client.get(reverse("admin:django_github_app_eventlog_cleanup"))
         assert response.status_code == 200
-        
+
         # Test POST request
         response = client.post(
             reverse("admin:django_github_app_eventlog_cleanup"),
             {"days_to_keep": "5"},
         )
         assert response.status_code == 302
-        
+
         # Check that old event was deleted and recent event remains
         assert not EventLog.objects.filter(id=old_event.id).exists()
         assert EventLog.objects.filter(id=recent_event.id).exists()
-        
+
         # Check success message
         messages = list(get_messages(response.wsgi_request))
         assert len(messages) == 1
