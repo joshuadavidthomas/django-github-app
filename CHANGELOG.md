@@ -18,6 +18,8 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+## [0.7.0]
+
 ### Added
 
 - Added `GITHUB_APP["LOG_ALL_EVENTS"]` setting to control webhook event logging. When `False`, only events with registered handlers are stored in the database.
@@ -107,7 +109,7 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 - Josh Thomas <josh@joshthomas.dev> (maintainer)
 
-[unreleased]: https://github.com/joshuadavidthomas/django-github-app/compare/v0.6.1...HEAD
+[unreleased]: https://github.com/joshuadavidthomas/django-github-app/compare/v0.7.0...HEAD
 [0.1.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.1.0
 [0.2.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.2.0
 [0.2.1]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.2.1
@@ -116,3 +118,4 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 [0.5.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.5.0
 [0.6.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.6.0
 [0.6.1]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.6.1
+[0.7.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.7.0
