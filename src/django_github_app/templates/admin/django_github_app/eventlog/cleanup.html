@@ -1,0 +1,35 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+{% block bodyclass %}
+    {{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} delete-confirmation
+{% endblock %}
+{% block breadcrumbs %}
+    {% include "admin/django_github_app/eventlog/includes/cleanup_breadcrumbs.html" %}
+{% endblock %}
+{% block content %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="module">
+            {% for field in form %}
+                <div>
+                    {{ field.errors }}
+                    {{ field.label_tag }}
+                    {{ field }}
+                    <div class="help"
+                         {% if field.id_for_label %}id="{{ field.id_for_label }}_helptext"{% endif %}>
+                        <div>{{ field.help_text|safe }}</div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="submit-row">
+            <input type="submit"
+                   value="{% translate 'Delete' %}"
+                   class="default"
+                   name="_save">
+            {% url opts|admin_urlname:'changelist' as changelist_url %}
+            <a href="{% add_preserved_filters changelist_url %}"
+               class="button cancel-link">{% translate 'Cancel' %}</a>
+        </div>
+    </form>
+{% endblock %}

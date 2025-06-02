@@ -1,0 +1,28 @@
+{% extends "admin/delete_confirmation.html" %}
+{% load i18n admin_urls %}
+{% block breadcrumbs %}
+    {% include "admin/django_github_app/eventlog/includes/cleanup_breadcrumbs.html" %}
+{% endblock %}
+{% block delete_confirm %}
+    <p>
+        {% blocktranslate count counter=form.to_delete_count with verbose_name=opts.verbose_name verbose_name_plural=opts.verbose_name_plural days_to_keep=form.cleaned_data.days_to_keep %}You are about to delete {{ counter }} {{ verbose_name }} older than {{ days_to_keep }} days.{% plural %}You are about to delete {{ counter }} {{ verbose_name_plural }} older than {{ days_to_keep }} days.{% endblocktranslate %}
+    </p>
+    <p>
+        {% blocktranslate with verbose_name_plural=opts.verbose_name_plural cutoff_date=form.cutoff_date %}All {{ verbose_name_plural }} received before {{ cutoff_date }} will be permanently deleted.{% endblocktranslate %}
+    </p>
+    {% if form.to_delete_count %}
+        <h2>{% translate "Summary" %}</h2>
+        <ul>
+            <li>{% blocktranslate with name=opts.verbose_name_plural count=form.to_delete_count %}{{ name }}: {{ count }}{% endblocktranslate %}</li>
+        </ul>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <div>
+            <input type="hidden" name="post" value="yes">
+            <input type="hidden" name="days_to_keep" value="{{ form.cleaned_data.days_to_keep }}">
+            <input type="submit" value="{% translate "Yes, I'm sure" %}">
+            <a href="#" class="button cancel-link">{% translate 'No, take me back' %}</a>
+        </div>
+    </form>
+{% endblock %}

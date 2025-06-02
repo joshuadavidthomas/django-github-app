@@ -21,6 +21,7 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 ### Added
 
 - Added `GITHUB_APP["LOG_ALL_EVENTS"]` setting to control webhook event logging. When `False`, only events with registered handlers are stored in the database.
+- Added admin action to bulk delete EventLog entries older than a specified number of days.
 
 ## [0.6.1]
 
