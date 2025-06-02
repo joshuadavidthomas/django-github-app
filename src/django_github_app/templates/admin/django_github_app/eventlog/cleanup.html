@@ -18,13 +18,13 @@
         </div>
         <div class="submit-row">
             <input type="submit"
-                   value="{% translate 'Delete Events' %}"
-                   class="deletelink"
+                   value="{% translate 'Submit' %}"
+                   class="default"
                    name="_save">
             {% url opts|admin_urlname:'changelist' as changelist_url %}
             <a role="button"
                href="{% add_preserved_filters changelist_url %}"
-               class="closelink">{% translate 'Cancel' %}</a>
+               class="button">{% translate 'Cancel' %}</a>
         </div>
     </form>
 {% endblock %}
