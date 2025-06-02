@@ -1,5 +1,16 @@
 {% extends "admin/base_site.html" %}
 {% load i18n admin_urls %}
+{% block bodyclass %}
+    {{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} delete-confirmation
+{% endblock %}
+{% block breadcrumbs %}
+    <div class="breadcrumbs">
+        <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+        &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+        &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+        &rsaquo; {% translate 'Clean up Events' %}
+    </div>
+{% endblock %}
 {% block content %}
     <form method="post">
         {% csrf_token %}
@@ -22,9 +33,8 @@
                    class="default"
                    name="_save">
             {% url opts|admin_urlname:'changelist' as changelist_url %}
-            <a role="button"
-               href="{% add_preserved_filters changelist_url %}"
-               class="button">{% translate 'Cancel' %}</a>
+            <a href="{% add_preserved_filters changelist_url %}"
+               class="button cancel-link">{% translate 'Cancel' %}</a>
         </div>
     </form>
 {% endblock %}

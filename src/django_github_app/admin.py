@@ -19,7 +19,7 @@ from .models import Repository
 
 class EventLogCleanupForm(forms.Form):
     days_to_keep = forms.IntegerField(
-        label="Days to keep events",
+        label="Days to keep",
         min_value=0,
         initial=app_settings.DAYS_TO_KEEP_EVENTS,
         help_text="Events older than this number of days will be deleted.",

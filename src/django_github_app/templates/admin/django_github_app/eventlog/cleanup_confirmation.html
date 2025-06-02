@@ -1,30 +1,30 @@
 {% extends "admin/delete_confirmation.html" %}
 {% load i18n admin_urls %}
-
 {% block breadcrumbs %}
-<div class="breadcrumbs">
-<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
-&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
-&rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
-&rsaquo; {% translate 'Clean up Events' %}
-</div>
-{% endblock %}
-
-{% block delete_confirm %}
-<p>{% blocktranslate count counter=delete_count %}You are about to delete {{ counter }} event older than {{ days_to_keep }} days.{% plural %}You are about to delete {{ counter }} events older than {{ days_to_keep }} days.{% endblocktranslate %}</p>
-
-<p>{% blocktranslate %}All events received before {{ cutoff_date }} will be permanently deleted.{% endblocktranslate %}</p>
-
-{% if model_count %}
-    {% include "admin/includes/object_delete_summary.html" %}
-{% endif %}
-
-<form method="post">{% csrf_token %}
-    <div>
-        <input type="hidden" name="post" value="yes">
-        <input type="hidden" name="days_to_keep" value="{{ days_to_keep }}">
-        <input type="submit" value="{% translate "Yes, I'm sure" %}">
-        <a href="#" class="button cancel-link">{% translate "No, take me back" %}</a>
+    <div class="breadcrumbs">
+        <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+        &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+        &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+        &rsaquo; {% translate 'Clean up Events' %}
     </div>
-</form>
+{% endblock %}
+{% block delete_confirm %}
+    <p>
+        {% blocktranslate count counter=delete_count %}You are about to delete {{ counter }} event older than {{ days_to_keep }} days.{% plural %}You are about to delete {{ counter }} events older than {{ days_to_keep }} days.{% endblocktranslate %}
+    </p>
+    <p>
+        {% blocktranslate %}All events received before {{ cutoff_date }} will be permanently deleted.{% endblocktranslate %}
+    </p>
+    {% if model_count %}
+        {% include "admin/includes/object_delete_summary.html" %}
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <div>
+            <input type="hidden" name="post" value="yes">
+            <input type="hidden" name="days_to_keep" value="{{ days_to_keep }}">
+            <input type="submit" value="{% translate "Yes, I'm sure" %}">
+            <a href="#" class="button cancel-link">{% translate 'No, take me back' %}</a>
+        </div>
+    </form>
 {% endblock %}
