@@ -18,6 +18,10 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Added
+
+- Added `GITHUB_APP["LOG_ALL_EVENTS"]` setting to control webhook event logging. When `False`, only events with registered handlers are stored in the database.
+
 ## [0.6.1]
 
 ### Fixed

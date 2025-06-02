@@ -16,6 +16,7 @@ from django_github_app.conf import app_settings
         ("AUTO_CLEANUP_EVENTS", True),
         ("CLIENT_ID", ""),
         ("DAYS_TO_KEEP_EVENTS", 7),
+        ("LOG_ALL_EVENTS", True),
         ("NAME", ""),
         ("PRIVATE_KEY", ""),
         ("WEBHOOK_SECRET", ""),
