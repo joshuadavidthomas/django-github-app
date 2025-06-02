@@ -1,21 +1,30 @@
 {% extends "admin/base_site.html" %}
-
+{% load i18n admin_urls %}
 {% block content %}
-<h1>{{ title }}</h1>
-
-<form method="post">
-    {% csrf_token %}
-    <div class="module">
-        <div class="form-row">
-            <label for="id_days_to_keep">Days to keep events:</label>
-            <input type="number" name="days_to_keep" value="{{ days_to_keep }}" id="id_days_to_keep" min="0" required>
-            <p class="help">Events older than this number of days will be deleted.</p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="module">
+            {% for field in form %}
+                <div>
+                    {{ field.errors }}
+                    {{ field.label_tag }}
+                    {{ field }}
+                    <div class="help"
+                         {% if field.id_for_label %}id="{{ field.id_for_label }}_helptext"{% endif %}>
+                        <div>{{ field.help_text|safe }}</div>
+                    </div>
+                </div>
+            {% endfor %}
         </div>
-    </div>
-
-    <div class="submit-row">
-        <input type="submit" value="Delete Events" class="default">
-        <a href="{% url 'admin:django_github_app_eventlog_changelist' %}" class="button cancel-link">Cancel</a>
-    </div>
-</form>
+        <div class="submit-row">
+            <input type="submit"
+                   value="{% translate 'Delete Events' %}"
+                   class="default"
+                   name="_save">
+            {% url opts|admin_urlname:'changelist' as changelist_url %}
+            <a role="button"
+               href="{% add_preserved_filters changelist_url %}"
+               class="closelink">{% translate 'Cancel' %}</a>
+        </div>
+    </form>
 {% endblock %}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django import forms
 from django.contrib import admin
 from django.contrib import messages
 from django.http import HttpResponseRedirect
@@ -11,6 +12,15 @@ from .conf import app_settings
 from .models import EventLog
 from .models import Installation
 from .models import Repository
+
+
+class EventLogCleanupForm(forms.Form):
+    days_to_keep = forms.IntegerField(
+        label="Days to keep events",
+        min_value=0,
+        initial=app_settings.DAYS_TO_KEEP_EVENTS,
+        help_text="Events older than this number of days will be deleted.",
+    )
 
 
 @admin.register(EventLog)
@@ -29,31 +39,26 @@ class EventLogModelAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
-    def changelist_view(self, request, extra_context=None):
-        extra_context = extra_context or {}
-        extra_context["cleanup_url"] = reverse(
-            "admin:django_github_app_eventlog_cleanup"
-        )
-        return super().changelist_view(request, extra_context=extra_context)
-
     def cleanup_view(self, request):
         if request.method == "POST":
-            days_to_keep = int(
-                request.POST.get("days_to_keep", app_settings.DAYS_TO_KEEP_EVENTS)
-            )
-            deleted_count, _ = EventLog.objects.cleanup_events(days_to_keep)
-            messages.success(
-                request,
-                f"Successfully deleted {deleted_count} event(s) older than {days_to_keep} days.",
-            )
-            return HttpResponseRedirect(
-                reverse("admin:django_github_app_eventlog_changelist")
-            )
+            form = EventLogCleanupForm(request.POST)
+            if form.is_valid():
+                days_to_keep = form.cleaned_data["days_to_keep"]
+                deleted_count, _ = EventLog.objects.cleanup_events(days_to_keep)
+                messages.success(
+                    request,
+                    f"Successfully deleted {deleted_count} event(s) older than {days_to_keep} days.",
+                )
+                return HttpResponseRedirect(
+                    reverse("admin:django_github_app_eventlog_changelist")
+                )
+        else:
+            form = EventLogCleanupForm()
 
         context = {
             **self.admin_site.each_context(request),
             "title": "Clean up Events",
-            "days_to_keep": app_settings.DAYS_TO_KEEP_EVENTS,
+            "form": form,
             "opts": self.model._meta,
         }
         return render(request, "admin/django_github_app/eventlog/cleanup.html", context)
