@@ -186,7 +186,6 @@ class TestAsyncWebhookView:
         assert response.status_code != HTTPStatus.FORBIDDEN
 
     async def test_event_log_created(self, webhook_request, aregister_webhook_event):
-        # Register a handler for the webhook event
         aregister_webhook_event("push")
         request = webhook_request(event_type="push")
         view = AsyncWebhookView()
@@ -246,11 +245,9 @@ class TestAsyncWebhookView:
             aregister_webhook_event("push", should_fail=True)
             view = AsyncWebhookView()
 
-            # Create event directly, bypassing webhook validation
             data = {"action": "opened"}
             event = sansio.Event(data, event="issues", delivery_id="12345")
 
-            # Mock the get_event method to return our event
             monkeypatch.setattr(view, "get_event", lambda request: event)
 
             response = await view.post(None)
@@ -262,24 +259,18 @@ class TestAsyncWebhookView:
         self, monkeypatch, aregister_webhook_event, override_app_settings
     ):
         with override_app_settings(LOG_ALL_EVENTS=True):
-            # Register handler for "push" but send "issues" event
             aregister_webhook_event("push", should_fail=True)
             view = AsyncWebhookView()
 
-            # Create event directly, bypassing webhook validation
             data = {"action": "opened"}
             event = sansio.Event(data, event="issues", delivery_id="12345")
 
-            # Mock the get_event method to return our event
             monkeypatch.setattr(view, "get_event", lambda request: event)
 
-            # Get count before
             count_before = await EventLog.objects.acount()
 
-            # Process request (with a dummy request)
             await view.post(None)
 
-            # Verify event log is created when LOG_ALL_EVENTS=True
             count_after = await EventLog.objects.acount()
             assert count_after - count_before == 1
 
@@ -287,24 +278,18 @@ class TestAsyncWebhookView:
         self, monkeypatch, aregister_webhook_event, override_app_settings
     ):
         with override_app_settings(LOG_ALL_EVENTS=False):
-            # Register handler for "push" but send "issues" event
             aregister_webhook_event("push", should_fail=True)
             view = AsyncWebhookView()
 
-            # Create event directly, bypassing webhook validation
             data = {"action": "opened"}
             event = sansio.Event(data, event="issues", delivery_id="12345")
 
-            # Mock the get_event method to return our event
             monkeypatch.setattr(view, "get_event", lambda request: event)
 
-            # Get count before
             count_before = await EventLog.objects.acount()
 
-            # Process request (with a dummy request)
             await view.post(None)
 
-            # Verify event log is not created when LOG_ALL_EVENTS=False
             count_after = await EventLog.objects.acount()
             assert count_after - count_before == 0
 
@@ -328,7 +313,6 @@ class TestSyncWebhookView:
         assert response.status_code != HTTPStatus.FORBIDDEN
 
     def test_event_log_created(self, webhook_request, register_webhook_event):
-        # Register a handler for the webhook event
         register_webhook_event("push")
         request = webhook_request(event_type="push")
         view = SyncWebhookView()
@@ -374,11 +358,9 @@ class TestSyncWebhookView:
             register_webhook_event("push", should_fail=True)
             view = SyncWebhookView()
 
-            # Create event directly, bypassing webhook validation
             data = {"action": "opened"}
             event = sansio.Event(data, event="issues", delivery_id="12345")
 
-            # Mock the get_event method to return our event
             monkeypatch.setattr(view, "get_event", lambda request: event)
 
             response = view.post(None)
@@ -390,24 +372,18 @@ class TestSyncWebhookView:
         self, monkeypatch, register_webhook_event, override_app_settings
     ):
         with override_app_settings(LOG_ALL_EVENTS=True):
-            # Register handler for "push" but send "issues" event
             register_webhook_event("push", should_fail=True)
             view = SyncWebhookView()
 
-            # Create event directly, bypassing webhook validation
             data = {"action": "opened"}
             event = sansio.Event(data, event="issues", delivery_id="12345")
 
-            # Mock the get_event method to return our event
             monkeypatch.setattr(view, "get_event", lambda request: event)
 
-            # Get count before
             count_before = EventLog.objects.count()
 
-            # Process request (with a dummy request)
             view.post(None)
 
-            # Verify event log is created when LOG_ALL_EVENTS=True
             count_after = EventLog.objects.count()
             assert count_after - count_before == 1
 
@@ -415,23 +391,17 @@ class TestSyncWebhookView:
         self, monkeypatch, register_webhook_event, override_app_settings
     ):
         with override_app_settings(LOG_ALL_EVENTS=False):
-            # Register handler for "push" but send "issues" event
             register_webhook_event("push", should_fail=True)
             view = SyncWebhookView()
 
-            # Create event directly, bypassing webhook validation
             data = {"action": "opened"}
             event = sansio.Event(data, event="issues", delivery_id="12345")
 
-            # Mock the get_event method to return our event
             monkeypatch.setattr(view, "get_event", lambda request: event)
 
-            # Get count before
             count_before = EventLog.objects.count()
 
-            # Process request (with a dummy request)
             view.post(None)
 
-            # Verify event log is not created when LOG_ALL_EVENTS=False
             count_after = EventLog.objects.count()
             assert count_after - count_before == 0
