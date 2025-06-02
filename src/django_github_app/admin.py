@@ -17,8 +17,8 @@ from .models import Installation
 from .models import Repository
 
 
-def get_cleanup_form(model_meta):
-    """Create a cleanup form with model-specific help text."""
+def get_cleanup_form(model_meta, model_class):
+    """Create a cleanup form with model-specific help text and save method."""
 
     class CleanupForm(forms.Form):
         days_to_keep = forms.IntegerField(
@@ -27,6 +27,18 @@ def get_cleanup_form(model_meta):
             initial=app_settings.DAYS_TO_KEEP_EVENTS,
             help_text=f"{model_meta.verbose_name_plural.capitalize()} older than this number of days will be deleted.",
         )
+
+        def get_queryset_to_delete(self):
+            """Get the queryset of objects that will be deleted."""
+            days_to_keep = self.cleaned_data["days_to_keep"]
+            cutoff_date = timezone.now() - datetime.timedelta(days=days_to_keep)
+            return model_class.objects.filter(received_at__lte=cutoff_date)
+
+        def save(self):
+            """Delete the events and return the count."""
+            days_to_keep = self.cleaned_data["days_to_keep"]
+            deleted_count, _ = model_class.objects.cleanup_events(days_to_keep)
+            return deleted_count
 
     return CleanupForm
 
@@ -48,10 +60,13 @@ class EventLogModelAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def cleanup_view(self, request):
+        CleanupForm = get_cleanup_form(self.model._meta, self.model)
+        form = CleanupForm(request.POST or None)
+
         # handle confirmation
-        if request.POST.get("post") == "yes":
-            days_to_keep = int(request.POST.get("days_to_keep", 0))
-            deleted_count, _ = EventLog.objects.cleanup_events(days_to_keep)
+        if request.POST.get("post") == "yes" and form.is_valid():
+            deleted_count = form.save()
+            days_to_keep = form.cleaned_data["days_to_keep"]
             event_text = "event" if deleted_count == 1 else "events"
             day_text = "day" if days_to_keep == 1 else "days"
             messages.success(
@@ -62,15 +77,11 @@ class EventLogModelAdmin(admin.ModelAdmin):
                 reverse("admin:django_github_app_eventlog_changelist")
             )
 
-        CleanupForm = get_cleanup_form(self.model._meta)
-
-        form = CleanupForm(request.POST or None)
-
         if form.is_valid():
             days_to_keep = form.cleaned_data["days_to_keep"]
-            cutoff_date = timezone.now() - datetime.timedelta(days=days_to_keep)
-            events_to_delete = EventLog.objects.filter(received_at__lte=cutoff_date)
+            events_to_delete = form.get_queryset_to_delete()
             delete_count = events_to_delete.count()
+            cutoff_date = timezone.now() - datetime.timedelta(days=days_to_keep)
 
             context = {
                 **self.admin_site.each_context(request),
