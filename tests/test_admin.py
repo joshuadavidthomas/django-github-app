@@ -45,7 +45,7 @@ class TestEventLogModelAdmin:
     def test_cleanup_url_exists(self, client, admin_user):
         client.login(username="admin", password="adminpass")
         response = client.get(reverse("admin:django_github_app_eventlog_changelist"))
-        
+
         assert response.status_code == 200
         # Check that the cleanup URL is in the rendered HTML
         cleanup_url = reverse("admin:django_github_app_eventlog_cleanup")
