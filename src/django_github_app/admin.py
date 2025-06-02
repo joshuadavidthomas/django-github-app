@@ -64,38 +64,33 @@ class EventLogModelAdmin(admin.ModelAdmin):
 
         CleanupForm = get_cleanup_form(self.model._meta)
 
-        # show form or confirmation
-        if request.method == "POST":
-            form = CleanupForm(request.POST)
-            if form.is_valid():
-                days_to_keep = form.cleaned_data["days_to_keep"]
-                cutoff_date = timezone.now() - datetime.timedelta(days=days_to_keep)
-                events_to_delete = EventLog.objects.filter(received_at__lte=cutoff_date)
-                delete_count = events_to_delete.count()
+        form = CleanupForm(request.POST or None)
 
-                context = {
-                    **self.admin_site.each_context(request),
-                    "title": f"Confirm {self.model._meta.verbose_name} deletion",
-                    "days_to_keep": days_to_keep,
-                    "delete_count": delete_count,
-                    "cutoff_date": cutoff_date,
-                    "opts": self.model._meta,
-                    "object_name": self.model._meta.verbose_name,
-                    "model_count": [
-                        (self.model._meta.verbose_name_plural, delete_count)
-                    ]
-                    if delete_count
-                    else [],
-                    "perms_lacking": None,
-                    "protected": None,
-                }
-                return render(
-                    request,
-                    "admin/django_github_app/eventlog/cleanup_confirmation.html",
-                    context,
-                )
+        if form.is_valid():
+            days_to_keep = form.cleaned_data["days_to_keep"]
+            cutoff_date = timezone.now() - datetime.timedelta(days=days_to_keep)
+            events_to_delete = EventLog.objects.filter(received_at__lte=cutoff_date)
+            delete_count = events_to_delete.count()
 
-        form = CleanupForm()
+            context = {
+                **self.admin_site.each_context(request),
+                "title": f"Confirm {self.model._meta.verbose_name} deletion",
+                "days_to_keep": days_to_keep,
+                "delete_count": delete_count,
+                "cutoff_date": cutoff_date,
+                "opts": self.model._meta,
+                "object_name": self.model._meta.verbose_name,
+                "model_count": [(self.model._meta.verbose_name_plural, delete_count)]
+                if delete_count
+                else [],
+                "perms_lacking": None,
+                "protected": None,
+            }
+            return render(
+                request,
+                "admin/django_github_app/eventlog/cleanup_confirmation.html",
+                context,
+            )
 
         context = {
             **self.admin_site.each_context(request),
