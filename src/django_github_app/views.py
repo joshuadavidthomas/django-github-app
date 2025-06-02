@@ -51,13 +51,11 @@ class BaseWebhookView(View, ABC, Generic[GitHubAPIType]):
         installation_id = getattr(installation, "installation_id", None)
         return self.github_api_class(requester, installation_id=installation_id)
 
-    def get_response(self, event_log: EventLog) -> JsonResponse:
-        return JsonResponse(
-            {
-                "message": "ok",
-                "event_id": event_log.id,
-            }
-        )
+    def get_response(self, event_log: EventLog | None) -> JsonResponse:
+        response_data: dict[str, int | str] = {"message": "ok"}
+        if event_log:
+            response_data["event_id"] = event_log.id
+        return JsonResponse(response_data)
 
     @property
     def router(self) -> GitHubRouter:
@@ -80,12 +78,17 @@ class AsyncWebhookView(BaseWebhookView[AsyncGitHubAPI]):
         if app_settings.AUTO_CLEANUP_EVENTS:
             await EventLog.objects.acleanup_events()
 
-        event_log = await EventLog.objects.acreate_from_event(event)
-        installation = await Installation.objects.aget_from_event(event)
+        found_callbacks = self.router.fetch(event)
 
-        async with self.get_github_api(installation) as gh:
-            await gh.sleep(1)
-            await self.router.adispatch(event, gh)
+        event_log = None
+        if app_settings.LOG_ALL_EVENTS or found_callbacks:
+            event_log = await EventLog.objects.acreate_from_event(event)
+
+        if found_callbacks:
+            installation = await Installation.objects.aget_from_event(event)
+            async with self.get_github_api(installation) as gh:
+                await gh.sleep(1)
+                await self.router.adispatch(event, gh)
 
         return self.get_response(event_log)
 
@@ -100,11 +103,16 @@ class SyncWebhookView(BaseWebhookView[SyncGitHubAPI]):
         if app_settings.AUTO_CLEANUP_EVENTS:
             EventLog.objects.cleanup_events()
 
-        event_log = EventLog.objects.create_from_event(event)
-        installation = Installation.objects.get_from_event(event)
+        found_callbacks = self.router.fetch(event)
 
-        with self.get_github_api(installation) as gh:
-            time.sleep(1)
-            self.router.dispatch(event, gh)
+        event_log = None
+        if app_settings.LOG_ALL_EVENTS or found_callbacks:
+            event_log = EventLog.objects.create_from_event(event)
+
+        if found_callbacks:
+            installation = Installation.objects.get_from_event(event)
+            with self.get_github_api(installation) as gh:
+                time.sleep(1)
+                self.router.dispatch(event, gh)
 
         return self.get_response(event_log)

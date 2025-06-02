@@ -19,6 +19,7 @@ class AppSettings:
     AUTO_CLEANUP_EVENTS: bool = True
     CLIENT_ID: str = ""
     DAYS_TO_KEEP_EVENTS: int = 7
+    LOG_ALL_EVENTS: bool = True
     NAME: str = ""
     PRIVATE_KEY: str = ""
     WEBHOOK_SECRET: str = ""

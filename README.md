@@ -510,6 +510,7 @@ GITHUB_APP = {
     "AUTO_CLEANUP_EVENTS": True,
     "CLIENT_ID": "",
     "DAYS_TO_KEEP_EVENTS": 7,
+    "LOG_ALL_EVENTS": True,
     "NAME": "",
     "PRIVATE_KEY": "",
     "WEBHOOK_SECRET": "",
@@ -551,6 +552,24 @@ The GitHub App's client ID. Obtained when registering your GitHub App.
 > **Optional** | `int` | Default: `7`
 
 Number of days to retain webhook events before cleanup. Used by both automatic cleanup (when [`AUTO_CLEANUP_EVENTS`](#auto_cleanup_events) is `True`) and the `EventLog.objects.acleanup_events` manager method.
+
+### `LOG_ALL_EVENTS`
+
+> **Optional** | `bool` | Default: `True`
+
+Controls whether all webhook events are stored in the database, or only events that have registered handlers.
+
+When `True` (default), all webhook events sent to your webhook endpoint are stored as `EventLog` entries, providing a complete audit trail. This is useful for debugging and compliance purposes.
+
+When `False`, only events that have registered handlers (via `@router.event()` decorators) are stored. This can significantly reduce database usage for high-traffic GitHub Apps, especially those receiving many events they don't process (e.g., the numerous pull request sub-events like "labeled", "unlabeled", etc.).
+
+Example:
+```python
+GITHUB_APP = {
+    # ... other settings ...
+    "LOG_ALL_EVENTS": False,  # Only store events with handlers
+}
+```
 
 ### `NAME`
 
