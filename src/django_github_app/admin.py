@@ -40,7 +40,7 @@ class EventLogCleanupForm(forms.Form):
 
     @property
     def to_delete_count(self) -> int:
-        if not hasattr(self, "cleaned_data"):
+        if not hasattr(self, "cleaned_data"):  # pragma: no cover
             raise ValidationError(
                 "Form must be validated before accessing to_delete_count"
             )
@@ -48,7 +48,7 @@ class EventLogCleanupForm(forms.Form):
 
     @property
     def cutoff_date(self) -> datetime.datetime:
-        if not hasattr(self, "cleaned_data"):
+        if not hasattr(self, "cleaned_data"):  # pragma: no cover
             raise ValidationError("Form must be validated before accessing cutoff_date")
         days_to_keep = self.cleaned_data["days_to_keep"]
         return timezone.now() - datetime.timedelta(days=days_to_keep)
