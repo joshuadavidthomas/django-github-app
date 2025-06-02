@@ -60,14 +60,30 @@ class TestEventLogModelAdmin:
         assert b"Clean up Events" in response.content
         assert b"Days to keep events" in response.content
 
+    def test_cleanup_view_post_shows_confirmation(self, client, admin_user, baker):
+        # Create some test events
+        now = timezone.now()
+        baker.make(EventLog, _quantity=3, received_at=now - datetime.timedelta(days=10))
+        baker.make(EventLog, _quantity=2, received_at=now - datetime.timedelta(days=2))
+
+        client.login(username="admin", password="adminpass")
+        response = client.post(
+            reverse("admin:django_github_app_eventlog_cleanup"),
+            {"days_to_keep": "5"},
+        )
+
+        assert response.status_code == 200
+        assert b"You are about to delete 3 events" in response.content
+        assert b"Yes, I" in response.content and b"m sure" in response.content
+
     @patch("django_github_app.models.EventLog.objects.cleanup_events")
-    def test_cleanup_view_post(self, mock_cleanup, client, admin_user):
+    def test_cleanup_view_confirm_deletion(self, mock_cleanup, client, admin_user):
         mock_cleanup.return_value = (5, {"django_github_app.EventLog": 5})
 
         client.login(username="admin", password="adminpass")
         response = client.post(
             reverse("admin:django_github_app_eventlog_cleanup"),
-            {"days_to_keep": "3"},
+            {"post": "yes", "days_to_keep": "3"},
         )
 
         assert response.status_code == 302
@@ -77,7 +93,45 @@ class TestEventLogModelAdmin:
         # Check success message
         messages = list(get_messages(response.wsgi_request))
         assert len(messages) == 1
-        assert "Successfully deleted 5 event(s)" in str(messages[0])
+        assert "Successfully deleted 5 events older than 3 days" in str(messages[0])
+
+    @patch("django_github_app.models.EventLog.objects.cleanup_events")
+    def test_cleanup_view_confirm_deletion_singular_day(
+        self, mock_cleanup, client, admin_user
+    ):
+        mock_cleanup.return_value = (2, {"django_github_app.EventLog": 2})
+
+        client.login(username="admin", password="adminpass")
+        response = client.post(
+            reverse("admin:django_github_app_eventlog_cleanup"),
+            {"post": "yes", "days_to_keep": "1"},
+        )
+
+        assert response.status_code == 302
+
+        # Check success message uses singular "day" and plural "events"
+        messages = list(get_messages(response.wsgi_request))
+        assert len(messages) == 1
+        assert "Successfully deleted 2 events older than 1 day" in str(messages[0])
+
+    @patch("django_github_app.models.EventLog.objects.cleanup_events")
+    def test_cleanup_view_confirm_deletion_zero_events(
+        self, mock_cleanup, client, admin_user
+    ):
+        mock_cleanup.return_value = (0, {})
+
+        client.login(username="admin", password="adminpass")
+        response = client.post(
+            reverse("admin:django_github_app_eventlog_cleanup"),
+            {"post": "yes", "days_to_keep": "7"},
+        )
+
+        assert response.status_code == 302
+
+        # Check success message uses plural "events" for zero
+        messages = list(get_messages(response.wsgi_request))
+        assert len(messages) == 1
+        assert "Successfully deleted 0 events older than 7 days" in str(messages[0])
 
     def test_cleanup_view_integration(self, client, admin_user, baker):
         now = timezone.now()
@@ -102,10 +156,18 @@ class TestEventLogModelAdmin:
         response = client.get(reverse("admin:django_github_app_eventlog_cleanup"))
         assert response.status_code == 200
 
-        # Test POST request
+        # Test POST request - Step 1: Show confirmation
         response = client.post(
             reverse("admin:django_github_app_eventlog_cleanup"),
             {"days_to_keep": "5"},
+        )
+        assert response.status_code == 200
+        assert b"You are about to delete 1 event" in response.content
+
+        # Test POST request - Step 2: Confirm deletion
+        response = client.post(
+            reverse("admin:django_github_app_eventlog_cleanup"),
+            {"post": "yes", "days_to_keep": "5"},
         )
         assert response.status_code == 302
 
@@ -116,4 +178,4 @@ class TestEventLogModelAdmin:
         # Check success message
         messages = list(get_messages(response.wsgi_request))
         assert len(messages) == 1
-        assert "Successfully deleted 1 event(s)" in str(messages[0])
+        assert "Successfully deleted 1 event older than 5 days" in str(messages[0])

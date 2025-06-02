@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime
+
 from django import forms
 from django.contrib import admin
 from django.contrib import messages
@@ -7,6 +9,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import path
 from django.urls import reverse
+from django.utils import timezone
 
 from .conf import app_settings
 from .models import EventLog
@@ -40,17 +43,49 @@ class EventLogModelAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def cleanup_view(self, request):
+        # handle confirmation
+        if request.POST.get("post") == "yes":
+            days_to_keep = int(request.POST.get("days_to_keep", 0))
+            deleted_count, _ = EventLog.objects.cleanup_events(days_to_keep)
+            event_text = "event" if deleted_count == 1 else "events"
+            day_text = "day" if days_to_keep == 1 else "days"
+            messages.success(
+                request,
+                f"Successfully deleted {deleted_count} {event_text} older than {days_to_keep} {day_text}.",
+            )
+            return HttpResponseRedirect(
+                reverse("admin:django_github_app_eventlog_changelist")
+            )
+
+        # show form or confirmation
         if request.method == "POST":
             form = EventLogCleanupForm(request.POST)
             if form.is_valid():
                 days_to_keep = form.cleaned_data["days_to_keep"]
-                deleted_count, _ = EventLog.objects.cleanup_events(days_to_keep)
-                messages.success(
+                cutoff_date = timezone.now() - datetime.timedelta(days=days_to_keep)
+                events_to_delete = EventLog.objects.filter(received_at__lte=cutoff_date)
+                delete_count = events_to_delete.count()
+
+                context = {
+                    **self.admin_site.each_context(request),
+                    "title": "Confirm Event Cleanup",
+                    "days_to_keep": days_to_keep,
+                    "delete_count": delete_count,
+                    "cutoff_date": cutoff_date,
+                    "opts": self.model._meta,
+                    "object_name": self.model._meta.verbose_name,
+                    "model_count": [
+                        (self.model._meta.verbose_name_plural, delete_count)
+                    ]
+                    if delete_count
+                    else [],
+                    "perms_lacking": None,
+                    "protected": None,
+                }
+                return render(
                     request,
-                    f"Successfully deleted {deleted_count} event(s) older than {days_to_keep} days.",
-                )
-                return HttpResponseRedirect(
-                    reverse("admin:django_github_app_eventlog_changelist")
+                    "admin/django_github_app/eventlog/cleanup_confirmation.html",
+                    context,
                 )
         else:
             form = EventLogCleanupForm()
