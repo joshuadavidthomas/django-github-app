@@ -16,6 +16,7 @@ from gidgethub.routing import Router as GidgetHubRouter
 from ._typing import override
 from .commands import CommandScope
 from .commands import check_event_for_mention
+from .commands import check_event_scope
 
 AsyncCallback = Callable[..., Awaitable[None]]
 SyncCallback = Callable[..., None]
@@ -83,6 +84,10 @@ class GitHubRouter(GidgetHubRouter):
                 if not check_event_for_mention(event.data, command, username):
                     return
 
+                # Check if the event matches the specified scope
+                if not check_event_scope(event.event, event.data, scope):
+                    return
+
                 # TODO: Check permissions
                 # For now, just call through
                 await func(event, *args, **wrapper_kwargs)  # type: ignore[func-returns-value]
@@ -95,6 +100,10 @@ class GitHubRouter(GidgetHubRouter):
                 username = "bot"  # Placeholder
 
                 if not check_event_for_mention(event.data, command, username):
+                    return
+
+                # Check if the event matches the specified scope
+                if not check_event_scope(event.event, event.data, scope):
                     return
 
                 # TODO: Check permissions

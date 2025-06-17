@@ -273,3 +273,177 @@ class TestMentionDecorator:
         test_router.dispatch(event, None)
 
         assert handler_called
+
+    def test_scope_validation_issue_comment_on_issue(self, test_router):
+        """Test that ISSUE scope works for actual issues."""
+        handler_called = False
+
+        @test_router.mention(command="issue-only", scope=CommandScope.ISSUE)
+        def issue_handler(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+
+        # Issue comment on an actual issue (no pull_request field)
+        event = sansio.Event(
+            {
+                "action": "created",
+                "issue": {"title": "Bug report", "number": 123},
+                "comment": {"body": "@bot issue-only"},
+            },
+            event="issue_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(event, None)
+
+        assert handler_called
+
+    def test_scope_validation_issue_comment_on_pr(self, test_router):
+        """Test that ISSUE scope rejects PR comments."""
+        handler_called = False
+
+        @test_router.mention(command="issue-only", scope=CommandScope.ISSUE)
+        def issue_handler(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+
+        # Issue comment on a pull request (has pull_request field)
+        event = sansio.Event(
+            {
+                "action": "created",
+                "issue": {
+                    "title": "PR title",
+                    "number": 456,
+                    "pull_request": {"url": "https://api.github.com/..."},
+                },
+                "comment": {"body": "@bot issue-only"},
+            },
+            event="issue_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(event, None)
+
+        assert not handler_called
+
+    def test_scope_validation_pr_scope_on_pr(self, test_router):
+        """Test that PR scope works for pull requests."""
+        handler_called = False
+
+        @test_router.mention(command="pr-only", scope=CommandScope.PR)
+        def pr_handler(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+
+        # Issue comment on a pull request
+        event = sansio.Event(
+            {
+                "action": "created",
+                "issue": {
+                    "title": "PR title",
+                    "number": 456,
+                    "pull_request": {"url": "https://api.github.com/..."},
+                },
+                "comment": {"body": "@bot pr-only"},
+            },
+            event="issue_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(event, None)
+
+        assert handler_called
+
+    def test_scope_validation_pr_scope_on_issue(self, test_router):
+        """Test that PR scope rejects issue comments."""
+        handler_called = False
+
+        @test_router.mention(command="pr-only", scope=CommandScope.PR)
+        def pr_handler(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+
+        # Issue comment on an actual issue
+        event = sansio.Event(
+            {
+                "action": "created",
+                "issue": {"title": "Bug report", "number": 123},
+                "comment": {"body": "@bot pr-only"},
+            },
+            event="issue_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(event, None)
+
+        assert not handler_called
+
+    def test_scope_validation_commit_scope(self, test_router):
+        """Test that COMMIT scope works for commit comments."""
+        handler_called = False
+
+        @test_router.mention(command="commit-only", scope=CommandScope.COMMIT)
+        def commit_handler(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+
+        # Commit comment event
+        event = sansio.Event(
+            {
+                "action": "created",
+                "comment": {"body": "@bot commit-only"},
+                "commit": {"sha": "abc123"},
+            },
+            event="commit_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(event, None)
+
+        assert handler_called
+
+    def test_scope_validation_no_scope(self, test_router):
+        """Test that no scope allows all comment types."""
+        call_count = 0
+
+        @test_router.mention(command="all-contexts")
+        def all_handler(event, *args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+
+        # Test on issue
+        event = sansio.Event(
+            {
+                "action": "created",
+                "issue": {"title": "Issue", "number": 1},
+                "comment": {"body": "@bot all-contexts"},
+            },
+            event="issue_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(event, None)
+
+        # Test on PR
+        event = sansio.Event(
+            {
+                "action": "created",
+                "issue": {
+                    "title": "PR",
+                    "number": 2,
+                    "pull_request": {"url": "..."},
+                },
+                "comment": {"body": "@bot all-contexts"},
+            },
+            event="issue_comment",
+            delivery_id="124",
+        )
+        test_router.dispatch(event, None)
+
+        # Test on commit
+        event = sansio.Event(
+            {
+                "action": "created",
+                "comment": {"body": "@bot all-contexts"},
+                "commit": {"sha": "abc123"},
+            },
+            event="commit_comment",
+            delivery_id="125",
+        )
+        test_router.dispatch(event, None)
+
+        assert call_count == 3

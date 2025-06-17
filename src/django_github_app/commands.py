@@ -89,3 +89,25 @@ def check_event_for_mention(
         return True
 
     return any(mention.command == command.lower() for mention in mentions)
+
+
+def check_event_scope(
+    event_type: str, event_data: dict[str, Any], scope: CommandScope | None
+) -> bool:
+    if scope is None:
+        return True
+
+    # For issue_comment events, we need to distinguish between issues and PRs
+    if event_type == "issue_comment":
+        issue = event_data.get("issue", {})
+        is_pull_request = "pull_request" in issue and issue["pull_request"] is not None
+
+        # If scope is ISSUE, we only want actual issues (not PRs)
+        if scope == CommandScope.ISSUE:
+            return not is_pull_request
+        # If scope is PR, we only want pull requests
+        elif scope == CommandScope.PR:
+            return is_pull_request
+
+    scope_events = scope.get_events()
+    return any(event_action.event == event_type for event_action in scope_events)
