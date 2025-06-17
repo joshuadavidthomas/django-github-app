@@ -15,6 +15,7 @@ from gidgethub.routing import Router as GidgetHubRouter
 
 from ._typing import override
 from .commands import CommandScope
+from .commands import check_event_for_mention
 
 AsyncCallback = Callable[..., Awaitable[None]]
 SyncCallback = Callable[..., None]
@@ -76,8 +77,12 @@ class GitHubRouter(GidgetHubRouter):
             async def async_wrapper(
                 event: sansio.Event, *args: Any, **wrapper_kwargs: Any
             ) -> None:
-                # TODO: Parse comment body for mentions
-                # TODO: If command specified, check if it matches
+                # TODO: Get actual bot username from installation/app data
+                username = "bot"  # Placeholder
+
+                if not check_event_for_mention(event.data, command, username):
+                    return
+
                 # TODO: Check permissions
                 # For now, just call through
                 await func(event, *args, **wrapper_kwargs)  # type: ignore[func-returns-value]
@@ -86,8 +91,12 @@ class GitHubRouter(GidgetHubRouter):
             def sync_wrapper(
                 event: sansio.Event, *args: Any, **wrapper_kwargs: Any
             ) -> None:
-                # TODO: Parse comment body for mentions
-                # TODO: If command specified, check if it matches
+                # TODO: Get actual bot username from installation/app data
+                username = "bot"  # Placeholder
+
+                if not check_event_for_mention(event.data, command, username):
+                    return
+
                 # TODO: Check permissions
                 # For now, just call through
                 func(event, *args, **wrapper_kwargs)
@@ -104,7 +113,9 @@ class GitHubRouter(GidgetHubRouter):
 
             events = scope.get_events() if scope else CommandScope.all_events()
             for event_action in events:
-                self.add(wrapper, event_action.event, action=event_action.action, **kwargs)
+                self.add(
+                    wrapper, event_action.event, action=event_action.action, **kwargs
+                )
 
             return func
 

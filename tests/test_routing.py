@@ -216,7 +216,8 @@ class TestMentionDecorator:
 
         assert handler_called
 
-    def test_multiple_decorators_on_same_function(self, test_router):
+    @pytest.mark.parametrize("comment", ["@bot help", "@bot h", "@bot ?"])
+    def test_multiple_decorators_on_same_function(self, comment, test_router):
         call_count = 0
 
         @test_router.mention(command="help")
@@ -227,26 +228,14 @@ class TestMentionDecorator:
             call_count += 1
             return f"help called {call_count} times"
 
-        event1 = sansio.Event(
-            {"action": "created", "comment": {"body": "@bot help"}},
+        event = sansio.Event(
+            {"action": "created", "comment": {"body": comment}},
             event="issue_comment",
             delivery_id="123",
         )
-        test_router.dispatch(event1, None)
+        test_router.dispatch(event, None)
 
-        assert call_count == 3
-
-        call_count = 0
-        event2 = sansio.Event(
-            {"action": "created", "comment": {"body": "@bot h"}},
-            event="issue_comment",
-            delivery_id="124",
-        )
-        test_router.dispatch(event2, None)
-
-        assert call_count == 3
-
-        # This behavior will change once we implement command parsing
+        assert call_count == 1
 
     def test_async_mention_handler(self, test_router):
         handler_called = False
