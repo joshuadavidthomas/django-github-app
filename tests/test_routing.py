@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from django.http import HttpRequest
 from django.http import JsonResponse
+from gidgethub import sansio
 
+from django_github_app.commands import CommandScope
 from django_github_app.github import SyncGitHubAPI
 from django_github_app.routing import GitHubRouter
 from django_github_app.views import BaseWebhookView
@@ -109,3 +113,174 @@ class TestGitHubRouter:
 
         assert len(views) == view_count
         assert not all(view.router is view1_router for view in views)
+
+
+class TestMentionDecorator:
+    def test_basic_mention_no_command(self, test_router):
+        handler_called = False
+        handler_args = None
+
+        @test_router.mention()
+        def handle_mention(event, *args, **kwargs):
+            nonlocal handler_called, handler_args
+            handler_called = True
+            handler_args = (event, args, kwargs)
+
+        event = sansio.Event(
+            {"action": "created", "comment": {"body": "@bot hello"}},
+            event="issue_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(event, None)
+
+        assert handler_called
+        assert handler_args[0] == event
+
+    def test_mention_with_command(self, test_router):
+        handler_called = False
+
+        @test_router.mention(command="help")
+        def help_command(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+            return "help response"
+
+        event = sansio.Event(
+            {"action": "created", "comment": {"body": "@bot help"}},
+            event="issue_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(event, None)
+
+        assert handler_called
+
+    def test_mention_with_scope(self, test_router):
+        pr_handler_called = False
+
+        @test_router.mention(command="deploy", scope=CommandScope.PR)
+        def deploy_command(event, *args, **kwargs):
+            nonlocal pr_handler_called
+            pr_handler_called = True
+
+        pr_event = sansio.Event(
+            {"action": "created", "comment": {"body": "@bot deploy"}},
+            event="pull_request_review_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(pr_event, None)
+
+        assert pr_handler_called
+
+        issue_event = sansio.Event(
+            {"action": "created", "comment": {"body": "@bot deploy"}},
+            event="commit_comment",  # This is NOT a PR event
+            delivery_id="124",
+        )
+        pr_handler_called = False  # Reset
+
+        test_router.dispatch(issue_event, None)
+
+        assert not pr_handler_called
+
+    def test_mention_with_permission(self, test_router):
+        handler_called = False
+
+        @test_router.mention(command="delete", permission="admin")
+        def delete_command(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+
+        event = sansio.Event(
+            {"action": "created", "comment": {"body": "@bot delete"}},
+            event="issue_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(event, None)
+
+        assert handler_called
+
+    def test_case_insensitive_command(self, test_router):
+        handler_called = False
+
+        @test_router.mention(command="HELP")
+        def help_command(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+
+        event = sansio.Event(
+            {"action": "created", "comment": {"body": "@bot help"}},
+            event="issue_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(event, None)
+
+        assert handler_called
+
+    def test_multiple_decorators_on_same_function(self, test_router):
+        call_count = 0
+
+        @test_router.mention(command="help")
+        @test_router.mention(command="h")
+        @test_router.mention(command="?")
+        def help_command(event, *args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            return f"help called {call_count} times"
+
+        event1 = sansio.Event(
+            {"action": "created", "comment": {"body": "@bot help"}},
+            event="issue_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(event1, None)
+
+        assert call_count == 3
+
+        call_count = 0
+        event2 = sansio.Event(
+            {"action": "created", "comment": {"body": "@bot h"}},
+            event="issue_comment",
+            delivery_id="124",
+        )
+        test_router.dispatch(event2, None)
+
+        assert call_count == 3
+
+        # This behavior will change once we implement command parsing
+
+    def test_async_mention_handler(self, test_router):
+        handler_called = False
+
+        @test_router.mention(command="async-test")
+        async def async_handler(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+            return "async response"
+
+        event = sansio.Event(
+            {"action": "created", "comment": {"body": "@bot async-test"}},
+            event="issue_comment",
+            delivery_id="123",
+        )
+
+        asyncio.run(test_router.adispatch(event, None))
+
+        assert handler_called
+
+    def test_sync_mention_handler(self, test_router):
+        handler_called = False
+
+        @test_router.mention(command="sync-test")
+        def sync_handler(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+            return "sync response"
+
+        event = sansio.Event(
+            {"action": "created", "comment": {"body": "@bot sync-test"}},
+            event="issue_comment",
+            delivery_id="123",
+        )
+        test_router.dispatch(event, None)
+
+        assert handler_called
