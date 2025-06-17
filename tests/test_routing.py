@@ -7,7 +7,7 @@ from django.http import HttpRequest
 from django.http import JsonResponse
 from gidgethub import sansio
 
-from django_github_app.commands import CommandScope
+from django_github_app.mentions import MentionScope
 from django_github_app.github import SyncGitHubAPI
 from django_github_app.routing import GitHubRouter
 from django_github_app.views import BaseWebhookView
@@ -157,7 +157,7 @@ class TestMentionDecorator:
     def test_mention_with_scope(self, test_router):
         pr_handler_called = False
 
-        @test_router.mention(command="deploy", scope=CommandScope.PR)
+        @test_router.mention(command="deploy", scope=MentionScope.PR)
         def deploy_command(event, *args, **kwargs):
             nonlocal pr_handler_called
             pr_handler_called = True
@@ -278,7 +278,7 @@ class TestMentionDecorator:
         """Test that ISSUE scope works for actual issues."""
         handler_called = False
 
-        @test_router.mention(command="issue-only", scope=CommandScope.ISSUE)
+        @test_router.mention(command="issue-only", scope=MentionScope.ISSUE)
         def issue_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
@@ -301,7 +301,7 @@ class TestMentionDecorator:
         """Test that ISSUE scope rejects PR comments."""
         handler_called = False
 
-        @test_router.mention(command="issue-only", scope=CommandScope.ISSUE)
+        @test_router.mention(command="issue-only", scope=MentionScope.ISSUE)
         def issue_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
@@ -328,7 +328,7 @@ class TestMentionDecorator:
         """Test that PR scope works for pull requests."""
         handler_called = False
 
-        @test_router.mention(command="pr-only", scope=CommandScope.PR)
+        @test_router.mention(command="pr-only", scope=MentionScope.PR)
         def pr_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
@@ -355,7 +355,7 @@ class TestMentionDecorator:
         """Test that PR scope rejects issue comments."""
         handler_called = False
 
-        @test_router.mention(command="pr-only", scope=CommandScope.PR)
+        @test_router.mention(command="pr-only", scope=MentionScope.PR)
         def pr_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
@@ -378,7 +378,7 @@ class TestMentionDecorator:
         """Test that COMMIT scope works for commit comments."""
         handler_called = False
 
-        @test_router.mention(command="commit-only", scope=CommandScope.COMMIT)
+        @test_router.mention(command="commit-only", scope=MentionScope.COMMIT)
         def commit_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True

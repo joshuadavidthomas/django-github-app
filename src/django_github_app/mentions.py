@@ -12,24 +12,24 @@ class EventAction(NamedTuple):
     action: str
 
 
-class CommandScope(str, Enum):
+class MentionScope(str, Enum):
     COMMIT = "commit"
     ISSUE = "issue"
     PR = "pr"
 
     def get_events(self) -> list[EventAction]:
         match self:
-            case CommandScope.ISSUE:
+            case MentionScope.ISSUE:
                 return [
                     EventAction("issue_comment", "created"),
                 ]
-            case CommandScope.PR:
+            case MentionScope.PR:
                 return [
                     EventAction("issue_comment", "created"),
                     EventAction("pull_request_review_comment", "created"),
                     EventAction("pull_request_review", "submitted"),
                 ]
-            case CommandScope.COMMIT:
+            case MentionScope.COMMIT:
                 return [
                     EventAction("commit_comment", "created"),
                 ]
@@ -92,7 +92,7 @@ def check_event_for_mention(
     return any(mention.command == command.lower() for mention in mentions)
 
 
-def check_event_scope(event: sansio.Event, scope: CommandScope | None) -> bool:
+def check_event_scope(event: sansio.Event, scope: MentionScope | None) -> bool:
     if scope is None:
         return True
 
@@ -102,10 +102,10 @@ def check_event_scope(event: sansio.Event, scope: CommandScope | None) -> bool:
         is_pull_request = "pull_request" in issue and issue["pull_request"] is not None
 
         # If scope is ISSUE, we only want actual issues (not PRs)
-        if scope == CommandScope.ISSUE:
+        if scope == MentionScope.ISSUE:
             return not is_pull_request
         # If scope is PR, we only want pull requests
-        elif scope == CommandScope.PR:
+        elif scope == MentionScope.PR:
             return is_pull_request
 
     scope_events = scope.get_events()
