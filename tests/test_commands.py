@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from gidgethub import sansio
+
 from django_github_app.commands import CommandScope
 from django_github_app.commands import check_event_for_mention
 from django_github_app.commands import check_event_scope
@@ -161,37 +163,51 @@ class TestParseMentions:
 
 class TestCheckMentionMatches:
     def test_match_with_command(self):
-        event = {"comment": {"body": "@bot help"}}
+        event = sansio.Event(
+            {"comment": {"body": "@bot help"}}, event="issue_comment", delivery_id="123"
+        )
 
         assert check_event_for_mention(event, "help", "bot") is True
         assert check_event_for_mention(event, "deploy", "bot") is False
 
     def test_match_without_command(self):
-        event = {"comment": {"body": "@bot help"}}
+        event = sansio.Event(
+            {"comment": {"body": "@bot help"}}, event="issue_comment", delivery_id="123"
+        )
 
         assert check_event_for_mention(event, None, "bot") is True
 
-        event = {"comment": {"body": "no mention here"}}
+        event = sansio.Event(
+            {"comment": {"body": "no mention here"}},
+            event="issue_comment",
+            delivery_id="124",
+        )
 
         assert check_event_for_mention(event, None, "bot") is False
 
     def test_no_comment_body(self):
-        event = {}
+        event = sansio.Event({}, event="issue_comment", delivery_id="123")
 
         assert check_event_for_mention(event, "help", "bot") is False
 
-        event = {"comment": {}}
+        event = sansio.Event({"comment": {}}, event="issue_comment", delivery_id="124")
 
         assert check_event_for_mention(event, "help", "bot") is False
 
     def test_case_insensitive_command_match(self):
-        event = {"comment": {"body": "@bot HELP"}}
+        event = sansio.Event(
+            {"comment": {"body": "@bot HELP"}}, event="issue_comment", delivery_id="123"
+        )
 
         assert check_event_for_mention(event, "help", "bot") is True
         assert check_event_for_mention(event, "HELP", "bot") is True
 
     def test_multiple_mentions(self):
-        event = {"comment": {"body": "@bot help @bot deploy"}}
+        event = sansio.Event(
+            {"comment": {"body": "@bot help @bot deploy"}},
+            event="issue_comment",
+            delivery_id="123",
+        )
 
         assert check_event_for_mention(event, "help", "bot") is True
         assert check_event_for_mention(event, "deploy", "bot") is True
@@ -201,82 +217,92 @@ class TestCheckMentionMatches:
 class TestCheckEventScope:
     def test_no_scope_allows_all_events(self):
         # When no scope is specified, all events should pass
-        assert check_event_scope("issue_comment", {"issue": {}}, None) is True
-        assert check_event_scope("pull_request_review_comment", {}, None) is True
-        assert check_event_scope("commit_comment", {}, None) is True
+        event1 = sansio.Event({"issue": {}}, event="issue_comment", delivery_id="1")
+        assert check_event_scope(event1, None) is True
+
+        event2 = sansio.Event({}, event="pull_request_review_comment", delivery_id="2")
+        assert check_event_scope(event2, None) is True
+
+        event3 = sansio.Event({}, event="commit_comment", delivery_id="3")
+        assert check_event_scope(event3, None) is True
 
     def test_issue_scope_on_issue_comment(self):
         # Issue comment on an actual issue (no pull_request field)
-        issue_event = {"issue": {"title": "Bug report"}}
-        assert (
-            check_event_scope("issue_comment", issue_event, CommandScope.ISSUE) is True
+        issue_event = sansio.Event(
+            {"issue": {"title": "Bug report"}}, event="issue_comment", delivery_id="1"
         )
+        assert check_event_scope(issue_event, CommandScope.ISSUE) is True
 
         # Issue comment on a pull request (has pull_request field)
-        pr_event = {"issue": {"title": "PR title", "pull_request": {"url": "..."}}}
-        assert check_event_scope("issue_comment", pr_event, CommandScope.ISSUE) is False
+        pr_event = sansio.Event(
+            {"issue": {"title": "PR title", "pull_request": {"url": "..."}}},
+            event="issue_comment",
+            delivery_id="2",
+        )
+        assert check_event_scope(pr_event, CommandScope.ISSUE) is False
 
     def test_pr_scope_on_issue_comment(self):
         # Issue comment on an actual issue (no pull_request field)
-        issue_event = {"issue": {"title": "Bug report"}}
-        assert check_event_scope("issue_comment", issue_event, CommandScope.PR) is False
+        issue_event = sansio.Event(
+            {"issue": {"title": "Bug report"}}, event="issue_comment", delivery_id="1"
+        )
+        assert check_event_scope(issue_event, CommandScope.PR) is False
 
         # Issue comment on a pull request (has pull_request field)
-        pr_event = {"issue": {"title": "PR title", "pull_request": {"url": "..."}}}
-        assert check_event_scope("issue_comment", pr_event, CommandScope.PR) is True
+        pr_event = sansio.Event(
+            {"issue": {"title": "PR title", "pull_request": {"url": "..."}}},
+            event="issue_comment",
+            delivery_id="2",
+        )
+        assert check_event_scope(pr_event, CommandScope.PR) is True
 
     def test_pr_scope_allows_pr_specific_events(self):
         # PR scope should allow pull_request_review_comment
-        assert (
-            check_event_scope("pull_request_review_comment", {}, CommandScope.PR)
-            is True
-        )
+        event1 = sansio.Event({}, event="pull_request_review_comment", delivery_id="1")
+        assert check_event_scope(event1, CommandScope.PR) is True
 
         # PR scope should allow pull_request_review
-        assert check_event_scope("pull_request_review", {}, CommandScope.PR) is True
+        event2 = sansio.Event({}, event="pull_request_review", delivery_id="2")
+        assert check_event_scope(event2, CommandScope.PR) is True
 
         # PR scope should not allow commit_comment
-        assert check_event_scope("commit_comment", {}, CommandScope.PR) is False
+        event3 = sansio.Event({}, event="commit_comment", delivery_id="3")
+        assert check_event_scope(event3, CommandScope.PR) is False
 
     def test_commit_scope_allows_commit_comment_only(self):
         # Commit scope should allow commit_comment
-        assert check_event_scope("commit_comment", {}, CommandScope.COMMIT) is True
+        event1 = sansio.Event({}, event="commit_comment", delivery_id="1")
+        assert check_event_scope(event1, CommandScope.COMMIT) is True
 
         # Commit scope should not allow issue_comment
-        assert (
-            check_event_scope("issue_comment", {"issue": {}}, CommandScope.COMMIT)
-            is False
-        )
+        event2 = sansio.Event({"issue": {}}, event="issue_comment", delivery_id="2")
+        assert check_event_scope(event2, CommandScope.COMMIT) is False
 
         # Commit scope should not allow PR events
-        assert (
-            check_event_scope("pull_request_review_comment", {}, CommandScope.COMMIT)
-            is False
-        )
+        event3 = sansio.Event({}, event="pull_request_review_comment", delivery_id="3")
+        assert check_event_scope(event3, CommandScope.COMMIT) is False
 
     def test_issue_scope_disallows_non_issue_events(self):
         # Issue scope should not allow pull_request_review_comment
-        assert (
-            check_event_scope("pull_request_review_comment", {}, CommandScope.ISSUE)
-            is False
-        )
+        event1 = sansio.Event({}, event="pull_request_review_comment", delivery_id="1")
+        assert check_event_scope(event1, CommandScope.ISSUE) is False
 
         # Issue scope should not allow commit_comment
-        assert check_event_scope("commit_comment", {}, CommandScope.ISSUE) is False
+        event2 = sansio.Event({}, event="commit_comment", delivery_id="2")
+        assert check_event_scope(event2, CommandScope.ISSUE) is False
 
     def test_pull_request_field_none_treated_as_issue(self):
         # If pull_request field exists but is None, treat as issue
-        event_with_none_pr = {"issue": {"title": "Issue", "pull_request": None}}
-        assert (
-            check_event_scope("issue_comment", event_with_none_pr, CommandScope.ISSUE)
-            is True
+        event = sansio.Event(
+            {"issue": {"title": "Issue", "pull_request": None}},
+            event="issue_comment",
+            delivery_id="1",
         )
-        assert (
-            check_event_scope("issue_comment", event_with_none_pr, CommandScope.PR)
-            is False
-        )
+        assert check_event_scope(event, CommandScope.ISSUE) is True
+        assert check_event_scope(event, CommandScope.PR) is False
 
     def test_missing_issue_data(self):
         # If issue data is missing entirely, default behavior
-        assert check_event_scope("issue_comment", {}, CommandScope.ISSUE) is True
-        assert check_event_scope("issue_comment", {}, CommandScope.PR) is False
+        event = sansio.Event({}, event="issue_comment", delivery_id="1")
+        assert check_event_scope(event, CommandScope.ISSUE) is True
+        assert check_event_scope(event, CommandScope.PR) is False
