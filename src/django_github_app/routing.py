@@ -81,15 +81,13 @@ class GitHubRouter(GidgetHubRouter):
                 # TODO: Get actual bot username from installation/app data
                 username = "bot"  # Placeholder
 
-                if not check_event_for_mention(event.data, command, username):
+                if not check_event_for_mention(event, command, username):
                     return
 
-                # Check if the event matches the specified scope
-                if not check_event_scope(event.event, event.data, scope):
+                if not check_event_scope(event, scope):
                     return
 
-                # TODO: Check permissions
-                # For now, just call through
+                # TODO: Check permissions. For now, just call through.
                 await func(event, *args, **wrapper_kwargs)  # type: ignore[func-returns-value]
 
             @wraps(func)
@@ -99,15 +97,13 @@ class GitHubRouter(GidgetHubRouter):
                 # TODO: Get actual bot username from installation/app data
                 username = "bot"  # Placeholder
 
-                if not check_event_for_mention(event.data, command, username):
+                if not check_event_for_mention(event, command, username):
                     return
 
-                # Check if the event matches the specified scope
-                if not check_event_scope(event.event, event.data, scope):
+                if not check_event_scope(event, scope):
                     return
 
-                # TODO: Check permissions
-                # For now, just call through
+                # TODO: Check permissions. For now, just call through.
                 func(event, *args, **wrapper_kwargs)
 
             wrapper: MentionHandler

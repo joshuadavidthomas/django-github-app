@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import re
 from enum import Enum
-from typing import Any
 from typing import NamedTuple
+
+from gidgethub import sansio
 
 
 class EventAction(NamedTuple):
@@ -77,9 +78,9 @@ def parse_mentions(text: str, username: str) -> list[MentionMatch]:
 
 
 def check_event_for_mention(
-    event: dict[str, Any], command: str | None, username: str
+    event: sansio.Event, command: str | None, username: str
 ) -> bool:
-    comment = event.get("comment", {}).get("body", "")
+    comment = event.data.get("comment", {}).get("body", "")
     mentions = parse_mentions(comment, username)
 
     if not mentions:
@@ -91,15 +92,13 @@ def check_event_for_mention(
     return any(mention.command == command.lower() for mention in mentions)
 
 
-def check_event_scope(
-    event_type: str, event_data: dict[str, Any], scope: CommandScope | None
-) -> bool:
+def check_event_scope(event: sansio.Event, scope: CommandScope | None) -> bool:
     if scope is None:
         return True
 
     # For issue_comment events, we need to distinguish between issues and PRs
-    if event_type == "issue_comment":
-        issue = event_data.get("issue", {})
+    if event.event == "issue_comment":
+        issue = event.data.get("issue", {})
         is_pull_request = "pull_request" in issue and issue["pull_request"] is not None
 
         # If scope is ISSUE, we only want actual issues (not PRs)
@@ -110,4 +109,4 @@ def check_event_scope(
             return is_pull_request
 
     scope_events = scope.get_events()
-    return any(event_action.event == event_type for event_action in scope_events)
+    return any(event_action.event == event.event for event_action in scope_events)
