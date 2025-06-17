@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from django_github_app.commands import CommandScope
 from django_github_app.commands import check_event_for_mention
+from django_github_app.commands import check_event_scope
 from django_github_app.commands import parse_mentions
 
 
@@ -194,3 +196,87 @@ class TestCheckMentionMatches:
         assert check_event_for_mention(event, "help", "bot") is True
         assert check_event_for_mention(event, "deploy", "bot") is True
         assert check_event_for_mention(event, "test", "bot") is False
+
+
+class TestCheckEventScope:
+    def test_no_scope_allows_all_events(self):
+        # When no scope is specified, all events should pass
+        assert check_event_scope("issue_comment", {"issue": {}}, None) is True
+        assert check_event_scope("pull_request_review_comment", {}, None) is True
+        assert check_event_scope("commit_comment", {}, None) is True
+
+    def test_issue_scope_on_issue_comment(self):
+        # Issue comment on an actual issue (no pull_request field)
+        issue_event = {"issue": {"title": "Bug report"}}
+        assert (
+            check_event_scope("issue_comment", issue_event, CommandScope.ISSUE) is True
+        )
+
+        # Issue comment on a pull request (has pull_request field)
+        pr_event = {"issue": {"title": "PR title", "pull_request": {"url": "..."}}}
+        assert check_event_scope("issue_comment", pr_event, CommandScope.ISSUE) is False
+
+    def test_pr_scope_on_issue_comment(self):
+        # Issue comment on an actual issue (no pull_request field)
+        issue_event = {"issue": {"title": "Bug report"}}
+        assert check_event_scope("issue_comment", issue_event, CommandScope.PR) is False
+
+        # Issue comment on a pull request (has pull_request field)
+        pr_event = {"issue": {"title": "PR title", "pull_request": {"url": "..."}}}
+        assert check_event_scope("issue_comment", pr_event, CommandScope.PR) is True
+
+    def test_pr_scope_allows_pr_specific_events(self):
+        # PR scope should allow pull_request_review_comment
+        assert (
+            check_event_scope("pull_request_review_comment", {}, CommandScope.PR)
+            is True
+        )
+
+        # PR scope should allow pull_request_review
+        assert check_event_scope("pull_request_review", {}, CommandScope.PR) is True
+
+        # PR scope should not allow commit_comment
+        assert check_event_scope("commit_comment", {}, CommandScope.PR) is False
+
+    def test_commit_scope_allows_commit_comment_only(self):
+        # Commit scope should allow commit_comment
+        assert check_event_scope("commit_comment", {}, CommandScope.COMMIT) is True
+
+        # Commit scope should not allow issue_comment
+        assert (
+            check_event_scope("issue_comment", {"issue": {}}, CommandScope.COMMIT)
+            is False
+        )
+
+        # Commit scope should not allow PR events
+        assert (
+            check_event_scope("pull_request_review_comment", {}, CommandScope.COMMIT)
+            is False
+        )
+
+    def test_issue_scope_disallows_non_issue_events(self):
+        # Issue scope should not allow pull_request_review_comment
+        assert (
+            check_event_scope("pull_request_review_comment", {}, CommandScope.ISSUE)
+            is False
+        )
+
+        # Issue scope should not allow commit_comment
+        assert check_event_scope("commit_comment", {}, CommandScope.ISSUE) is False
+
+    def test_pull_request_field_none_treated_as_issue(self):
+        # If pull_request field exists but is None, treat as issue
+        event_with_none_pr = {"issue": {"title": "Issue", "pull_request": None}}
+        assert (
+            check_event_scope("issue_comment", event_with_none_pr, CommandScope.ISSUE)
+            is True
+        )
+        assert (
+            check_event_scope("issue_comment", event_with_none_pr, CommandScope.PR)
+            is False
+        )
+
+    def test_missing_issue_data(self):
+        # If issue data is missing entirely, default behavior
+        assert check_event_scope("issue_comment", {}, CommandScope.ISSUE) is True
+        assert check_event_scope("issue_comment", {}, CommandScope.PR) is False
