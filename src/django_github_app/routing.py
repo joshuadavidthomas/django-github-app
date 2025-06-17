@@ -14,9 +14,9 @@ from gidgethub import sansio
 from gidgethub.routing import Router as GidgetHubRouter
 
 from ._typing import override
-from .commands import CommandScope
-from .commands import check_event_for_mention
-from .commands import check_event_scope
+from .mentions import MentionScope
+from .mentions import check_event_for_mention
+from .mentions import check_event_scope
 
 AsyncCallback = Callable[..., Awaitable[None]]
 SyncCallback = Callable[..., None]
@@ -26,7 +26,7 @@ CB = TypeVar("CB", AsyncCallback, SyncCallback)
 
 class MentionHandlerBase(Protocol):
     _mention_command: str | None
-    _mention_scope: CommandScope | None
+    _mention_scope: MentionScope | None
     _mention_permission: str | None
 
 
@@ -116,7 +116,7 @@ class GitHubRouter(GidgetHubRouter):
             wrapper._mention_scope = scope
             wrapper._mention_permission = permission
 
-            events = scope.get_events() if scope else CommandScope.all_events()
+            events = scope.get_events() if scope else MentionScope.all_events()
             for event_action in events:
                 self.add(
                     wrapper, event_action.event, action=event_action.action, **kwargs
