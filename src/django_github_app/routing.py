@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from asyncio import iscoroutinefunction
 from collections.abc import Awaitable
 from collections.abc import Callable
@@ -16,11 +17,13 @@ from gidgethub.routing import Router as GidgetHubRouter
 from ._typing import override
 from .github import AsyncGitHubAPI
 from .github import SyncGitHubAPI
+from .mentions import Comment
 from .mentions import MentionContext
 from .mentions import MentionScope
-from .mentions import check_event_for_mention
-from .mentions import get_commands
+from .mentions import check_pattern_match
 from .mentions import get_event_scope
+from .mentions import parse_mentions_for_username
+from .permissions import Permission
 from .permissions import aget_user_permission_from_event
 from .permissions import get_user_permission_from_event
 
@@ -31,9 +34,10 @@ CB = TypeVar("CB", AsyncCallback, SyncCallback)
 
 
 class MentionHandlerBase(Protocol):
-    _mention_command: str | None
-    _mention_scope: MentionScope | None
+    _mention_pattern: str | re.Pattern[str] | None
     _mention_permission: str | None
+    _mention_scope: MentionScope | None
+    _mention_username: str | re.Pattern[str] | None
 
 
 class AsyncMentionHandler(MentionHandlerBase, Protocol):
@@ -76,7 +80,9 @@ class GitHubRouter(GidgetHubRouter):
 
     def mention(self, **kwargs: Any) -> Callable[[CB], CB]:
         def decorator(func: CB) -> CB:
-            command = kwargs.pop("command", None)
+            # Support both old 'command' and new 'pattern' parameters
+            pattern = kwargs.pop("pattern", kwargs.pop("command", None))
+            username = kwargs.pop("username", None)
             scope = kwargs.pop("scope", None)
             permission = kwargs.pop("permission", None)
 
@@ -84,45 +90,75 @@ class GitHubRouter(GidgetHubRouter):
             async def async_wrapper(
                 event: sansio.Event, gh: AsyncGitHubAPI, *args: Any, **kwargs: Any
             ) -> None:
-                # TODO: Get actual bot username from installation/app data
-                username = "bot"  # Placeholder
-
-                if not check_event_for_mention(event, command, username):
-                    return
-
                 event_scope = get_event_scope(event)
                 if scope is not None and event_scope != scope:
                     return
 
-                kwargs["mention"] = MentionContext(
-                    commands=get_commands(event, username),
-                    user_permission=await aget_user_permission_from_event(event, gh),
-                    scope=event_scope,
-                )
+                mentions = parse_mentions_for_username(event, username)
+                if not mentions:
+                    return
 
-                await func(event, gh, *args, **kwargs)  # type: ignore[func-returns-value]
+                user_permission = await aget_user_permission_from_event(event, gh)
+                if permission is not None:
+                    required_perm = Permission[permission.upper()]
+                    if user_permission is None or user_permission < required_perm:
+                        return
+
+                comment = Comment.from_event(event)
+                comment.mentions = mentions
+
+                for mention in mentions:
+                    if pattern is not None:
+                        match = check_pattern_match(mention.text, pattern)
+                        if not match:
+                            continue
+                        mention.match = match
+
+                    kwargs["mention"] = MentionContext(
+                        comment=comment,
+                        triggered_by=mention,
+                        user_permission=user_permission,
+                        scope=event_scope,
+                    )
+
+                    await func(event, gh, *args, **kwargs)  # type: ignore[func-returns-value]
 
             @wraps(func)
             def sync_wrapper(
                 event: sansio.Event, gh: SyncGitHubAPI, *args: Any, **kwargs: Any
             ) -> None:
-                # TODO: Get actual bot username from installation/app data
-                username = "bot"  # Placeholder
-
-                if not check_event_for_mention(event, command, username):
-                    return
-
                 event_scope = get_event_scope(event)
                 if scope is not None and event_scope != scope:
                     return
 
-                kwargs["mention"] = MentionContext(
-                    commands=get_commands(event, username),
-                    user_permission=get_user_permission_from_event(event, gh),
-                    scope=event_scope,
-                )
+                mentions = parse_mentions_for_username(event, username)
+                if not mentions:
+                    return
 
-                func(event, gh, *args, **kwargs)
+                user_permission = get_user_permission_from_event(event, gh)
+                if permission is not None:
+                    required_perm = Permission[permission.upper()]
+                    if user_permission is None or user_permission < required_perm:
+                        return
+
+                comment = Comment.from_event(event)
+                comment.mentions = mentions
+
+                for mention in mentions:
+                    if pattern is not None:
+                        match = check_pattern_match(mention.text, pattern)
+                        if not match:
+                            continue
+                        mention.match = match
+
+                    kwargs["mention"] = MentionContext(
+                        comment=comment,
+                        triggered_by=mention,
+                        user_permission=user_permission,
+                        scope=event_scope,
+                    )
+
+                    func(event, gh, *args, **kwargs)
 
             wrapper: MentionHandler
             if iscoroutinefunction(func):
@@ -130,9 +166,10 @@ class GitHubRouter(GidgetHubRouter):
             else:
                 wrapper = cast(SyncMentionHandler, sync_wrapper)
 
-            wrapper._mention_command = command.lower() if command else None
-            wrapper._mention_scope = scope
+            wrapper._mention_pattern = pattern
             wrapper._mention_permission = permission
+            wrapper._mention_scope = scope
+            wrapper._mention_username = username
 
             events = scope.get_events() if scope else MentionScope.all_events()
             for event_action in events:
