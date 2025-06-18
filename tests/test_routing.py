@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import re
 
-import gidgethub
 import pytest
 from django.http import HttpRequest
 from django.http import JsonResponse
@@ -11,16 +10,8 @@ from gidgethub import sansio
 
 from django_github_app.github import SyncGitHubAPI
 from django_github_app.mentions import MentionScope
-from django_github_app.permissions import cache
 from django_github_app.routing import GitHubRouter
 from django_github_app.views import BaseWebhookView
-
-
-@pytest.fixture(autouse=True)
-def clear_permission_cache():
-    cache.clear()
-    yield
-    cache.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -126,7 +117,7 @@ class TestGitHubRouter:
 
 
 class TestMentionDecorator:
-    def test_basic_mention_no_command(self, test_router, get_mock_github_api_sync):
+    def test_basic_mention_no_pattern(self, test_router, get_mock_github_api_sync):
         handler_called = False
         handler_args = None
 
@@ -146,17 +137,17 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
         assert handler_args[0] == event
 
-    def test_mention_with_command(self, test_router, get_mock_github_api_sync):
+    def test_mention_with_pattern(self, test_router, get_mock_github_api_sync):
         handler_called = False
 
-        @test_router.mention(command="help")
-        def help_command(event, *args, **kwargs):
+        @test_router.mention(pattern="help")
+        def help_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
             return "help response"
@@ -171,7 +162,7 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -179,12 +170,12 @@ class TestMentionDecorator:
     def test_mention_with_scope(self, test_router, get_mock_github_api_sync):
         pr_handler_called = False
 
-        @test_router.mention(command="deploy", scope=MentionScope.PR)
-        def deploy_command(event, *args, **kwargs):
+        @test_router.mention(pattern="deploy", scope=MentionScope.PR)
+        def deploy_handler(event, *args, **kwargs):
             nonlocal pr_handler_called
             pr_handler_called = True
 
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
 
         pr_event = sansio.Event(
             {
@@ -215,37 +206,11 @@ class TestMentionDecorator:
 
         assert not pr_handler_called
 
-    def test_mention_with_permission(self, test_router, get_mock_github_api_sync):
+    def test_case_insensitive_pattern(self, test_router, get_mock_github_api_sync):
         handler_called = False
 
-        @test_router.mention(command="delete", permission="admin")
-        def delete_command(event, *args, **kwargs):
-            nonlocal handler_called
-            handler_called = True
-
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot delete", "user": {"login": "testuser"}},
-                "issue": {
-                    "number": 123
-                },  # Added issue field required for issue_comment events
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="issue_comment",
-            delivery_id="123",
-        )
-        # Mock the permission check to return admin permission
-        mock_gh = get_mock_github_api_sync({"permission": "admin"})
-        test_router.dispatch(event, mock_gh)
-
-        assert handler_called
-
-    def test_case_insensitive_command(self, test_router, get_mock_github_api_sync):
-        handler_called = False
-
-        @test_router.mention(command="HELP")
-        def help_command(event, *args, **kwargs):
+        @test_router.mention(pattern="HELP")
+        def help_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
 
@@ -259,7 +224,7 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -278,8 +243,8 @@ class TestMentionDecorator:
         # Track which handler is being called
         call_tracker = []
 
-        @router.mention(command="help")
-        def help_command_help(event, *args, **kwargs):
+        @router.mention(pattern="help")
+        def help_handler_help(event, *args, **kwargs):
             call_tracker.append("help decorator")
             mention = kwargs.get("mention")
             if mention and mention.triggered_by:
@@ -287,8 +252,8 @@ class TestMentionDecorator:
                 if text in call_counts:
                     call_counts[text] += 1
 
-        @router.mention(command="h")
-        def help_command_h(event, *args, **kwargs):
+        @router.mention(pattern="h")
+        def help_handler_h(event, *args, **kwargs):
             call_tracker.append("h decorator")
             mention = kwargs.get("mention")
             if mention and mention.triggered_by:
@@ -296,8 +261,8 @@ class TestMentionDecorator:
                 if text in call_counts:
                     call_counts[text] += 1
 
-        @router.mention(command="?")
-        def help_command_q(event, *args, **kwargs):
+        @router.mention(pattern="?")
+        def help_handler_q(event, *args, **kwargs):
             call_tracker.append("? decorator")
             mention = kwargs.get("mention")
             if mention and mention.triggered_by:
@@ -305,22 +270,21 @@ class TestMentionDecorator:
                 if text in call_counts:
                     call_counts[text] += 1
 
-        # Test each command
-        for command_text in ["help", "h", "?"]:
+        for pattern in ["help", "h", "?"]:
             event = sansio.Event(
                 {
                     "action": "created",
                     "comment": {
-                        "body": f"@bot {command_text}",
+                        "body": f"@bot {pattern}",
                         "user": {"login": "testuser"},
                     },
                     "issue": {"number": 5},
                     "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
                 },
                 event="issue_comment",
-                delivery_id=f"123-{command_text}",
+                delivery_id=f"123-{pattern}",
             )
-            mock_gh = get_mock_github_api_sync({"permission": "write"})
+            mock_gh = get_mock_github_api_sync({})
             router.dispatch(event, mock_gh)
 
         # Check expected behavior:
@@ -334,7 +298,7 @@ class TestMentionDecorator:
     def test_async_mention_handler(self, test_router, get_mock_github_api):
         handler_called = False
 
-        @test_router.mention(command="async-test")
+        @test_router.mention(pattern="async-test")
         async def async_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
@@ -351,7 +315,7 @@ class TestMentionDecorator:
             delivery_id="123",
         )
 
-        mock_gh = get_mock_github_api({"permission": "write"})
+        mock_gh = get_mock_github_api({})
         asyncio.run(test_router.adispatch(event, mock_gh))
 
         assert handler_called
@@ -359,7 +323,7 @@ class TestMentionDecorator:
     def test_sync_mention_handler(self, test_router, get_mock_github_api_sync):
         handler_called = False
 
-        @test_router.mention(command="sync-test")
+        @test_router.mention(pattern="sync-test")
         def sync_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
@@ -375,7 +339,7 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -386,7 +350,7 @@ class TestMentionDecorator:
         """Test that ISSUE scope works for actual issues."""
         handler_called = False
 
-        @test_router.mention(command="issue-only", scope=MentionScope.ISSUE)
+        @test_router.mention(pattern="issue-only", scope=MentionScope.ISSUE)
         def issue_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
@@ -402,7 +366,7 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -413,7 +377,7 @@ class TestMentionDecorator:
         """Test that ISSUE scope rejects PR comments."""
         handler_called = False
 
-        @test_router.mention(command="issue-only", scope=MentionScope.ISSUE)
+        @test_router.mention(pattern="issue-only", scope=MentionScope.ISSUE)
         def issue_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
@@ -433,7 +397,7 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert not handler_called
@@ -444,7 +408,7 @@ class TestMentionDecorator:
         """Test that PR scope works for pull requests."""
         handler_called = False
 
-        @test_router.mention(command="pr-only", scope=MentionScope.PR)
+        @test_router.mention(pattern="pr-only", scope=MentionScope.PR)
         def pr_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
@@ -464,7 +428,7 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -475,7 +439,7 @@ class TestMentionDecorator:
         """Test that PR scope rejects issue comments."""
         handler_called = False
 
-        @test_router.mention(command="pr-only", scope=MentionScope.PR)
+        @test_router.mention(pattern="pr-only", scope=MentionScope.PR)
         def pr_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
@@ -491,7 +455,7 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert not handler_called
@@ -500,7 +464,7 @@ class TestMentionDecorator:
         """Test that COMMIT scope works for commit comments."""
         handler_called = False
 
-        @test_router.mention(command="commit-only", scope=MentionScope.COMMIT)
+        @test_router.mention(pattern="commit-only", scope=MentionScope.COMMIT)
         def commit_handler(event, *args, **kwargs):
             nonlocal handler_called
             handler_called = True
@@ -516,7 +480,7 @@ class TestMentionDecorator:
             event="commit_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -525,12 +489,12 @@ class TestMentionDecorator:
         """Test that no scope allows all comment types."""
         call_count = 0
 
-        @test_router.mention(command="all-contexts")
+        @test_router.mention(pattern="all-contexts")
         def all_handler(event, *args, **kwargs):
             nonlocal call_count
             call_count += 1
 
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
 
         # Test on issue
         event = sansio.Event(
@@ -577,139 +541,13 @@ class TestMentionDecorator:
 
         assert call_count == 3
 
-    def test_mention_enrichment_with_permission(
-        self, test_router, get_mock_github_api_sync
-    ):
-        """Test that mention decorator enriches kwargs with permission data."""
-        handler_called = False
-        captured_kwargs = {}
-
-        @test_router.mention(command="admin-only")
-        def admin_command(event, *args, **kwargs):
-            nonlocal handler_called, captured_kwargs
-            handler_called = True
-            captured_kwargs = kwargs.copy()
-
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot admin-only", "user": {"login": "testuser"}},
-                "issue": {"number": 123},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="issue_comment",
-            delivery_id="123",
-        )
-
-        # Mock the permission check to return admin permission
-        mock_gh = get_mock_github_api_sync({"permission": "admin"})
-
-        test_router.dispatch(event, mock_gh)
-
-        # Handler SHOULD be called with enriched data
-        assert handler_called
-        assert "mention" in captured_kwargs
-        mention = captured_kwargs["mention"]
-        # Check the new structure
-        assert mention.comment.body == "@bot admin-only"
-        assert mention.triggered_by.text == "admin-only"
-        assert mention.user_permission.name == "ADMIN"
-        assert mention.scope.name == "ISSUE"
-
-    def test_mention_enrichment_no_permission(
-        self, test_router, get_mock_github_api_sync
-    ):
-        """Test enrichment when user has no permission."""
-        handler_called = False
-        captured_kwargs = {}
-
-        @test_router.mention(command="write-required")
-        def write_command(event, *args, **kwargs):
-            nonlocal handler_called, captured_kwargs
-            handler_called = True
-            captured_kwargs = kwargs.copy()
-
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {
-                    "body": "@bot write-required",
-                    "user": {"login": "stranger"},
-                },
-                "issue": {"number": 456},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="issue_comment",
-            delivery_id="456",
-        )
-
-        # Mock returns 404 for non-collaborator
-        mock_gh = get_mock_github_api_sync({})  # Empty dict as we'll override getitem
-        mock_gh.getitem.side_effect = [
-            gidgethub.HTTPException(404, "Not found", {}),  # User is not a collaborator
-            {"private": True},  # Repo is private
-        ]
-
-        test_router.dispatch(event, mock_gh)
-
-        # Handler SHOULD be called with enriched data
-        assert handler_called
-        assert "mention" in captured_kwargs
-        mention = captured_kwargs["mention"]
-        # Check the new structure
-        assert mention.comment.body == "@bot write-required"
-        assert mention.triggered_by.text == "write-required"
-        assert mention.user_permission.name == "NONE"  # User has no permission
-        assert mention.scope.name == "ISSUE"
-
-    @pytest.mark.asyncio
-    async def test_async_mention_enrichment(self, test_router, get_mock_github_api):
-        """Test async mention decorator enriches kwargs."""
-        handler_called = False
-        captured_kwargs = {}
-
-        @test_router.mention(command="maintain-only")
-        async def maintain_command(event, *args, **kwargs):
-            nonlocal handler_called, captured_kwargs
-            handler_called = True
-            captured_kwargs = kwargs.copy()
-
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {
-                    "body": "@bot maintain-only",
-                    "user": {"login": "contributor"},
-                },
-                "issue": {"number": 789},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="issue_comment",
-            delivery_id="789",
-        )
-
-        # Mock the permission check to return maintain permission
-        mock_gh = get_mock_github_api({"permission": "maintain"})
-
-        await test_router.adispatch(event, mock_gh)
-
-        # Handler SHOULD be called with enriched data
-        assert handler_called
-        assert "mention" in captured_kwargs
-        mention = captured_kwargs["mention"]
-        # Check the new structure
-        assert mention.comment.body == "@bot maintain-only"
-        assert mention.triggered_by.text == "maintain-only"
-        assert mention.user_permission.name == "MAINTAIN"
-        assert mention.scope.name == "ISSUE"
-
     def test_mention_enrichment_pr_scope(self, test_router, get_mock_github_api_sync):
         """Test that PR comments get correct scope enrichment."""
         handler_called = False
         captured_kwargs = {}
 
-        @test_router.mention(command="deploy")
-        def deploy_command(event, *args, **kwargs):
+        @test_router.mention(pattern="deploy")
+        def deploy_handler(event, *args, **kwargs):
             nonlocal handler_called, captured_kwargs
             handler_called = True
             captured_kwargs = kwargs.copy()
@@ -731,7 +569,7 @@ class TestMentionDecorator:
             delivery_id="999",
         )
 
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -740,7 +578,6 @@ class TestMentionDecorator:
         # Check the new structure
         assert mention.comment.body == "@bot deploy"
         assert mention.triggered_by.text == "deploy"
-        assert mention.user_permission.name == "WRITE"
         assert mention.scope.name == "PR"  # Should be PR, not ISSUE
 
 
@@ -752,7 +589,7 @@ class TestUpdatedMentionContext:
         handler_called = False
         captured_mention = None
 
-        @test_router.mention(command="test")
+        @test_router.mention(pattern="test")
         def test_handler(event, *args, **kwargs):
             nonlocal handler_called, captured_mention
             handler_called = True
@@ -762,7 +599,7 @@ class TestUpdatedMentionContext:
             {
                 "action": "created",
                 "comment": {
-                    "body": "@bot test command",
+                    "body": "@bot test",
                     "user": {"login": "testuser"},
                     "created_at": "2024-01-01T12:00:00Z",
                     "html_url": "https://github.com/test/repo/issues/1#issuecomment-123",
@@ -774,7 +611,7 @@ class TestUpdatedMentionContext:
             delivery_id="123",
         )
 
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -783,7 +620,7 @@ class TestUpdatedMentionContext:
         # Check Comment object
         assert hasattr(captured_mention, "comment")
         comment = captured_mention.comment
-        assert comment.body == "@bot test command"
+        assert comment.body == "@bot test"
         assert comment.author == "testuser"
         assert comment.url == "https://github.com/test/repo/issues/1#issuecomment-123"
         assert len(comment.mentions) == 1
@@ -792,12 +629,11 @@ class TestUpdatedMentionContext:
         assert hasattr(captured_mention, "triggered_by")
         triggered = captured_mention.triggered_by
         assert triggered.username == "bot"
-        assert triggered.text == "test command"
+        assert triggered.text == "test"
         assert triggered.position == 0
         assert triggered.line_number == 1
 
         # Check other fields still exist
-        assert captured_mention.user_permission.name == "WRITE"
         assert captured_mention.scope.name == "ISSUE"
 
     def test_multiple_mentions_triggered_by(
@@ -807,7 +643,7 @@ class TestUpdatedMentionContext:
         handler_called = False
         captured_mention = None
 
-        @test_router.mention(command="deploy")
+        @test_router.mention(pattern="deploy")
         def deploy_handler(event, *args, **kwargs):
             nonlocal handler_called, captured_mention
             handler_called = True
@@ -829,7 +665,7 @@ class TestUpdatedMentionContext:
             delivery_id="456",
         )
 
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -848,12 +684,12 @@ class TestUpdatedMentionContext:
         assert first_mention.next_mention is second_mention
         assert second_mention.previous_mention is first_mention
 
-    def test_mention_without_command(self, test_router, get_mock_github_api_sync):
-        """Test handler with no specific command uses first mention as triggered_by."""
+    def test_mention_without_pattern(self, test_router, get_mock_github_api_sync):
+        """Test handler with no specific pattern uses first mention as triggered_by."""
         handler_called = False
         captured_mention = None
 
-        @test_router.mention()  # No command specified
+        @test_router.mention()  # No pattern specified
         def general_handler(event, *args, **kwargs):
             nonlocal handler_called, captured_mention
             handler_called = True
@@ -875,7 +711,7 @@ class TestUpdatedMentionContext:
             delivery_id="789",
         )
 
-        mock_gh = get_mock_github_api_sync({"permission": "read"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -893,7 +729,7 @@ class TestUpdatedMentionContext:
         handler_called = False
         captured_mention = None
 
-        @test_router.mention(command="async-test")
+        @test_router.mention(pattern="async-test")
         async def async_handler(event, *args, **kwargs):
             nonlocal handler_called, captured_mention
             handler_called = True
@@ -915,7 +751,7 @@ class TestUpdatedMentionContext:
             delivery_id="999",
         )
 
-        mock_gh = get_mock_github_api({"permission": "admin"})
+        mock_gh = get_mock_github_api({})
         await test_router.adispatch(event, mock_gh)
 
         assert handler_called
@@ -924,7 +760,6 @@ class TestUpdatedMentionContext:
         # Verify structure is the same for async
         assert captured_mention.comment.body == "@bot async-test now"
         assert captured_mention.triggered_by.text == "async-test now"
-        assert captured_mention.user_permission.name == "ADMIN"
 
 
 class TestFlexibleMentionTriggers:
@@ -955,7 +790,7 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -989,7 +824,7 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -1016,7 +851,7 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
         assert handler_called
 
@@ -1048,7 +883,7 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         # Should be called twice (deploy-bot and test-bot)
@@ -1076,19 +911,18 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert mentions_seen == ["alice", "bob", "charlie"]
 
     def test_combined_filters(self, test_router, get_mock_github_api_sync):
-        """Test combining username, pattern, permission, and scope filters."""
+        """Test combining username, pattern, and scope filters."""
         calls = []
 
         @test_router.mention(
             username=re.compile(r".*-bot"),
             pattern="deploy",
-            permission="write",
             scope=MentionScope.PR,
         )
         def restricted_deploy(event, *args, **kwargs):
@@ -1109,28 +943,20 @@ class TestFlexibleMentionTriggers:
 
         # All conditions met
         event1 = make_event("@deploy-bot deploy now")
-        mock_gh_write = get_mock_github_api_sync({})
-
-        # Mock the permission API call to return "write" permission
-        def mock_getitem_write(path):
-            if "collaborators" in path and "permission" in path:
-                return {"permission": "write"}
-            return {}
-
-        mock_gh_write.getitem = mock_getitem_write
-        test_router.dispatch(event1, mock_gh_write)
+        mock_gh = get_mock_github_api_sync({})
+        test_router.dispatch(event1, mock_gh)
         assert len(calls) == 1
 
         # Wrong username pattern
         calls.clear()
         event2 = make_event("@bot deploy now")
-        test_router.dispatch(event2, mock_gh_write)
+        test_router.dispatch(event2, mock_gh)
         assert len(calls) == 0
 
         # Wrong pattern
         calls.clear()
         event3 = make_event("@deploy-bot help")
-        test_router.dispatch(event3, mock_gh_write)
+        test_router.dispatch(event3, mock_gh)
         assert len(calls) == 0
 
         # Wrong scope (issue instead of PR)
@@ -1148,30 +974,7 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        test_router.dispatch(event4, mock_gh_write)
-        assert len(calls) == 0
-
-        # Insufficient permission
-        calls.clear()
-        event5 = make_event("@deploy-bot deploy now")
-
-        # Clear the permission cache to ensure fresh permission check
-        from django_github_app.permissions import cache
-
-        cache.clear()
-
-        # Create a mock that returns read permission for the permission check
-        mock_gh_read = get_mock_github_api_sync({})
-
-        # Mock the permission API call to return "read" permission
-        def mock_getitem_read(path):
-            if "collaborators" in path and "permission" in path:
-                return {"permission": "read"}
-            return {}
-
-        mock_gh_read.getitem = mock_getitem_read
-
-        test_router.dispatch(event5, mock_gh_read)
+        test_router.dispatch(event4, mock_gh)
         assert len(calls) == 0
 
     def test_multiple_decorators_different_patterns(
@@ -1197,7 +1000,7 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert patterns_matched == ["ship"]
@@ -1224,7 +1027,7 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
+        mock_gh = get_mock_github_api_sync({})
         test_router.dispatch(event, mock_gh)
 
         assert questions_received == ["what is the status?"]
@@ -1234,58 +1037,3 @@ class TestFlexibleMentionTriggers:
         event.data["comment"]["body"] = "@bot please help"
         test_router.dispatch(event, mock_gh)
         assert questions_received == []
-
-    def test_permission_filter_silently_skips(
-        self, test_router, get_mock_github_api_sync
-    ):
-        """Test that permission filter silently skips without error."""
-        handler_called = False
-
-        @test_router.mention(permission="admin")
-        def admin_only(event, *args, **kwargs):
-            nonlocal handler_called
-            handler_called = True
-
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot admin command", "user": {"login": "user"}},
-                "issue": {"number": 1},
-                "repository": {"owner": {"login": "owner"}, "name": "repo"},
-            },
-            event="issue_comment",
-            delivery_id="1",
-        )
-
-        # User has write permission (less than admin)
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
-        test_router.dispatch(event, mock_gh)
-
-        # Should not be called, but no error
-        assert not handler_called
-
-    def test_backward_compatibility_command(
-        self, test_router, get_mock_github_api_sync
-    ):
-        """Test that old 'command' parameter still works."""
-        handler_called = False
-
-        @test_router.mention(command="help")  # Old style
-        def help_handler(event, *args, **kwargs):
-            nonlocal handler_called
-            handler_called = True
-
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot help me", "user": {"login": "user"}},
-                "issue": {"number": 1},
-                "repository": {"owner": {"login": "owner"}, "name": "repo"},
-            },
-            event="issue_comment",
-            delivery_id="1",
-        )
-        mock_gh = get_mock_github_api_sync({"permission": "write"})
-        test_router.dispatch(event, mock_gh)
-
-        assert handler_called

@@ -130,7 +130,7 @@ def repository_id():
 
 @pytest.fixture
 def get_mock_github_api():
-    def _get_mock_github_api(return_data):
+    def _get_mock_github_api(return_data, installation_id=12345):
         mock_api = AsyncMock(spec=AsyncGitHubAPI)
 
         async def mock_getitem(*args, **kwargs):
@@ -144,6 +144,7 @@ def get_mock_github_api():
         mock_api.getiter = mock_getiter
         mock_api.__aenter__.return_value = mock_api
         mock_api.__aexit__.return_value = None
+        mock_api.installation_id = installation_id
 
         return mock_api
 
@@ -152,7 +153,7 @@ def get_mock_github_api():
 
 @pytest.fixture
 def get_mock_github_api_sync():
-    def _get_mock_github_api_sync(return_data):
+    def _get_mock_github_api_sync(return_data, installation_id=12345):
         from django_github_app.github import SyncGitHubAPI
 
         mock_api = MagicMock(spec=SyncGitHubAPI)
@@ -169,6 +170,7 @@ def get_mock_github_api_sync():
         mock_api.getitem = mock_getitem
         mock_api.getiter = mock_getiter
         mock_api.post = mock_post
+        mock_api.installation_id = installation_id
 
         return mock_api
 

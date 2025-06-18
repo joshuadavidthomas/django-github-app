@@ -10,8 +10,6 @@ from django.conf import settings
 from django.utils import timezone
 from gidgethub import sansio
 
-from .permissions import Permission
-
 
 class EventAction(NamedTuple):
     event: str
@@ -121,7 +119,6 @@ class Comment:
 class MentionContext:
     comment: Comment
     triggered_by: Mention
-    user_permission: Permission
     scope: MentionScope | None
 
 
@@ -169,7 +166,10 @@ def check_pattern_match(
 def parse_mentions_for_username(
     event: sansio.Event, username_pattern: str | re.Pattern[str] | None = None
 ) -> list[Mention]:
-    body = event.data.get("comment", {}).get("body", "")
+    comment = event.data.get("comment", {})
+    if comment is None:
+        comment = {}
+    body = comment.get("body", "")
 
     if not body:
         return []
