@@ -23,9 +23,6 @@ from .mentions import MentionScope
 from .mentions import check_pattern_match
 from .mentions import get_event_scope
 from .mentions import parse_mentions_for_username
-from .permissions import Permission
-from .permissions import aget_user_permission_from_event
-from .permissions import get_user_permission_from_event
 
 AsyncCallback = Callable[..., Awaitable[None]]
 SyncCallback = Callable[..., None]
@@ -80,11 +77,9 @@ class GitHubRouter(GidgetHubRouter):
 
     def mention(self, **kwargs: Any) -> Callable[[CB], CB]:
         def decorator(func: CB) -> CB:
-            # Support both old 'command' and new 'pattern' parameters
-            pattern = kwargs.pop("pattern", kwargs.pop("command", None))
+            pattern = kwargs.pop("pattern", None)
             username = kwargs.pop("username", None)
             scope = kwargs.pop("scope", None)
-            permission = kwargs.pop("permission", None)
 
             @wraps(func)
             async def async_wrapper(
@@ -97,14 +92,6 @@ class GitHubRouter(GidgetHubRouter):
                 mentions = parse_mentions_for_username(event, username)
                 if not mentions:
                     return
-
-                if permission is not None:
-                    user_permission = await aget_user_permission_from_event(event, gh)
-                    required_perm = Permission[permission.upper()]
-                    if user_permission < required_perm:
-                        return
-                else:
-                    user_permission = Permission.NONE
 
                 comment = Comment.from_event(event)
                 comment.mentions = mentions
@@ -119,7 +106,6 @@ class GitHubRouter(GidgetHubRouter):
                     kwargs["mention"] = MentionContext(
                         comment=comment,
                         triggered_by=mention,
-                        user_permission=user_permission,
                         scope=event_scope,
                     )
 
@@ -137,14 +123,6 @@ class GitHubRouter(GidgetHubRouter):
                 if not mentions:
                     return
 
-                if permission is not None:
-                    user_permission = get_user_permission_from_event(event, gh)
-                    required_perm = Permission[permission.upper()]
-                    if user_permission < required_perm:
-                        return
-                else:
-                    user_permission = Permission.NONE
-
                 comment = Comment.from_event(event)
                 comment.mentions = mentions
 
@@ -158,7 +136,6 @@ class GitHubRouter(GidgetHubRouter):
                     kwargs["mention"] = MentionContext(
                         comment=comment,
                         triggered_by=mention,
-                        user_permission=user_permission,
                         scope=event_scope,
                     )
 
@@ -171,7 +148,6 @@ class GitHubRouter(GidgetHubRouter):
                 wrapper = cast(SyncMentionHandler, sync_wrapper)
 
             wrapper._mention_pattern = pattern
-            wrapper._mention_permission = permission
             wrapper._mention_scope = scope
             wrapper._mention_username = username
 
