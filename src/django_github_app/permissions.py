@@ -133,81 +133,47 @@ class EventInfo(NamedTuple):
 
 class PermissionCheck(NamedTuple):
     has_permission: bool
-    error_message: str | None
 
 
-PERMISSION_CHECK_ERROR_MESSAGE = """
-❌ **Permission Denied**
+async def aget_user_permission_from_event(
+    event: sansio.Event, gh: AsyncGitHubAPI
+) -> Permission | None:
+    comment_author, owner, repo = EventInfo.from_event(event)
 
-@{comment_author}, you need at least **{required_permission}** permission to use this command.
+    if not (comment_author and owner and repo):
+        return None
 
-Your current permission level: **{user_permission}**
-"""
+    return await aget_user_permission(gh, owner, repo, comment_author)
 
 
 async def acheck_mention_permission(
     event: sansio.Event, gh: AsyncGitHubAPI, required_permission: Permission
 ) -> PermissionCheck:
+    user_permission = await aget_user_permission_from_event(event, gh)
+
+    if user_permission is None:
+        return PermissionCheck(has_permission=False)
+
+    return PermissionCheck(has_permission=user_permission >= required_permission)
+
+
+def get_user_permission_from_event(
+    event: sansio.Event, gh: SyncGitHubAPI
+) -> Permission | None:
     comment_author, owner, repo = EventInfo.from_event(event)
 
     if not (comment_author and owner and repo):
-        return PermissionCheck(has_permission=False, error_message=None)
+        return None
 
-    user_permission = await aget_user_permission(gh, owner, repo, comment_author)
-
-    if user_permission >= required_permission:
-        return PermissionCheck(has_permission=True, error_message=None)
-
-    return PermissionCheck(
-        has_permission=False,
-        error_message=PERMISSION_CHECK_ERROR_MESSAGE.format(
-            comment_author=comment_author,
-            required_permission=required_permission.name.lower(),
-            user_permission=user_permission.name.lower(),
-        ),
-    )
+    return get_user_permission(gh, owner, repo, comment_author)
 
 
 def check_mention_permission(
     event: sansio.Event, gh: SyncGitHubAPI, required_permission: Permission
 ) -> PermissionCheck:
-    comment_author, owner, repo = EventInfo.from_event(event)
+    user_permission = get_user_permission_from_event(event, gh)
 
-    if not (comment_author and owner and repo):
-        return PermissionCheck(has_permission=False, error_message=None)
+    if user_permission is None:
+        return PermissionCheck(has_permission=False)
 
-    user_permission = get_user_permission(gh, owner, repo, comment_author)
-
-    if user_permission >= required_permission:
-        return PermissionCheck(has_permission=True, error_message=None)
-
-    return PermissionCheck(
-        has_permission=False,
-        error_message=PERMISSION_CHECK_ERROR_MESSAGE.format(
-            comment_author=comment_author,
-            required_permission=required_permission.name.lower(),
-            user_permission=user_permission.name.lower(),
-        ),
-    )
-
-
-def get_comment_post_url(event: sansio.Event) -> str | None:
-    if event.data.get("action") != "created":
-        return None
-
-    _, owner, repo = EventInfo.from_event(event)
-
-    if not (owner and repo):
-        return None
-
-    if "issue" in event.data:
-        issue_number = event.data["issue"]["number"]
-        return f"/repos/{owner}/{repo}/issues/{issue_number}/comments"
-    elif "pull_request" in event.data:
-        pr_number = event.data["pull_request"]["number"]
-        return f"/repos/{owner}/{repo}/issues/{pr_number}/comments"
-    elif "commit_sha" in event.data:
-        commit_sha = event.data["commit_sha"]
-        return f"/repos/{owner}/{repo}/commits/{commit_sha}/comments"
-
-    return None
+    return PermissionCheck(has_permission=user_permission >= required_permission)

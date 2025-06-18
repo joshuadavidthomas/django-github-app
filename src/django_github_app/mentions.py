@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from enum import Enum
 from typing import NamedTuple
 
 from gidgethub import sansio
+
+from .permissions import Permission
 
 
 class EventAction(NamedTuple):
@@ -43,6 +46,13 @@ class MentionScope(str, Enum):
         )
 
 
+@dataclass
+class MentionContext:
+    commands: list[str]
+    user_permission: Permission | None
+    scope: MentionScope | None
+
+
 class MentionMatch(NamedTuple):
     mention: str
     command: str | None
@@ -53,7 +63,9 @@ INLINE_CODE_PATTERN = re.compile(r"`[^`]+`")
 QUOTE_PATTERN = re.compile(r"^\s*>.*$", re.MULTILINE)
 
 
-def parse_mentions(text: str, username: str) -> list[MentionMatch]:
+def parse_mentions(event: sansio.Event, username: str) -> list[MentionMatch]:
+    text = event.data.get("comment", {}).get("body", "")
+
     if not text:
         return []
 
@@ -77,11 +89,15 @@ def parse_mentions(text: str, username: str) -> list[MentionMatch]:
     return mentions
 
 
+def get_commands(event: sansio.Event, username: str) -> list[str]:
+    mentions = parse_mentions(event, username)
+    return [m.command for m in mentions if m.command]
+
+
 def check_event_for_mention(
     event: sansio.Event, command: str | None, username: str
 ) -> bool:
-    comment = event.data.get("comment", {}).get("body", "")
-    mentions = parse_mentions(comment, username)
+    mentions = parse_mentions(event, username)
 
     if not mentions:
         return False
@@ -92,21 +108,15 @@ def check_event_for_mention(
     return any(mention.command == command.lower() for mention in mentions)
 
 
-def check_event_scope(event: sansio.Event, scope: MentionScope | None) -> bool:
-    if scope is None:
-        return True
-
-    # For issue_comment events, we need to distinguish between issues and PRs
+def get_event_scope(event: sansio.Event) -> MentionScope | None:
     if event.event == "issue_comment":
         issue = event.data.get("issue", {})
         is_pull_request = "pull_request" in issue and issue["pull_request"] is not None
+        return MentionScope.PR if is_pull_request else MentionScope.ISSUE
 
-        # If scope is ISSUE, we only want actual issues (not PRs)
-        if scope == MentionScope.ISSUE:
-            return not is_pull_request
-        # If scope is PR, we only want pull requests
-        elif scope == MentionScope.PR:
-            return is_pull_request
+    for scope in MentionScope:
+        scope_events = scope.get_events()
+        if any(event_action.event == event.event for event_action in scope_events):
+            return scope
 
-    scope_events = scope.get_events()
-    return any(event_action.event == event.event for event_action in scope_events)
+    return None
