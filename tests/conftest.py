@@ -151,6 +151,31 @@ def get_mock_github_api():
 
 
 @pytest.fixture
+def get_mock_github_api_sync():
+    def _get_mock_github_api_sync(return_data):
+        from django_github_app.github import SyncGitHubAPI
+
+        mock_api = MagicMock(spec=SyncGitHubAPI)
+
+        def mock_getitem(*args, **kwargs):
+            return return_data
+
+        def mock_getiter(*args, **kwargs):
+            yield from return_data
+
+        def mock_post(*args, **kwargs):
+            pass
+
+        mock_api.getitem = mock_getitem
+        mock_api.getiter = mock_getiter
+        mock_api.post = mock_post
+
+        return mock_api
+
+    return _get_mock_github_api_sync
+
+
+@pytest.fixture
 def installation(get_mock_github_api, baker):
     installation = baker.make(
         "django_github_app.Installation", installation_id=seq.next()

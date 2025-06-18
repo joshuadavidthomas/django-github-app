@@ -14,9 +14,15 @@ from gidgethub import sansio
 from gidgethub.routing import Router as GidgetHubRouter
 
 from ._typing import override
+from .github import AsyncGitHubAPI
+from .github import SyncGitHubAPI
 from .mentions import MentionScope
 from .mentions import check_event_for_mention
 from .mentions import check_event_scope
+from .permissions import Permission
+from .permissions import acheck_mention_permission
+from .permissions import check_mention_permission
+from .permissions import get_comment_post_url
 
 AsyncCallback = Callable[..., Awaitable[None]]
 SyncCallback = Callable[..., None]
@@ -76,7 +82,7 @@ class GitHubRouter(GidgetHubRouter):
 
             @wraps(func)
             async def async_wrapper(
-                event: sansio.Event, *args: Any, **wrapper_kwargs: Any
+                event: sansio.Event, gh: AsyncGitHubAPI, *args: Any, **kwargs: Any
             ) -> None:
                 # TODO: Get actual bot username from installation/app data
                 username = "bot"  # Placeholder
@@ -87,12 +93,29 @@ class GitHubRouter(GidgetHubRouter):
                 if not check_event_scope(event, scope):
                     return
 
-                # TODO: Check permissions. For now, just call through.
-                await func(event, *args, **wrapper_kwargs)  # type: ignore[func-returns-value]
+                # Check permissions if required
+                if permission is not None:
+                    required_perm = Permission.from_string(permission)
+                    permission_check = await acheck_mention_permission(
+                        event, gh, required_perm
+                    )
+
+                    if not permission_check.has_permission:
+                        # Post error comment if we have an error message
+                        if permission_check.error_message:
+                            comment_url = get_comment_post_url(event)
+                            if comment_url:
+                                await gh.post(
+                                    comment_url,
+                                    data={"body": permission_check.error_message},
+                                )
+                        return
+
+                await func(event, gh, *args, **kwargs)  # type: ignore[func-returns-value]
 
             @wraps(func)
             def sync_wrapper(
-                event: sansio.Event, *args: Any, **wrapper_kwargs: Any
+                event: sansio.Event, gh: SyncGitHubAPI, *args: Any, **kwargs: Any
             ) -> None:
                 # TODO: Get actual bot username from installation/app data
                 username = "bot"  # Placeholder
@@ -103,8 +126,25 @@ class GitHubRouter(GidgetHubRouter):
                 if not check_event_scope(event, scope):
                     return
 
-                # TODO: Check permissions. For now, just call through.
-                func(event, *args, **wrapper_kwargs)
+                # Check permissions if required
+                if permission is not None:
+                    required_perm = Permission.from_string(permission)
+                    permission_check = check_mention_permission(
+                        event, gh, required_perm
+                    )
+
+                    if not permission_check.has_permission:
+                        # Post error comment if we have an error message
+                        if permission_check.error_message:
+                            comment_url = get_comment_post_url(event)
+                            if comment_url:
+                                gh.post(  # type: ignore[unused-coroutine]
+                                    comment_url,
+                                    data={"body": permission_check.error_message},
+                                )
+                        return
+
+                func(event, gh, *args, **kwargs)
 
             wrapper: MentionHandler
             if iscoroutinefunction(func):
