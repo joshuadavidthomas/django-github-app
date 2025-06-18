@@ -98,11 +98,13 @@ class GitHubRouter(GidgetHubRouter):
                 if not mentions:
                     return
 
-                user_permission = await aget_user_permission_from_event(event, gh)
                 if permission is not None:
+                    user_permission = await aget_user_permission_from_event(event, gh)
                     required_perm = Permission[permission.upper()]
-                    if user_permission is None or user_permission < required_perm:
+                    if user_permission < required_perm:
                         return
+                else:
+                    user_permission = Permission.NONE
 
                 comment = Comment.from_event(event)
                 comment.mentions = mentions
@@ -135,11 +137,13 @@ class GitHubRouter(GidgetHubRouter):
                 if not mentions:
                     return
 
-                user_permission = get_user_permission_from_event(event, gh)
                 if permission is not None:
+                    user_permission = get_user_permission_from_event(event, gh)
                     required_perm = Permission[permission.upper()]
-                    if user_permission is None or user_permission < required_perm:
+                    if user_permission < required_perm:
                         return
+                else:
+                    user_permission = Permission.NONE
 
                 comment = Comment.from_event(event)
                 comment.mentions = mentions

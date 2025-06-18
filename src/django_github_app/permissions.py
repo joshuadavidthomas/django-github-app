@@ -48,10 +48,33 @@ class PermissionCacheKey(NamedTuple):
     username: str
 
 
-async def aget_user_permission(
-    gh: AsyncGitHubAPI, owner: str, repo: str, username: str
+class EventInfo(NamedTuple):
+    author: str | None
+    owner: str | None
+    repo: str | None
+
+    @classmethod
+    def from_event(cls, event: sansio.Event) -> EventInfo:
+        comment = event.data.get("comment", {})
+        repository = event.data.get("repository", {})
+        
+        author = comment.get("user", {}).get("login")
+        owner = repository.get("owner", {}).get("login")
+        repo = repository.get("name")
+
+        return cls(author=author, owner=owner, repo=repo)
+
+
+async def aget_user_permission_from_event(
+    event: sansio.Event, gh: AsyncGitHubAPI
 ) -> Permission:
-    cache_key = PermissionCacheKey(owner, repo, username)
+    author, owner, repo = EventInfo.from_event(event)
+
+    if not (author and owner and repo):
+        return Permission.NONE
+
+    # Inline the logic from aget_user_permission
+    cache_key = PermissionCacheKey(owner, repo, author)
 
     if cache_key in cache:
         return cache[cache_key]
@@ -61,7 +84,7 @@ async def aget_user_permission(
     try:
         # Check if user is a collaborator and get their permission
         data = await gh.getitem(
-            f"/repos/{owner}/{repo}/collaborators/{username}/permission"
+            f"/repos/{owner}/{repo}/collaborators/{author}/permission"
         )
         permission_str = data.get("permission", "none")
         permission = Permission.from_string(permission_str)
@@ -80,10 +103,16 @@ async def aget_user_permission(
     return permission
 
 
-def get_user_permission(
-    gh: SyncGitHubAPI, owner: str, repo: str, username: str
+def get_user_permission_from_event(
+    event: sansio.Event, gh: SyncGitHubAPI
 ) -> Permission:
-    cache_key = PermissionCacheKey(owner, repo, username)
+    author, owner, repo = EventInfo.from_event(event)
+
+    if not (author and owner and repo):
+        return Permission.NONE
+
+    # Inline the logic from get_user_permission
+    cache_key = PermissionCacheKey(owner, repo, author)
 
     if cache_key in cache:
         return cache[cache_key]
@@ -92,7 +121,7 @@ def get_user_permission(
 
     try:
         # Check if user is a collaborator and get their permission
-        data = gh.getitem(f"/repos/{owner}/{repo}/collaborators/{username}/permission")
+        data = gh.getitem(f"/repos/{owner}/{repo}/collaborators/{author}/permission")
         permission_str = data.get("permission", "none")  # type: ignore[attr-defined]
         permission = Permission.from_string(permission_str)
     except gidgethub.HTTPException as e:
@@ -108,72 +137,3 @@ def get_user_permission(
 
     cache[cache_key] = permission
     return permission
-
-
-class EventInfo(NamedTuple):
-    comment_author: str | None
-    owner: str | None
-    repo: str | None
-
-    @classmethod
-    def from_event(cls, event: sansio.Event) -> EventInfo:
-        comment_author = None
-        owner = None
-        repo = None
-
-        if "comment" in event.data:
-            comment_author = event.data["comment"]["user"]["login"]
-
-        if "repository" in event.data:
-            owner = event.data["repository"]["owner"]["login"]
-            repo = event.data["repository"]["name"]
-
-        return cls(comment_author=comment_author, owner=owner, repo=repo)
-
-
-class PermissionCheck(NamedTuple):
-    has_permission: bool
-
-
-async def aget_user_permission_from_event(
-    event: sansio.Event, gh: AsyncGitHubAPI
-) -> Permission | None:
-    comment_author, owner, repo = EventInfo.from_event(event)
-
-    if not (comment_author and owner and repo):
-        return None
-
-    return await aget_user_permission(gh, owner, repo, comment_author)
-
-
-async def acheck_mention_permission(
-    event: sansio.Event, gh: AsyncGitHubAPI, required_permission: Permission
-) -> PermissionCheck:
-    user_permission = await aget_user_permission_from_event(event, gh)
-
-    if user_permission is None:
-        return PermissionCheck(has_permission=False)
-
-    return PermissionCheck(has_permission=user_permission >= required_permission)
-
-
-def get_user_permission_from_event(
-    event: sansio.Event, gh: SyncGitHubAPI
-) -> Permission | None:
-    comment_author, owner, repo = EventInfo.from_event(event)
-
-    if not (comment_author and owner and repo):
-        return None
-
-    return get_user_permission(gh, owner, repo, comment_author)
-
-
-def check_mention_permission(
-    event: sansio.Event, gh: SyncGitHubAPI, required_permission: Permission
-) -> PermissionCheck:
-    user_permission = get_user_permission_from_event(event, gh)
-
-    if user_permission is None:
-        return PermissionCheck(has_permission=False)
-
-    return PermissionCheck(has_permission=user_permission >= required_permission)

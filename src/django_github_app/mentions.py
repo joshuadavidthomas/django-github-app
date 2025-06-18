@@ -121,7 +121,7 @@ class Comment:
 class MentionContext:
     comment: Comment
     triggered_by: Mention
-    user_permission: Permission | None
+    user_permission: Permission
     scope: MentionScope | None
 
 

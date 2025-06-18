@@ -6,13 +6,14 @@ from unittest.mock import create_autospec
 
 import gidgethub
 import pytest
+from gidgethub import sansio
 
 from django_github_app.github import AsyncGitHubAPI
 from django_github_app.github import SyncGitHubAPI
 from django_github_app.permissions import Permission
-from django_github_app.permissions import aget_user_permission
+from django_github_app.permissions import aget_user_permission_from_event
 from django_github_app.permissions import cache
-from django_github_app.permissions import get_user_permission
+from django_github_app.permissions import get_user_permission_from_event
 
 
 @pytest.fixture(autouse=True)
@@ -20,6 +21,18 @@ def clear_cache():
     cache.clear()
     yield
     cache.clear()
+
+
+def create_test_event(username: str, owner: str, repo: str) -> sansio.Event:
+    """Create a test event with comment author and repository info."""
+    return sansio.Event(
+        {
+            "comment": {"user": {"login": username}},
+            "repository": {"owner": {"login": owner}, "name": repo},
+        },
+        event="issue_comment",
+        delivery_id="test",
+    )
 
 
 class TestPermission:
@@ -64,8 +77,9 @@ class TestGetUserPermission:
     async def test_collaborator_with_admin_permission(self):
         gh = create_autospec(AsyncGitHubAPI, instance=True)
         gh.getitem = AsyncMock(return_value={"permission": "admin"})
+        event = create_test_event("user", "owner", "repo")
 
-        permission = await aget_user_permission(gh, "owner", "repo", "user")
+        permission = await aget_user_permission_from_event(event, gh)
 
         assert permission == Permission.ADMIN
         gh.getitem.assert_called_once_with(
@@ -75,8 +89,9 @@ class TestGetUserPermission:
     async def test_collaborator_with_write_permission(self):
         gh = create_autospec(AsyncGitHubAPI, instance=True)
         gh.getitem = AsyncMock(return_value={"permission": "write"})
+        event = create_test_event("user", "owner", "repo")
 
-        permission = await aget_user_permission(gh, "owner", "repo", "user")
+        permission = await aget_user_permission_from_event(event, gh)
 
         assert permission == Permission.WRITE
 
@@ -90,7 +105,8 @@ class TestGetUserPermission:
             ]
         )
 
-        permission = await aget_user_permission(gh, "owner", "repo", "user")
+        event = create_test_event("user", "owner", "repo")
+        permission = await aget_user_permission_from_event(event, gh)
 
         assert permission == Permission.READ
         assert gh.getitem.call_count == 2
@@ -106,8 +122,9 @@ class TestGetUserPermission:
                 {"private": True},  # Repo is private
             ]
         )
+        event = create_test_event("user", "owner", "repo")
 
-        permission = await aget_user_permission(gh, "owner", "repo", "user")
+        permission = await aget_user_permission_from_event(event, gh)
 
         assert permission == Permission.NONE
 
@@ -116,16 +133,18 @@ class TestGetUserPermission:
         gh.getitem = AsyncMock(
             side_effect=gidgethub.HTTPException(500, "Server error", {})
         )
+        event = create_test_event("user", "owner", "repo")
 
-        permission = await aget_user_permission(gh, "owner", "repo", "user")
+        permission = await aget_user_permission_from_event(event, gh)
 
         assert permission == Permission.NONE
 
     async def test_missing_permission_field(self):
         gh = create_autospec(AsyncGitHubAPI, instance=True)
         gh.getitem = AsyncMock(return_value={})  # No permission field
+        event = create_test_event("user", "owner", "repo")
 
-        permission = await aget_user_permission(gh, "owner", "repo", "user")
+        permission = await aget_user_permission_from_event(event, gh)
 
         assert permission == Permission.NONE
 
@@ -134,8 +153,9 @@ class TestGetUserPermissionSync:
     def test_collaborator_with_permission(self):
         gh = create_autospec(SyncGitHubAPI, instance=True)
         gh.getitem = Mock(return_value={"permission": "maintain"})
+        event = create_test_event("user", "owner", "repo")
 
-        permission = get_user_permission(gh, "owner", "repo", "user")
+        permission = get_user_permission_from_event(event, gh)
 
         assert permission == Permission.MAINTAIN
         gh.getitem.assert_called_once_with(
@@ -151,8 +171,9 @@ class TestGetUserPermissionSync:
                 {"private": False},  # Repo is public
             ]
         )
+        event = create_test_event("user", "owner", "repo")
 
-        permission = get_user_permission(gh, "owner", "repo", "user")
+        permission = get_user_permission_from_event(event, gh)
 
         assert permission == Permission.READ
 
@@ -162,14 +183,15 @@ class TestPermissionCaching:
     async def test_cache_hit(self):
         gh = create_autospec(AsyncGitHubAPI, instance=True)
         gh.getitem = AsyncMock(return_value={"permission": "write"})
+        event = create_test_event("user", "owner", "repo")
 
         # First call should hit the API
-        perm1 = await aget_user_permission(gh, "owner", "repo", "user")
+        perm1 = await aget_user_permission_from_event(event, gh)
         assert perm1 == Permission.WRITE
         assert gh.getitem.call_count == 1
 
         # Second call should use cache
-        perm2 = await aget_user_permission(gh, "owner", "repo", "user")
+        perm2 = await aget_user_permission_from_event(event, gh)
         assert perm2 == Permission.WRITE
         assert gh.getitem.call_count == 1  # No additional API call
 
@@ -182,9 +204,11 @@ class TestPermissionCaching:
                 {"permission": "admin"},
             ]
         )
+        event1 = create_test_event("user1", "owner", "repo")
+        event2 = create_test_event("user2", "owner", "repo")
 
-        perm1 = await aget_user_permission(gh, "owner", "repo", "user1")
-        perm2 = await aget_user_permission(gh, "owner", "repo", "user2")
+        perm1 = await aget_user_permission_from_event(event1, gh)
+        perm2 = await aget_user_permission_from_event(event2, gh)
 
         assert perm1 == Permission.WRITE
         assert perm2 == Permission.ADMIN
@@ -194,13 +218,42 @@ class TestPermissionCaching:
         """Test that sync version uses cache."""
         gh = create_autospec(SyncGitHubAPI, instance=True)
         gh.getitem = Mock(return_value={"permission": "read"})
+        event = create_test_event("user", "owner", "repo")
 
         # First call should hit the API
-        perm1 = get_user_permission(gh, "owner", "repo", "user")
+        perm1 = get_user_permission_from_event(event, gh)
         assert perm1 == Permission.READ
         assert gh.getitem.call_count == 1
 
         # Second call should use cache
-        perm2 = get_user_permission(gh, "owner", "repo", "user")
+        perm2 = get_user_permission_from_event(event, gh)
         assert perm2 == Permission.READ
         assert gh.getitem.call_count == 1  # No additional API call
+
+
+class TestPermissionFromEvent:
+    @pytest.mark.asyncio
+    async def test_missing_comment_data(self):
+        """Test when event has no comment data."""
+        gh = create_autospec(AsyncGitHubAPI, instance=True)
+        event = sansio.Event({}, event="issue_comment", delivery_id="test")
+
+        permission = await aget_user_permission_from_event(event, gh)
+
+        assert permission == Permission.NONE
+        assert gh.getitem.called is False
+
+    @pytest.mark.asyncio
+    async def test_missing_repository_data(self):
+        """Test when event has no repository data."""
+        gh = create_autospec(AsyncGitHubAPI, instance=True)
+        event = sansio.Event(
+            {"comment": {"user": {"login": "user"}}},
+            event="issue_comment",
+            delivery_id="test",
+        )
+
+        permission = await aget_user_permission_from_event(event, gh)
+
+        assert permission == Permission.NONE
+        assert gh.getitem.called is False
