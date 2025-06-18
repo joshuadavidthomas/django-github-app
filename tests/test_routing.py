@@ -2,15 +2,24 @@ from __future__ import annotations
 
 import asyncio
 
+import gidgethub
 import pytest
 from django.http import HttpRequest
 from django.http import JsonResponse
 from gidgethub import sansio
 
-from django_github_app.mentions import MentionScope
 from django_github_app.github import SyncGitHubAPI
+from django_github_app.mentions import MentionScope
+from django_github_app.permissions import cache
 from django_github_app.routing import GitHubRouter
 from django_github_app.views import BaseWebhookView
+
+
+@pytest.fixture(autouse=True)
+def clear_permission_cache():
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -182,7 +191,7 @@ class TestMentionDecorator:
 
         assert not pr_handler_called
 
-    def test_mention_with_permission(self, test_router):
+    def test_mention_with_permission(self, test_router, get_mock_github_api_sync):
         handler_called = False
 
         @test_router.mention(command="delete", permission="admin")
@@ -191,11 +200,20 @@ class TestMentionDecorator:
             handler_called = True
 
         event = sansio.Event(
-            {"action": "created", "comment": {"body": "@bot delete"}},
+            {
+                "action": "created",
+                "comment": {"body": "@bot delete", "user": {"login": "testuser"}},
+                "issue": {
+                    "number": 123
+                },  # Added issue field required for issue_comment events
+                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
+            },
             event="issue_comment",
             delivery_id="123",
         )
-        test_router.dispatch(event, None)
+        # Mock the permission check to return admin permission
+        mock_gh = get_mock_github_api_sync({"permission": "admin"})
+        test_router.dispatch(event, mock_gh)
 
         assert handler_called
 
@@ -447,3 +465,144 @@ class TestMentionDecorator:
         test_router.dispatch(event, None)
 
         assert call_count == 3
+
+    def test_mention_permission_denied(self, test_router, get_mock_github_api_sync):
+        """Test that permission denial posts error comment."""
+        handler_called = False
+        posted_comment = None
+
+        @test_router.mention(command="admin-only", permission="admin")
+        def admin_command(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+
+        event = sansio.Event(
+            {
+                "action": "created",
+                "comment": {"body": "@bot admin-only", "user": {"login": "testuser"}},
+                "issue": {"number": 123},
+                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
+            },
+            event="issue_comment",
+            delivery_id="123",
+        )
+
+        # Mock the permission check to return write permission (less than admin)
+        mock_gh = get_mock_github_api_sync({"permission": "write"})
+
+        # Capture the posted comment
+        def capture_post(url, data=None, **kwargs):
+            nonlocal posted_comment
+            posted_comment = data.get("body") if data else None
+
+        mock_gh.post = capture_post
+
+        test_router.dispatch(event, mock_gh)
+
+        # Handler should not be called
+        assert not handler_called
+        # Error comment should be posted
+        assert posted_comment is not None
+        assert "Permission Denied" in posted_comment
+        assert "admin" in posted_comment
+        assert "write" in posted_comment
+        assert "@testuser" in posted_comment
+
+    def test_mention_permission_denied_no_permission(
+        self, test_router, get_mock_github_api_sync
+    ):
+        """Test permission denial when user has no permission."""
+        handler_called = False
+        posted_comment = None
+
+        @test_router.mention(command="write-required", permission="write")
+        def write_command(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+
+        event = sansio.Event(
+            {
+                "action": "created",
+                "comment": {
+                    "body": "@bot write-required",
+                    "user": {"login": "stranger"},
+                },
+                "issue": {"number": 456},
+                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
+            },
+            event="issue_comment",
+            delivery_id="456",
+        )
+
+        # Mock returns 404 for non-collaborator
+        mock_gh = get_mock_github_api_sync({})  # Empty dict as we'll override getitem
+        mock_gh.getitem.side_effect = [
+            gidgethub.HTTPException(404, "Not found", {}),  # User is not a collaborator
+            {"private": True},  # Repo is private
+        ]
+
+        # Capture the posted comment
+        def capture_post(url, data=None, **kwargs):
+            nonlocal posted_comment
+            posted_comment = data.get("body") if data else None
+
+        mock_gh.post = capture_post
+
+        test_router.dispatch(event, mock_gh)
+
+        # Handler should not be called
+        assert not handler_called
+        # Error comment should be posted
+        assert posted_comment is not None
+        assert "Permission Denied" in posted_comment
+        assert "write" in posted_comment
+        assert "none" in posted_comment  # User has no permission
+        assert "@stranger" in posted_comment
+
+    @pytest.mark.asyncio
+    async def test_async_mention_permission_denied(
+        self, test_router, get_mock_github_api
+    ):
+        """Test async permission denial posts error comment."""
+        handler_called = False
+        posted_comment = None
+
+        @test_router.mention(command="maintain-only", permission="maintain")
+        async def maintain_command(event, *args, **kwargs):
+            nonlocal handler_called
+            handler_called = True
+
+        event = sansio.Event(
+            {
+                "action": "created",
+                "comment": {
+                    "body": "@bot maintain-only",
+                    "user": {"login": "contributor"},
+                },
+                "issue": {"number": 789},
+                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
+            },
+            event="issue_comment",
+            delivery_id="789",
+        )
+
+        # Mock the permission check to return triage permission (less than maintain)
+        mock_gh = get_mock_github_api({"permission": "triage"})
+
+        # Capture the posted comment
+        async def capture_post(url, data=None, **kwargs):
+            nonlocal posted_comment
+            posted_comment = data.get("body") if data else None
+
+        mock_gh.post = capture_post
+
+        await test_router.adispatch(event, mock_gh)
+
+        # Handler should not be called
+        assert not handler_called
+        # Error comment should be posted
+        assert posted_comment is not None
+        assert "Permission Denied" in posted_comment
+        assert "maintain" in posted_comment
+        assert "triage" in posted_comment
+        assert "@contributor" in posted_comment
