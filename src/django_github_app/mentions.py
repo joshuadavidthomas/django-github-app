@@ -46,6 +46,23 @@ class MentionScope(str, Enum):
             )
         )
 
+    @classmethod
+    def from_event(cls, event: sansio.Event) -> MentionScope | None:
+        """Determine the scope of a GitHub event based on its type and context."""
+        if event.event == "issue_comment":
+            issue = event.data.get("issue", {})
+            is_pull_request = (
+                "pull_request" in issue and issue["pull_request"] is not None
+            )
+            return cls.PR if is_pull_request else cls.ISSUE
+
+        for scope in cls:
+            scope_events = scope.get_events()
+            if any(event_action.event == event.event for event_action in scope_events):
+                return scope
+
+        return None
+
 
 @dataclass
 class Mention:
@@ -125,20 +142,6 @@ class MentionContext:
 CODE_BLOCK_PATTERN = re.compile(r"```[\s\S]*?```", re.MULTILINE)
 INLINE_CODE_PATTERN = re.compile(r"`[^`]+`")
 QUOTE_PATTERN = re.compile(r"^\s*>.*$", re.MULTILINE)
-
-
-def get_event_scope(event: sansio.Event) -> MentionScope | None:
-    if event.event == "issue_comment":
-        issue = event.data.get("issue", {})
-        is_pull_request = "pull_request" in issue and issue["pull_request"] is not None
-        return MentionScope.PR if is_pull_request else MentionScope.ISSUE
-
-    for scope in MentionScope:
-        scope_events = scope.get_events()
-        if any(event_action.event == event.event for event_action in scope_events):
-            return scope
-
-    return None
 
 
 def check_pattern_match(

@@ -21,7 +21,6 @@ from .mentions import Comment
 from .mentions import MentionContext
 from .mentions import MentionScope
 from .mentions import check_pattern_match
-from .mentions import get_event_scope
 from .mentions import parse_mentions_for_username
 
 AsyncCallback = Callable[..., Awaitable[None]]
@@ -84,7 +83,7 @@ class GitHubRouter(GidgetHubRouter):
             async def async_wrapper(
                 event: sansio.Event, gh: AsyncGitHubAPI, *args: Any, **kwargs: Any
             ) -> None:
-                event_scope = get_event_scope(event)
+                event_scope = MentionScope.from_event(event)
                 if scope is not None and event_scope != scope:
                     return
 
@@ -114,7 +113,7 @@ class GitHubRouter(GidgetHubRouter):
             def sync_wrapper(
                 event: sansio.Event, gh: SyncGitHubAPI, *args: Any, **kwargs: Any
             ) -> None:
-                event_scope = get_event_scope(event)
+                event_scope = MentionScope.from_event(event)
                 if scope is not None and event_scope != scope:
                     return
 
