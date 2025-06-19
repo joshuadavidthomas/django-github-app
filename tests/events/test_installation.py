@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-from gidgethub.abc import sansio
 from model_bakery import baker
 
 from django_github_app.events.installation import create_installation
@@ -19,7 +18,11 @@ pytestmark = [pytest.mark.django_db]
 
 @pytest.mark.parametrize("app_settings_app_id_type", [int, str])
 def test_create_installation(
-    app_settings_app_id_type, installation_id, repository_id, override_app_settings
+    app_settings_app_id_type,
+    installation_id,
+    repository_id,
+    override_app_settings,
+    create_event,
 ):
     data = {
         "installation": {
@@ -30,7 +33,7 @@ def test_create_installation(
             {"id": repository_id, "node_id": "node1234", "full_name": "owner/repo"}
         ],
     }
-    event = sansio.Event(data, event="installation", delivery_id="1234")
+    event = create_event("installation", delivery_id="1234", **data)
 
     with override_app_settings(
         APP_ID=data["installation"]["app_id"]
@@ -44,13 +47,13 @@ def test_create_installation(
     assert installation.data == data["installation"]
 
 
-def test_delete_installation(installation):
+def test_delete_installation(installation, create_event):
     data = {
         "installation": {
             "id": installation.installation_id,
         }
     }
-    event = sansio.Event(data, event="installation", delivery_id="1234")
+    event = create_event("installation", delivery_id="1234", **data)
 
     delete_installation(event, None)
 
@@ -66,7 +69,9 @@ def test_delete_installation(installation):
         (InstallationStatus.INACTIVE, "unsuspend", InstallationStatus.ACTIVE),
     ],
 )
-def test_toggle_installation_status_suspend(status, action, expected, installation):
+def test_toggle_installation_status_suspend(
+    status, action, expected, installation, create_event
+):
     installation.status = status
     installation.save()
 
@@ -76,7 +81,7 @@ def test_toggle_installation_status_suspend(status, action, expected, installati
             "id": installation.installation_id,
         },
     }
-    event = sansio.Event(data, event="installation", delivery_id="1234")
+    event = create_event("installation", delivery_id="1234", **data)
 
     assert installation.status != expected
 
@@ -86,13 +91,13 @@ def test_toggle_installation_status_suspend(status, action, expected, installati
     assert installation.status == expected
 
 
-def test_sync_installation_data(installation):
+def test_sync_installation_data(installation, create_event):
     data = {
         "installation": {
             "id": installation.installation_id,
         },
     }
-    event = sansio.Event(data, event="installation", delivery_id="1234")
+    event = create_event("installation", delivery_id="1234", **data)
 
     assert installation.data != data
 
@@ -102,7 +107,7 @@ def test_sync_installation_data(installation):
     assert installation.data == data["installation"]
 
 
-def test_sync_installation_repositories(installation):
+def test_sync_installation_repositories(installation, create_event):
     existing_repo = baker.make(
         "django_github_app.Repository",
         installation=installation,
@@ -126,7 +131,7 @@ def test_sync_installation_repositories(installation):
             }
         ],
     }
-    event = sansio.Event(data, event="installation", delivery_id="1234")
+    event = create_event("installation", delivery_id="1234", **data)
 
     assert Repository.objects.filter(
         repository_id=data["repositories_removed"][0]["id"]

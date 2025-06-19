@@ -9,7 +9,6 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from django.utils import timezone
-from gidgethub import sansio
 from model_bakery import baker
 
 from django_github_app.github import AsyncGitHubAPI
@@ -21,14 +20,6 @@ from django_github_app.models import Repository
 from .utils import seq
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture
-def create_event():
-    def _create_event(data, event):
-        return sansio.Event(data=data, event=event, delivery_id=seq.next())
-
-    return _create_event
 
 
 @pytest.fixture
@@ -52,7 +43,9 @@ class TestEventLogManager:
         data = {"foo": "bar"}
         event = "baz"
 
-        event_log = await EventLog.objects.acreate_from_event(create_event(data, event))
+        event_log = await EventLog.objects.acreate_from_event(
+            create_event(event, **data)
+        )
 
         assert event_log.event == event
         assert event_log.payload == data
@@ -61,7 +54,7 @@ class TestEventLogManager:
         data = {"foo": "bar"}
         event = "baz"
 
-        event_log = EventLog.objects.create_from_event(create_event(data, event))
+        event_log = EventLog.objects.create_from_event(create_event(event, **data))
 
         assert event_log.event == event
         assert event_log.payload == data
@@ -140,11 +133,9 @@ class TestInstallationManager:
             "app_id": seq.next(),
         }
         event = create_event(
-            {
-                "installation": installation_data,
-                "repositories": repositories,
-            },
             "installation",
+            installation=installation_data,
+            repositories=repositories,
         )
 
         with override_app_settings(
@@ -173,11 +164,9 @@ class TestInstallationManager:
             "app_id": seq.next(),
         }
         event = create_event(
-            {
-                "installation": installation_data,
-                "repositories": repositories,
-            },
             "installation",
+            installation=installation_data,
+            repositories=repositories,
         )
 
         with override_app_settings(
@@ -221,7 +210,7 @@ class TestInstallationManager:
     @pytest.mark.asyncio
     async def test_aget_from_event(self, ainstallation, create_event):
         event = create_event(
-            {"installation": {"id": ainstallation.installation_id}}, "installation"
+            "installation", installation={"id": ainstallation.installation_id}
         )
 
         result = await Installation.objects.aget_from_event(event)
@@ -230,7 +219,7 @@ class TestInstallationManager:
 
     @pytest.mark.asyncio
     async def test_aget_from_event_doesnotexist(self, installation_id, create_event):
-        event = create_event({"installation": {"id": installation_id}}, "installation")
+        event = create_event("installation", installation={"id": installation_id})
 
         installation = await Installation.objects.aget_from_event(event)
 
@@ -238,7 +227,7 @@ class TestInstallationManager:
 
     def test_get_from_event(self, installation, create_event):
         event = create_event(
-            {"installation": {"id": installation.installation_id}}, "installation"
+            "installation", installation={"id": installation.installation_id}
         )
 
         result = Installation.objects.get_from_event(event)
@@ -258,12 +247,12 @@ class TestInstallationStatus:
         ],
     )
     def test_from_event(self, action, expected, create_event):
-        event = create_event({"action": action}, "installation")
+        event = create_event("installation", action=action)
 
         assert InstallationStatus.from_event(event) == expected
 
     def test_from_event_invalid_action(self, create_event):
-        event = create_event({"action": "invalid"}, "installation")
+        event = create_event("installation", action="invalid")
 
         with pytest.raises(ValueError):
             InstallationStatus.from_event(event)
@@ -411,7 +400,7 @@ class TestRepositoryManager:
         }
 
         repo = await Repository.objects.aget_from_event(
-            create_event(data, "repository")
+            create_event("repository", **data)
         )
 
         assert repo.repository_id == data["repository"]["id"]
@@ -428,7 +417,7 @@ class TestRepositoryManager:
         }
 
         repo = await Repository.objects.aget_from_event(
-            create_event(data, "repository")
+            create_event("repository", **data)
         )
 
         assert repo is None
@@ -442,7 +431,7 @@ class TestRepositoryManager:
             }
         }
 
-        repo = Repository.objects.get_from_event(create_event(data, "repository"))
+        repo = Repository.objects.get_from_event(create_event("repository", **data))
 
         assert repo.repository_id == data["repository"]["id"]
         assert repo.repository_node_id == data["repository"]["node_id"]
