@@ -246,7 +246,7 @@ class TestMentionDecorator:
         @router.mention(pattern="help")
         def help_handler_help(event, *args, **kwargs):
             call_tracker.append("help decorator")
-            mention = kwargs.get("mention")
+            mention = kwargs.get("context")
             if mention and mention.triggered_by:
                 text = mention.triggered_by.text.strip()
                 if text in call_counts:
@@ -255,7 +255,7 @@ class TestMentionDecorator:
         @router.mention(pattern="h")
         def help_handler_h(event, *args, **kwargs):
             call_tracker.append("h decorator")
-            mention = kwargs.get("mention")
+            mention = kwargs.get("context")
             if mention and mention.triggered_by:
                 text = mention.triggered_by.text.strip()
                 if text in call_counts:
@@ -264,7 +264,7 @@ class TestMentionDecorator:
         @router.mention(pattern="?")
         def help_handler_q(event, *args, **kwargs):
             call_tracker.append("? decorator")
-            mention = kwargs.get("mention")
+            mention = kwargs.get("context")
             if mention and mention.triggered_by:
                 text = mention.triggered_by.text.strip()
                 if text in call_counts:
@@ -573,8 +573,8 @@ class TestMentionDecorator:
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
-        assert "mention" in captured_kwargs
-        mention = captured_kwargs["mention"]
+        assert "context" in captured_kwargs
+        mention = captured_kwargs["context"]
         # Check the new structure
         assert mention.comment.body == "@bot deploy"
         assert mention.triggered_by.text == "deploy"
@@ -593,7 +593,7 @@ class TestUpdatedMentionContext:
         def test_handler(event, *args, **kwargs):
             nonlocal handler_called, captured_mention
             handler_called = True
-            captured_mention = kwargs.get("mention")
+            captured_mention = kwargs.get("context")
 
         event = sansio.Event(
             {
@@ -647,7 +647,7 @@ class TestUpdatedMentionContext:
         def deploy_handler(event, *args, **kwargs):
             nonlocal handler_called, captured_mention
             handler_called = True
-            captured_mention = kwargs.get("mention")
+            captured_mention = kwargs.get("context")
 
         event = sansio.Event(
             {
@@ -693,7 +693,7 @@ class TestUpdatedMentionContext:
         def general_handler(event, *args, **kwargs):
             nonlocal handler_called, captured_mention
             handler_called = True
-            captured_mention = kwargs.get("mention")
+            captured_mention = kwargs.get("context")
 
         event = sansio.Event(
             {
@@ -733,7 +733,7 @@ class TestUpdatedMentionContext:
         async def async_handler(event, *args, **kwargs):
             nonlocal handler_called, captured_mention
             handler_called = True
-            captured_mention = kwargs.get("mention")
+            captured_mention = kwargs.get("context")
 
         event = sansio.Event(
             {
@@ -774,7 +774,7 @@ class TestFlexibleMentionTriggers:
         def deploy_handler(event, *args, **kwargs):
             nonlocal handler_called, captured_mention
             handler_called = True
-            captured_mention = kwargs.get("mention")
+            captured_mention = kwargs.get("context")
 
         # Should match
         event = sansio.Event(
@@ -812,7 +812,7 @@ class TestFlexibleMentionTriggers:
         def deploy_env_handler(event, *args, **kwargs):
             nonlocal handler_called, captured_mention
             handler_called = True
-            captured_mention = kwargs.get("mention")
+            captured_mention = kwargs.get("context")
 
         event = sansio.Event(
             {
@@ -895,7 +895,7 @@ class TestFlexibleMentionTriggers:
 
         @test_router.mention(username=re.compile(r".*"))
         def all_mentions_handler(event, *args, **kwargs):
-            mention = kwargs.get("mention")
+            mention = kwargs.get("context")
             mentions_seen.append(mention.triggered_by.username)
 
         event = sansio.Event(
@@ -987,7 +987,7 @@ class TestFlexibleMentionTriggers:
         @test_router.mention(pattern=re.compile(r"ship"))
         @test_router.mention(pattern=re.compile(r"release"))
         def deploy_handler(event, *args, **kwargs):
-            mention = kwargs.get("mention")
+            mention = kwargs.get("context")
             patterns_matched.append(mention.triggered_by.text.split()[0])
 
         event = sansio.Event(
@@ -1011,7 +1011,7 @@ class TestFlexibleMentionTriggers:
 
         @test_router.mention(pattern=re.compile(r".*\?$"))
         def question_handler(event, *args, **kwargs):
-            mention = kwargs.get("mention")
+            mention = kwargs.get("context")
             questions_received.append(mention.triggered_by.text)
 
         event = sansio.Event(

@@ -32,7 +32,6 @@ CB = TypeVar("CB", AsyncCallback, SyncCallback)
 
 class MentionHandlerBase(Protocol):
     _mention_pattern: str | re.Pattern[str] | None
-    _mention_permission: str | None
     _mention_scope: MentionScope | None
     _mention_username: str | re.Pattern[str] | None
 
@@ -103,7 +102,7 @@ class GitHubRouter(GidgetHubRouter):
                             continue
                         mention.match = match
 
-                    kwargs["mention"] = MentionContext(
+                    kwargs["context"] = MentionContext(
                         comment=comment,
                         triggered_by=mention,
                         scope=event_scope,
@@ -133,7 +132,7 @@ class GitHubRouter(GidgetHubRouter):
                             continue
                         mention.match = match
 
-                    kwargs["mention"] = MentionContext(
+                    kwargs["context"] = MentionContext(
                         comment=comment,
                         triggered_by=mention,
                         scope=event_scope,
