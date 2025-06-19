@@ -76,116 +76,6 @@ class Mention:
     next_mention: Mention | None = None
 
 
-@dataclass
-class Comment:
-    body: str
-    author: str
-    created_at: datetime
-    url: str
-    mentions: list[Mention]
-
-    @property
-    def line_count(self) -> int:
-        """Number of lines in the comment."""
-        if not self.body:
-            return 0
-        return len(self.body.splitlines())
-
-    @classmethod
-    def from_event(cls, event: sansio.Event) -> Comment:
-        match event.event:
-            case "issue_comment" | "pull_request_review_comment" | "commit_comment":
-                comment_data = event.data.get("comment")
-            case "pull_request_review":
-                comment_data = event.data.get("review")
-            case _:
-                comment_data = None
-
-        if not comment_data:
-            raise ValueError(f"Cannot extract comment from event type: {event.event}")
-
-        created_at_str = comment_data.get("created_at", "")
-        if created_at_str:
-            # GitHub timestamps are in ISO format: 2024-01-01T12:00:00Z
-            created_at_aware = datetime.fromisoformat(
-                created_at_str.replace("Z", "+00:00")
-            )
-            if settings.USE_TZ:
-                created_at = created_at_aware
-            else:
-                created_at = timezone.make_naive(
-                    created_at_aware, timezone.get_default_timezone()
-                )
-        else:
-            created_at = timezone.now()
-
-        author = comment_data.get("user", {}).get("login", "")
-        if not author and "sender" in event.data:
-            author = event.data.get("sender", {}).get("login", "")
-
-        return cls(
-            body=comment_data.get("body", ""),
-            author=author,
-            created_at=created_at,
-            url=comment_data.get("html_url", ""),
-            mentions=[],
-        )
-
-
-@dataclass
-class MentionEvent:
-    comment: Comment
-    triggered_by: Mention
-    scope: MentionScope | None
-
-    @classmethod
-    def from_event(
-        cls,
-        event: sansio.Event,
-        *,
-        username: str | re.Pattern[str] | None = None,
-        pattern: str | re.Pattern[str] | None = None,
-        scope: MentionScope | None = None,
-    ):
-        """Generate MentionEvent instances from a GitHub event.
-
-        Yields MentionEvent for each mention that matches the given criteria.
-        """
-        # Check scope match first
-        event_scope = MentionScope.from_event(event)
-        if scope is not None and event_scope != scope:
-            return
-
-        # Parse mentions
-        mentions = parse_mentions_for_username(event, username)
-        if not mentions:
-            return
-
-        # Create comment
-        comment = Comment.from_event(event)
-        comment.mentions = mentions
-
-        # Yield contexts for matching mentions
-        for mention in mentions:
-            # Check pattern match if specified
-            if pattern is not None:
-                match = check_pattern_match(mention.text, pattern)
-                if not match:
-                    continue
-                mention.match = match
-
-            yield cls(
-                comment=comment,
-                triggered_by=mention,
-                scope=event_scope,
-            )
-
-
-CODE_BLOCK_PATTERN = re.compile(r"```[\s\S]*?```", re.MULTILINE)
-INLINE_CODE_PATTERN = re.compile(r"`[^`]+`")
-QUOTE_PATTERN = re.compile(r"^\s*>.*$", re.MULTILINE)
-
-
 def check_pattern_match(
     text: str, pattern: str | re.Pattern[str] | None
 ) -> re.Match[str] | None:
@@ -206,6 +96,11 @@ def check_pattern_match(
     # Escape the string to treat it literally
     escaped_pattern = re.escape(pattern)
     return re.match(escaped_pattern, text, re.IGNORECASE)
+
+
+CODE_BLOCK_PATTERN = re.compile(r"```[\s\S]*?```", re.MULTILINE)
+INLINE_CODE_PATTERN = re.compile(r"`[^`]+`")
+QUOTE_PATTERN = re.compile(r"^\s*>.*$", re.MULTILINE)
 
 
 def parse_mentions_for_username(
@@ -299,3 +194,100 @@ def parse_mentions_for_username(
             mention.next_mention = mentions[i + 1]
 
     return mentions
+
+
+@dataclass
+class Comment:
+    body: str
+    author: str
+    created_at: datetime
+    url: str
+    mentions: list[Mention]
+
+    @property
+    def line_count(self) -> int:
+        """Number of lines in the comment."""
+        if not self.body:
+            return 0
+        return len(self.body.splitlines())
+
+    @classmethod
+    def from_event(cls, event: sansio.Event) -> Comment:
+        match event.event:
+            case "issue_comment" | "pull_request_review_comment" | "commit_comment":
+                comment_data = event.data.get("comment")
+            case "pull_request_review":
+                comment_data = event.data.get("review")
+            case _:
+                comment_data = None
+
+        if not comment_data:
+            raise ValueError(f"Cannot extract comment from event type: {event.event}")
+
+        created_at_str = comment_data.get("created_at", "")
+        if created_at_str:
+            # GitHub timestamps are in ISO format: 2024-01-01T12:00:00Z
+            created_at_aware = datetime.fromisoformat(
+                created_at_str.replace("Z", "+00:00")
+            )
+            if settings.USE_TZ:
+                created_at = created_at_aware
+            else:
+                created_at = timezone.make_naive(
+                    created_at_aware, timezone.get_default_timezone()
+                )
+        else:
+            created_at = timezone.now()
+
+        author = comment_data.get("user", {}).get("login", "")
+        if not author and "sender" in event.data:
+            author = event.data.get("sender", {}).get("login", "")
+
+        return cls(
+            body=comment_data.get("body", ""),
+            author=author,
+            created_at=created_at,
+            url=comment_data.get("html_url", ""),
+            mentions=[],
+        )
+
+
+@dataclass
+class MentionEvent:
+    comment: Comment
+    triggered_by: Mention
+    scope: MentionScope | None
+
+    @classmethod
+    def from_event(
+        cls,
+        event: sansio.Event,
+        *,
+        username: str | re.Pattern[str] | None = None,
+        pattern: str | re.Pattern[str] | None = None,
+        scope: MentionScope | None = None,
+    ):
+        event_scope = MentionScope.from_event(event)
+        if scope is not None and event_scope != scope:
+            return
+
+        mentions = parse_mentions_for_username(event, username)
+        if not mentions:
+            return
+
+        comment = Comment.from_event(event)
+        comment.mentions = mentions
+
+        for mention in mentions:
+            if pattern is not None:
+                match = check_pattern_match(mention.text, pattern)
+                if not match:
+                    continue
+                mention.match = match
+
+            yield cls(
+                comment=comment,
+                triggered_by=mention,
+                scope=event_scope,
+            )
+
