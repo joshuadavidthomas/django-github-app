@@ -9,8 +9,14 @@ from gidgethub import sansio
 
 from django_github_app.mentions import Comment
 from django_github_app.mentions import MentionScope
-from django_github_app.mentions import get_match
 from django_github_app.mentions import extract_mentions_from_event
+from django_github_app.mentions import get_match
+
+
+@pytest.fixture(autouse=True)
+def setup_test_app_name(override_app_settings):
+    with override_app_settings(NAME="bot"):
+        yield
 
 
 @pytest.fixture
