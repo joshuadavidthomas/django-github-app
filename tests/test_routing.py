@@ -117,7 +117,7 @@ class TestGitHubRouter:
 
 
 class TestMentionDecorator:
-    def test_basic_mention_no_pattern(self, test_router, get_mock_github_api_sync):
+    def test_basic_mention_no_pattern(self, test_router, get_mock_github_api):
         handler_called = False
         handler_args = None
 
@@ -137,13 +137,13 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
         assert handler_args[0] == event
 
-    def test_mention_with_pattern(self, test_router, get_mock_github_api_sync):
+    def test_mention_with_pattern(self, test_router, get_mock_github_api):
         handler_called = False
 
         @test_router.mention(pattern="help")
@@ -162,12 +162,12 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
 
-    def test_mention_with_scope(self, test_router, get_mock_github_api_sync):
+    def test_mention_with_scope(self, test_router, get_mock_github_api):
         pr_handler_called = False
 
         @test_router.mention(pattern="deploy", scope=MentionScope.PR)
@@ -175,7 +175,7 @@ class TestMentionDecorator:
             nonlocal pr_handler_called
             pr_handler_called = True
 
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
 
         pr_event = sansio.Event(
             {
@@ -206,7 +206,7 @@ class TestMentionDecorator:
 
         assert not pr_handler_called
 
-    def test_case_insensitive_pattern(self, test_router, get_mock_github_api_sync):
+    def test_case_insensitive_pattern(self, test_router, get_mock_github_api):
         handler_called = False
 
         @test_router.mention(pattern="HELP")
@@ -224,46 +224,20 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
 
     def test_multiple_decorators_on_same_function(
-        self, test_router, get_mock_github_api_sync
+        self, test_router, get_mock_github_api
     ):
-        """Test that multiple decorators on the same function work correctly."""
-        # Create a fresh router for this test
-        from django_github_app.routing import GitHubRouter
-
-        router = GitHubRouter()
-
         call_counts = {"help": 0, "h": 0, "?": 0}
 
-        # Track which handler is being called
-        call_tracker = []
-
-        @router.mention(pattern="help")
-        def help_handler_help(event, *args, **kwargs):
-            call_tracker.append("help decorator")
-            mention = kwargs.get("context")
-            if mention and mention.triggered_by:
-                text = mention.triggered_by.text.strip()
-                if text in call_counts:
-                    call_counts[text] += 1
-
-        @router.mention(pattern="h")
-        def help_handler_h(event, *args, **kwargs):
-            call_tracker.append("h decorator")
-            mention = kwargs.get("context")
-            if mention and mention.triggered_by:
-                text = mention.triggered_by.text.strip()
-                if text in call_counts:
-                    call_counts[text] += 1
-
-        @router.mention(pattern="?")
-        def help_handler_q(event, *args, **kwargs):
-            call_tracker.append("? decorator")
+        @test_router.mention(pattern="help")
+        @test_router.mention(pattern="h")
+        @test_router.mention(pattern="?")
+        def help_handler(event, *args, **kwargs):
             mention = kwargs.get("context")
             if mention and mention.triggered_by:
                 text = mention.triggered_by.text.strip()
@@ -284,8 +258,8 @@ class TestMentionDecorator:
                 event="issue_comment",
                 delivery_id=f"123-{pattern}",
             )
-            mock_gh = get_mock_github_api_sync({})
-            router.dispatch(event, mock_gh)
+            mock_gh = get_mock_github_api({})
+            test_router.dispatch(event, mock_gh)
 
         # Check expected behavior:
         # - "help" matches both "help" pattern and "h" pattern (since "help" starts with "h")
@@ -295,7 +269,7 @@ class TestMentionDecorator:
         assert call_counts["h"] == 1  # Matched only by "h" pattern
         assert call_counts["?"] == 1  # Matched only by "?" pattern
 
-    def test_async_mention_handler(self, test_router, get_mock_github_api):
+    def test_async_mention_handler(self, test_router, aget_mock_github_api):
         handler_called = False
 
         @test_router.mention(pattern="async-test")
@@ -315,12 +289,12 @@ class TestMentionDecorator:
             delivery_id="123",
         )
 
-        mock_gh = get_mock_github_api({})
+        mock_gh = aget_mock_github_api({})
         asyncio.run(test_router.adispatch(event, mock_gh))
 
         assert handler_called
 
-    def test_sync_mention_handler(self, test_router, get_mock_github_api_sync):
+    def test_sync_mention_handler(self, test_router, get_mock_github_api):
         handler_called = False
 
         @test_router.mention(pattern="sync-test")
@@ -339,15 +313,14 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
 
     def test_scope_validation_issue_comment_on_issue(
-        self, test_router, get_mock_github_api_sync
+        self, test_router, get_mock_github_api
     ):
-        """Test that ISSUE scope works for actual issues."""
         handler_called = False
 
         @test_router.mention(pattern="issue-only", scope=MentionScope.ISSUE)
@@ -355,7 +328,6 @@ class TestMentionDecorator:
             nonlocal handler_called
             handler_called = True
 
-        # Issue comment on an actual issue (no pull_request field)
         event = sansio.Event(
             {
                 "action": "created",
@@ -366,15 +338,14 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
 
     def test_scope_validation_issue_comment_on_pr(
-        self, test_router, get_mock_github_api_sync
+        self, test_router, get_mock_github_api
     ):
-        """Test that ISSUE scope rejects PR comments."""
         handler_called = False
 
         @test_router.mention(pattern="issue-only", scope=MentionScope.ISSUE)
@@ -397,15 +368,12 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert not handler_called
 
-    def test_scope_validation_pr_scope_on_pr(
-        self, test_router, get_mock_github_api_sync
-    ):
-        """Test that PR scope works for pull requests."""
+    def test_scope_validation_pr_scope_on_pr(self, test_router, get_mock_github_api):
         handler_called = False
 
         @test_router.mention(pattern="pr-only", scope=MentionScope.PR)
@@ -413,7 +381,6 @@ class TestMentionDecorator:
             nonlocal handler_called
             handler_called = True
 
-        # Issue comment on a pull request
         event = sansio.Event(
             {
                 "action": "created",
@@ -428,15 +395,12 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
 
-    def test_scope_validation_pr_scope_on_issue(
-        self, test_router, get_mock_github_api_sync
-    ):
-        """Test that PR scope rejects issue comments."""
+    def test_scope_validation_pr_scope_on_issue(self, test_router, get_mock_github_api):
         handler_called = False
 
         @test_router.mention(pattern="pr-only", scope=MentionScope.PR)
@@ -444,7 +408,6 @@ class TestMentionDecorator:
             nonlocal handler_called
             handler_called = True
 
-        # Issue comment on an actual issue
         event = sansio.Event(
             {
                 "action": "created",
@@ -455,12 +418,12 @@ class TestMentionDecorator:
             event="issue_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert not handler_called
 
-    def test_scope_validation_commit_scope(self, test_router, get_mock_github_api_sync):
+    def test_scope_validation_commit_scope(self, test_router, get_mock_github_api):
         """Test that COMMIT scope works for commit comments."""
         handler_called = False
 
@@ -469,7 +432,6 @@ class TestMentionDecorator:
             nonlocal handler_called
             handler_called = True
 
-        # Commit comment event
         event = sansio.Event(
             {
                 "action": "created",
@@ -480,13 +442,12 @@ class TestMentionDecorator:
             event="commit_comment",
             delivery_id="123",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
 
-    def test_scope_validation_no_scope(self, test_router, get_mock_github_api_sync):
-        """Test that no scope allows all comment types."""
+    def test_scope_validation_no_scope(self, test_router, get_mock_github_api):
         call_count = 0
 
         @test_router.mention(pattern="all-contexts")
@@ -494,9 +455,8 @@ class TestMentionDecorator:
             nonlocal call_count
             call_count += 1
 
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
 
-        # Test on issue
         event = sansio.Event(
             {
                 "action": "created",
@@ -509,7 +469,6 @@ class TestMentionDecorator:
         )
         test_router.dispatch(event, mock_gh)
 
-        # Test on PR
         event = sansio.Event(
             {
                 "action": "created",
@@ -526,7 +485,6 @@ class TestMentionDecorator:
         )
         test_router.dispatch(event, mock_gh)
 
-        # Test on commit
         event = sansio.Event(
             {
                 "action": "created",
@@ -541,8 +499,7 @@ class TestMentionDecorator:
 
         assert call_count == 3
 
-    def test_mention_enrichment_pr_scope(self, test_router, get_mock_github_api_sync):
-        """Test that PR comments get correct scope enrichment."""
+    def test_mention_enrichment_pr_scope(self, test_router, get_mock_github_api):
         handler_called = False
         captured_kwargs = {}
 
@@ -552,7 +509,6 @@ class TestMentionDecorator:
             handler_called = True
             captured_kwargs = kwargs.copy()
 
-        # Issue comment on a PR (has pull_request field)
         event = sansio.Event(
             {
                 "action": "created",
@@ -569,23 +525,21 @@ class TestMentionDecorator:
             delivery_id="999",
         )
 
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
         assert "context" in captured_kwargs
+
         mention = captured_kwargs["context"]
-        # Check the new structure
+
         assert mention.comment.body == "@bot deploy"
         assert mention.triggered_by.text == "deploy"
-        assert mention.scope.name == "PR"  # Should be PR, not ISSUE
+        assert mention.scope.name == "PR"
 
 
 class TestUpdatedMentionContext:
-    """Test the updated MentionEvent structure with comment and triggered_by fields."""
-
-    def test_mention_context_structure(self, test_router, get_mock_github_api_sync):
-        """Test that MentionEvent has the new structure with comment and triggered_by."""
+    def test_mention_context_structure(self, test_router, get_mock_github_api):
         handler_called = False
         captured_mention = None
 
@@ -611,35 +565,28 @@ class TestUpdatedMentionContext:
             delivery_id="123",
         )
 
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
-        assert captured_mention is not None
 
-        # Check Comment object
-        assert hasattr(captured_mention, "comment")
         comment = captured_mention.comment
+
         assert comment.body == "@bot test"
         assert comment.author == "testuser"
         assert comment.url == "https://github.com/test/repo/issues/1#issuecomment-123"
         assert len(comment.mentions) == 1
 
-        # Check triggered_by Mention object
-        assert hasattr(captured_mention, "triggered_by")
         triggered = captured_mention.triggered_by
+
         assert triggered.username == "bot"
         assert triggered.text == "test"
         assert triggered.position == 0
         assert triggered.line_number == 1
 
-        # Check other fields still exist
         assert captured_mention.scope.name == "ISSUE"
 
-    def test_multiple_mentions_triggered_by(
-        self, test_router, get_mock_github_api_sync
-    ):
-        """Test that triggered_by is set correctly when multiple mentions exist."""
+    def test_multiple_mentions_triggered_by(self, test_router, get_mock_github_api):
         handler_called = False
         captured_mention = None
 
@@ -665,27 +612,22 @@ class TestUpdatedMentionContext:
             delivery_id="456",
         )
 
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
         assert captured_mention is not None
-
-        # Check that we have multiple mentions
         assert len(captured_mention.comment.mentions) == 2
-
-        # Check triggered_by points to the "deploy" mention (second one)
         assert captured_mention.triggered_by.text == "deploy production"
         assert captured_mention.triggered_by.line_number == 2
 
-        # Verify mention linking
         first_mention = captured_mention.comment.mentions[0]
         second_mention = captured_mention.comment.mentions[1]
+
         assert first_mention.next_mention is second_mention
         assert second_mention.previous_mention is first_mention
 
-    def test_mention_without_pattern(self, test_router, get_mock_github_api_sync):
-        """Test handler with no specific pattern uses first mention as triggered_by."""
+    def test_mention_without_pattern(self, test_router, get_mock_github_api):
         handler_called = False
         captured_mention = None
 
@@ -711,21 +653,17 @@ class TestUpdatedMentionContext:
             delivery_id="789",
         )
 
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
-        assert captured_mention is not None
-
-        # Should use first (and only) mention as triggered_by
         assert captured_mention.triggered_by.text == "can you help me?"
         assert captured_mention.triggered_by.username == "bot"
 
     @pytest.mark.asyncio
     async def test_async_mention_context_structure(
-        self, test_router, get_mock_github_api
+        self, test_router, aget_mock_github_api
     ):
-        """Test async handlers get the same updated MentionEvent structure."""
         handler_called = False
         captured_mention = None
 
@@ -751,22 +689,16 @@ class TestUpdatedMentionContext:
             delivery_id="999",
         )
 
-        mock_gh = get_mock_github_api({})
+        mock_gh = aget_mock_github_api({})
         await test_router.adispatch(event, mock_gh)
 
         assert handler_called
-        assert captured_mention is not None
-
-        # Verify structure is the same for async
         assert captured_mention.comment.body == "@bot async-test now"
         assert captured_mention.triggered_by.text == "async-test now"
 
 
 class TestFlexibleMentionTriggers:
-    """Test the extended mention decorator with username and pattern parameters."""
-
-    def test_pattern_parameter_string(self, test_router, get_mock_github_api_sync):
-        """Test pattern parameter with literal string matching."""
+    def test_pattern_parameter_string(self, test_router, get_mock_github_api):
         handler_called = False
         captured_mention = None
 
@@ -776,7 +708,6 @@ class TestFlexibleMentionTriggers:
             handler_called = True
             captured_mention = kwargs.get("context")
 
-        # Should match
         event = sansio.Event(
             {
                 "action": "created",
@@ -790,7 +721,7 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
@@ -801,10 +732,10 @@ class TestFlexibleMentionTriggers:
         handler_called = False
         event.data["comment"]["body"] = "@bot please deploy"
         test_router.dispatch(event, mock_gh)
+
         assert not handler_called
 
-    def test_pattern_parameter_regex(self, test_router, get_mock_github_api_sync):
-        """Test pattern parameter with regex matching."""
+    def test_pattern_parameter_regex(self, test_router, get_mock_github_api):
         handler_called = False
         captured_mention = None
 
@@ -824,15 +755,14 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
         assert captured_mention.triggered_by.match is not None
         assert captured_mention.triggered_by.match.group("env") == "staging"
 
-    def test_username_parameter_exact(self, test_router, get_mock_github_api_sync):
-        """Test username parameter with exact matching."""
+    def test_username_parameter_exact(self, test_router, get_mock_github_api):
         handler_called = False
 
         @test_router.mention(username="deploy-bot")
@@ -851,18 +781,19 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
+
         assert handler_called
 
         # Should not match bot
         handler_called = False
         event.data["comment"]["body"] = "@bot run tests"
         test_router.dispatch(event, mock_gh)
+
         assert not handler_called
 
-    def test_username_parameter_regex(self, test_router, get_mock_github_api_sync):
-        """Test username parameter with regex matching."""
+    def test_username_parameter_regex(self, test_router, get_mock_github_api):
         handler_count = 0
 
         @test_router.mention(username=re.compile(r".*-bot"))
@@ -883,14 +814,13 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         # Should be called twice (deploy-bot and test-bot)
         assert handler_count == 2
 
-    def test_username_all_mentions(self, test_router, get_mock_github_api_sync):
-        """Test monitoring all mentions with username=.*"""
+    def test_username_all_mentions(self, test_router, get_mock_github_api):
         mentions_seen = []
 
         @test_router.mention(username=re.compile(r".*"))
@@ -911,13 +841,12 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert mentions_seen == ["alice", "bob", "charlie"]
 
-    def test_combined_filters(self, test_router, get_mock_github_api_sync):
-        """Test combining username, pattern, and scope filters."""
+    def test_combined_filters(self, test_router, get_mock_github_api):
         calls = []
 
         @test_router.mention(
@@ -928,7 +857,6 @@ class TestFlexibleMentionTriggers:
         def restricted_deploy(event, *args, **kwargs):
             calls.append(kwargs)
 
-        # Create fresh events for each test to avoid any caching issues
         def make_event(body):
             return sansio.Event(
                 {
@@ -943,20 +871,23 @@ class TestFlexibleMentionTriggers:
 
         # All conditions met
         event1 = make_event("@deploy-bot deploy now")
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event1, mock_gh)
+
         assert len(calls) == 1
 
         # Wrong username pattern
         calls.clear()
         event2 = make_event("@bot deploy now")
         test_router.dispatch(event2, mock_gh)
+
         assert len(calls) == 0
 
         # Wrong pattern
         calls.clear()
         event3 = make_event("@deploy-bot help")
         test_router.dispatch(event3, mock_gh)
+
         assert len(calls) == 0
 
         # Wrong scope (issue instead of PR)
@@ -975,12 +906,12 @@ class TestFlexibleMentionTriggers:
             delivery_id="1",
         )
         test_router.dispatch(event4, mock_gh)
+
         assert len(calls) == 0
 
     def test_multiple_decorators_different_patterns(
-        self, test_router, get_mock_github_api_sync
+        self, test_router, get_mock_github_api
     ):
-        """Test multiple decorators with different patterns on same function."""
         patterns_matched = []
 
         @test_router.mention(pattern=re.compile(r"deploy"))
@@ -1000,13 +931,12 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert patterns_matched == ["ship"]
 
-    def test_question_pattern(self, test_router, get_mock_github_api_sync):
-        """Test natural language pattern matching for questions."""
+    def test_question_pattern(self, test_router, get_mock_github_api):
         questions_received = []
 
         @test_router.mention(pattern=re.compile(r".*\?$"))
@@ -1027,7 +957,7 @@ class TestFlexibleMentionTriggers:
             event="issue_comment",
             delivery_id="1",
         )
-        mock_gh = get_mock_github_api_sync({})
+        mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
 
         assert questions_received == ["what is the status?"]
