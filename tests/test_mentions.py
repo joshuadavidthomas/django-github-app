@@ -8,13 +8,12 @@ from gidgethub import sansio
 
 from django_github_app.mentions import Comment
 from django_github_app.mentions import MentionScope
+from django_github_app.mentions import check_pattern_match
 from django_github_app.mentions import parse_mentions_for_username
 
 
 @pytest.fixture
 def create_comment_event():
-    """Fixture to create comment events for testing."""
-
     def _create(body: str) -> sansio.Event:
         return sansio.Event(
             {"comment": {"body": body}}, event="issue_comment", delivery_id="test"
@@ -188,26 +187,21 @@ class TestParseMentions:
 
 class TestGetEventScope:
     def test_from_event_for_various_events(self):
-        # Issue comment on actual issue
         event1 = sansio.Event({"issue": {}}, event="issue_comment", delivery_id="1")
         assert MentionScope.from_event(event1) == MentionScope.ISSUE
 
-        # PR review comment
         event2 = sansio.Event({}, event="pull_request_review_comment", delivery_id="2")
         assert MentionScope.from_event(event2) == MentionScope.PR
 
-        # Commit comment
         event3 = sansio.Event({}, event="commit_comment", delivery_id="3")
         assert MentionScope.from_event(event3) == MentionScope.COMMIT
 
     def test_issue_scope_on_issue_comment(self):
-        # Issue comment on an actual issue (no pull_request field)
         issue_event = sansio.Event(
             {"issue": {"title": "Bug report"}}, event="issue_comment", delivery_id="1"
         )
         assert MentionScope.from_event(issue_event) == MentionScope.ISSUE
 
-        # Issue comment on a pull request (has pull_request field)
         pr_event = sansio.Event(
             {"issue": {"title": "PR title", "pull_request": {"url": "..."}}},
             event="issue_comment",
@@ -216,13 +210,11 @@ class TestGetEventScope:
         assert MentionScope.from_event(pr_event) == MentionScope.PR
 
     def test_pr_scope_on_issue_comment(self):
-        # Issue comment on an actual issue (no pull_request field)
         issue_event = sansio.Event(
             {"issue": {"title": "Bug report"}}, event="issue_comment", delivery_id="1"
         )
         assert MentionScope.from_event(issue_event) == MentionScope.ISSUE
 
-        # Issue comment on a pull request (has pull_request field)
         pr_event = sansio.Event(
             {"issue": {"title": "PR title", "pull_request": {"url": "..."}}},
             event="issue_comment",
@@ -231,42 +223,33 @@ class TestGetEventScope:
         assert MentionScope.from_event(pr_event) == MentionScope.PR
 
     def test_pr_scope_allows_pr_specific_events(self):
-        # PR scope should allow pull_request_review_comment
         event1 = sansio.Event({}, event="pull_request_review_comment", delivery_id="1")
         assert MentionScope.from_event(event1) == MentionScope.PR
 
-        # PR scope should allow pull_request_review
         event2 = sansio.Event({}, event="pull_request_review", delivery_id="2")
         assert MentionScope.from_event(event2) == MentionScope.PR
 
-        # PR scope should not allow commit_comment
         event3 = sansio.Event({}, event="commit_comment", delivery_id="3")
         assert MentionScope.from_event(event3) == MentionScope.COMMIT
 
     def test_commit_scope_allows_commit_comment_only(self):
-        # Commit scope should allow commit_comment
         event1 = sansio.Event({}, event="commit_comment", delivery_id="1")
         assert MentionScope.from_event(event1) == MentionScope.COMMIT
 
-        # Commit scope should not allow issue_comment
         event2 = sansio.Event({"issue": {}}, event="issue_comment", delivery_id="2")
         assert MentionScope.from_event(event2) == MentionScope.ISSUE
 
-        # Commit scope should not allow PR events
         event3 = sansio.Event({}, event="pull_request_review_comment", delivery_id="3")
         assert MentionScope.from_event(event3) == MentionScope.PR
 
     def test_different_event_types_have_correct_scope(self):
-        # pull_request_review_comment should be PR scope
         event1 = sansio.Event({}, event="pull_request_review_comment", delivery_id="1")
         assert MentionScope.from_event(event1) == MentionScope.PR
 
-        # commit_comment should be COMMIT scope
         event2 = sansio.Event({}, event="commit_comment", delivery_id="2")
         assert MentionScope.from_event(event2) == MentionScope.COMMIT
 
     def test_pull_request_field_none_treated_as_issue(self):
-        # If pull_request field exists but is None, treat as issue
         event = sansio.Event(
             {"issue": {"title": "Issue", "pull_request": None}},
             event="issue_comment",
@@ -275,19 +258,16 @@ class TestGetEventScope:
         assert MentionScope.from_event(event) == MentionScope.ISSUE
 
     def test_missing_issue_data(self):
-        # If issue data is missing entirely, defaults to ISSUE scope for issue_comment
         event = sansio.Event({}, event="issue_comment", delivery_id="1")
         assert MentionScope.from_event(event) == MentionScope.ISSUE
 
     def test_unknown_event_returns_none(self):
-        # Unknown event types should return None
         event = sansio.Event({}, event="unknown_event", delivery_id="1")
         assert MentionScope.from_event(event) is None
 
 
 class TestComment:
     def test_from_event_issue_comment(self):
-        """Test Comment.from_event() with issue_comment event."""
         event = sansio.Event(
             {
                 "comment": {
@@ -311,7 +291,6 @@ class TestComment:
         assert comment.line_count == 1
 
     def test_from_event_pull_request_review_comment(self):
-        """Test Comment.from_event() with pull_request_review_comment event."""
         event = sansio.Event(
             {
                 "comment": {
@@ -333,7 +312,6 @@ class TestComment:
         assert comment.line_count == 3
 
     def test_from_event_pull_request_review(self):
-        """Test Comment.from_event() with pull_request_review event."""
         event = sansio.Event(
             {
                 "review": {
@@ -356,7 +334,6 @@ class TestComment:
         )
 
     def test_from_event_commit_comment(self):
-        """Test Comment.from_event() with commit_comment event."""
         event = sansio.Event(
             {
                 "comment": {
@@ -380,7 +357,6 @@ class TestComment:
         )
 
     def test_from_event_missing_fields(self):
-        """Test Comment.from_event() with missing optional fields."""
         event = sansio.Event(
             {
                 "comment": {
@@ -396,13 +372,12 @@ class TestComment:
         comment = Comment.from_event(event)
 
         assert comment.body == "Minimal comment"
-        assert comment.author == "fallback-user"  # Falls back to sender
+        assert comment.author == "fallback-user"
         assert comment.url == ""
         # created_at should be roughly now
         assert (timezone.now() - comment.created_at).total_seconds() < 5
 
     def test_from_event_invalid_event_type(self):
-        """Test Comment.from_event() with unsupported event type."""
         event = sansio.Event(
             {"some_data": "value"},
             event="push",
@@ -414,32 +389,26 @@ class TestComment:
         ):
             Comment.from_event(event)
 
-    def test_line_count_property(self):
-        """Test the line_count property with various comment bodies."""
-        # Single line
+    @pytest.mark.parametrize(
+        "body,line_count",
+        [
+            ("Single line", 1),
+            ("Line 1\nLine 2\nLine 3", 3),
+            ("Line 1\n\nLine 3", 3),
+            ("", 0),
+        ],
+    )
+    def test_line_count_property(self, body, line_count):
         comment = Comment(
-            body="Single line",
+            body=body,
             author="user",
             created_at=timezone.now(),
             url="",
             mentions=[],
         )
-        assert comment.line_count == 1
-
-        # Multiple lines
-        comment.body = "Line 1\nLine 2\nLine 3"
-        assert comment.line_count == 3
-
-        # Empty lines count
-        comment.body = "Line 1\n\nLine 3"
-        assert comment.line_count == 3
-
-        # Empty body
-        comment.body = ""
-        assert comment.line_count == 0
+        assert comment.line_count == line_count
 
     def test_from_event_timezone_handling(self):
-        """Test timezone handling in created_at parsing."""
         event = sansio.Event(
             {
                 "comment": {
@@ -462,17 +431,12 @@ class TestComment:
 
 class TestPatternMatching:
     def test_check_pattern_match_none(self):
-        """Test check_pattern_match with None pattern."""
-        from django_github_app.mentions import check_pattern_match
-
         match = check_pattern_match("any text", None)
+
         assert match is not None
         assert match.group(0) == "any text"
 
     def test_check_pattern_match_literal_string(self):
-        """Test check_pattern_match with literal string pattern."""
-        from django_github_app.mentions import check_pattern_match
-
         # Matching case
         match = check_pattern_match("deploy production", "deploy")
         assert match is not None
@@ -491,9 +455,6 @@ class TestPatternMatching:
         assert match is None
 
     def test_check_pattern_match_regex(self):
-        """Test check_pattern_match with regex patterns."""
-        from django_github_app.mentions import check_pattern_match
-
         # Simple regex
         match = check_pattern_match("deploy prod", re.compile(r"deploy (prod|staging)"))
         assert match is not None
@@ -516,9 +477,6 @@ class TestPatternMatching:
         assert match is None
 
     def test_check_pattern_match_invalid_regex(self):
-        """Test check_pattern_match with invalid regex falls back to literal."""
-        from django_github_app.mentions import check_pattern_match
-
         # Invalid regex should be treated as literal
         match = check_pattern_match("test [invalid", "[invalid")
         assert match is None  # Doesn't start with [invalid
@@ -527,9 +485,6 @@ class TestPatternMatching:
         assert match is not None  # Starts with literal [invalid
 
     def test_check_pattern_match_flag_preservation(self):
-        """Test that regex flags are preserved when using compiled patterns."""
-        from django_github_app.mentions import check_pattern_match
-
         # Case-sensitive pattern
         pattern_cs = re.compile(r"DEPLOY", re.MULTILINE)
         match = check_pattern_match("deploy", pattern_cs)
@@ -538,17 +493,16 @@ class TestPatternMatching:
         # Case-insensitive pattern
         pattern_ci = re.compile(r"DEPLOY", re.IGNORECASE)
         match = check_pattern_match("deploy", pattern_ci)
+
         assert match is not None  # Should match
 
         # Multiline pattern
         pattern_ml = re.compile(r"^prod$", re.MULTILINE)
         match = check_pattern_match("staging\nprod\ndev", pattern_ml)
+
         assert match is None  # Pattern expects exact match from start
 
     def test_parse_mentions_for_username_default(self):
-        """Test parse_mentions_for_username with default username."""
-        from django_github_app.mentions import parse_mentions_for_username
-
         event = sansio.Event(
             {"comment": {"body": "@bot help @otherbot test"}},
             event="issue_comment",
@@ -556,14 +510,12 @@ class TestPatternMatching:
         )
 
         mentions = parse_mentions_for_username(event, None)  # Uses default "bot"
+
         assert len(mentions) == 1
         assert mentions[0].username == "bot"
         assert mentions[0].text == "help @otherbot test"
 
     def test_parse_mentions_for_username_specific(self):
-        """Test parse_mentions_for_username with specific username."""
-        from django_github_app.mentions import parse_mentions_for_username
-
         event = sansio.Event(
             {"comment": {"body": "@bot help @deploy-bot test @test-bot check"}},
             event="issue_comment",
@@ -571,14 +523,12 @@ class TestPatternMatching:
         )
 
         mentions = parse_mentions_for_username(event, "deploy-bot")
+
         assert len(mentions) == 1
         assert mentions[0].username == "deploy-bot"
         assert mentions[0].text == "test @test-bot check"
 
     def test_parse_mentions_for_username_regex(self):
-        """Test parse_mentions_for_username with regex pattern."""
-        from django_github_app.mentions import parse_mentions_for_username
-
         event = sansio.Event(
             {
                 "comment": {
@@ -589,30 +539,26 @@ class TestPatternMatching:
             delivery_id="test",
         )
 
-        # Match any username ending in -bot
         mentions = parse_mentions_for_username(event, re.compile(r".*-bot"))
+
         assert len(mentions) == 2
         assert mentions[0].username == "deploy-bot"
         assert mentions[0].text == "test"
         assert mentions[1].username == "test-bot"
         assert mentions[1].text == "check @user ignore"
 
-        # Verify mention linking
         assert mentions[0].next_mention is mentions[1]
         assert mentions[1].previous_mention is mentions[0]
 
     def test_parse_mentions_for_username_all(self):
-        """Test parse_mentions_for_username matching all mentions."""
-        from django_github_app.mentions import parse_mentions_for_username
-
         event = sansio.Event(
             {"comment": {"body": "@alice review @bob help @charlie test"}},
             event="issue_comment",
             delivery_id="test",
         )
 
-        # Match all mentions with .*
         mentions = parse_mentions_for_username(event, re.compile(r".*"))
+
         assert len(mentions) == 3
         assert mentions[0].username == "alice"
         assert mentions[0].text == "review"
