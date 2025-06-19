@@ -277,16 +277,23 @@ def create_event(faker):
         if event_type == "issue_comment" and "comment" not in data:
             data["comment"] = {"body": faker.sentence()}
 
-        if "comment" in data and isinstance(data["comment"], str):
-            # Allow passing just the comment body as a string
-            data["comment"] = {"body": data["comment"]}
-
         if "comment" in data and "user" not in data["comment"]:
             data["comment"]["user"] = {"login": faker.user_name()}
+
+        if event_type == "issue_comment" and "issue" not in data:
+            data["issue"] = {"number": faker.random_int(min=1, max=1000)}
+
+        if event_type == "commit_comment" and "commit" not in data:
+            data["commit"] = {"sha": faker.sha1()}
+
+        if event_type == "pull_request_review_comment" and "pull_request" not in data:
+            data["pull_request"] = {"number": faker.random_int(min=1, max=1000)}
 
         if "repository" not in data and event_type in [
             "issue_comment",
             "pull_request",
+            "pull_request_review_comment",
+            "commit_comment",
             "push",
         ]:
             data["repository"] = {

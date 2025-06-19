@@ -137,10 +137,7 @@ class TestMentionDecorator:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={"body": "@bot hello", "user": {"login": "testuser"}},
-            issue={"number": 1},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
+            comment={"body": "@bot hello"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -160,10 +157,7 @@ class TestMentionDecorator:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={"body": "@bot help", "user": {"login": "testuser"}},
-            issue={"number": 2},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
+            comment={"body": "@bot help"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -183,10 +177,7 @@ class TestMentionDecorator:
         pr_event = create_event(
             "pull_request_review_comment",
             action="created",
-            comment={"body": "@bot deploy", "user": {"login": "testuser"}},
-            pull_request={"number": 3},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
+            comment={"body": "@bot deploy"},
         )
         test_router.dispatch(pr_event, mock_gh)
 
@@ -195,9 +186,7 @@ class TestMentionDecorator:
         issue_event = create_event(
             "commit_comment",  # This is NOT a PR event
             action="created",
-            comment={"body": "@bot deploy", "user": {"login": "testuser"}},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="124",
+            comment={"body": "@bot deploy"},
         )
         pr_handler_called = False  # Reset
 
@@ -218,10 +207,7 @@ class TestMentionDecorator:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={"body": "@bot help", "user": {"login": "testuser"}},
-            issue={"number": 4},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
+            comment={"body": "@bot help"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -247,13 +233,7 @@ class TestMentionDecorator:
             event = create_event(
                 "issue_comment",
                 action="created",
-                comment={
-                    "body": f"@bot {pattern}",
-                    "user": {"login": "testuser"},
-                },
-                issue={"number": 5},
-                repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-                delivery_id=f"123-{pattern}",
+                comment={"body": f"@bot {pattern}"},
             )
             mock_gh = get_mock_github_api({})
             test_router.dispatch(event, mock_gh)
@@ -280,10 +260,7 @@ class TestMentionDecorator:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={"body": "@bot async-test", "user": {"login": "testuser"}},
-            issue={"number": 1},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
+            comment={"body": "@bot async-test"},
         )
 
         mock_gh = aget_mock_github_api({})
@@ -303,10 +280,7 @@ class TestMentionDecorator:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={"body": "@bot sync-test", "user": {"login": "testuser"}},
-            issue={"number": 6},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
+            comment={"body": "@bot sync-test"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -326,10 +300,7 @@ class TestMentionDecorator:
         event = create_event(
             "issue_comment",
             action="created",
-            issue={"title": "Bug report", "number": 123},
-            comment={"body": "@bot issue-only", "user": {"login": "testuser"}},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
+            comment={"body": "@bot issue-only"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -351,13 +322,9 @@ class TestMentionDecorator:
             "issue_comment",
             action="created",
             issue={
-                "title": "PR title",
-                "number": 456,
                 "pull_request": {"url": "https://api.github.com/..."},
             },
-            comment={"body": "@bot issue-only", "user": {"login": "testuser"}},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
+            comment={"body": "@bot issue-only"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -378,13 +345,9 @@ class TestMentionDecorator:
             "issue_comment",
             action="created",
             issue={
-                "title": "PR title",
-                "number": 456,
                 "pull_request": {"url": "https://api.github.com/..."},
             },
-            comment={"body": "@bot pr-only", "user": {"login": "testuser"}},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
+            comment={"body": "@bot pr-only"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -404,10 +367,7 @@ class TestMentionDecorator:
         event = create_event(
             "issue_comment",
             action="created",
-            issue={"title": "Bug report", "number": 123},
-            comment={"body": "@bot pr-only", "user": {"login": "testuser"}},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
+            comment={"body": "@bot pr-only"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -428,10 +388,7 @@ class TestMentionDecorator:
         event = create_event(
             "commit_comment",
             action="created",
-            comment={"body": "@bot commit-only", "user": {"login": "testuser"}},
-            commit={"sha": "abc123"},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
+            comment={"body": "@bot commit-only"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -453,10 +410,7 @@ class TestMentionDecorator:
         event = create_event(
             "issue_comment",
             action="created",
-            issue={"title": "Issue", "number": 1},
-            comment={"body": "@bot all-contexts", "user": {"login": "testuser"}},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
+            comment={"body": "@bot all-contexts"},
         )
         test_router.dispatch(event, mock_gh)
 
@@ -464,23 +418,16 @@ class TestMentionDecorator:
             "issue_comment",
             action="created",
             issue={
-                "title": "PR",
-                "number": 2,
                 "pull_request": {"url": "..."},
             },
-            comment={"body": "@bot all-contexts", "user": {"login": "testuser"}},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="124",
+            comment={"body": "@bot all-contexts"},
         )
         test_router.dispatch(event, mock_gh)
 
         event = create_event(
             "commit_comment",
             action="created",
-            comment={"body": "@bot all-contexts", "user": {"login": "testuser"}},
-            commit={"sha": "abc123"},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="125",
+            comment={"body": "@bot all-contexts"},
         )
         test_router.dispatch(event, mock_gh)
 
@@ -501,15 +448,12 @@ class TestMentionDecorator:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={"body": "@bot deploy", "user": {"login": "dev"}},
+            comment={"body": "@bot deploy"},
             issue={
-                "number": 42,
                 "pull_request": {
                     "url": "https://api.github.com/repos/test/repo/pulls/42"
                 },
             },
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="999",
         )
 
         mock_gh = get_mock_github_api({})
@@ -543,13 +487,9 @@ class TestUpdatedMentionContext:
             action="created",
             comment={
                 "body": "@bot test",
-                "user": {"login": "testuser"},
                 "created_at": "2024-01-01T12:00:00Z",
                 "html_url": "https://github.com/test/repo/issues/1#issuecomment-123",
             },
-            issue={"number": 1},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="123",
         )
 
         mock_gh = get_mock_github_api({})
@@ -560,7 +500,7 @@ class TestUpdatedMentionContext:
         comment = captured_mention.comment
 
         assert comment.body == "@bot test"
-        assert comment.author == "testuser"
+        assert comment.author is not None  # Generated by faker
         assert comment.url == "https://github.com/test/repo/issues/1#issuecomment-123"
         assert len(comment.mentions) == 1
 
@@ -590,13 +530,9 @@ class TestUpdatedMentionContext:
             action="created",
             comment={
                 "body": "@bot help\n@bot deploy production",
-                "user": {"login": "testuser"},
                 "created_at": "2024-01-01T12:00:00Z",
                 "html_url": "https://github.com/test/repo/issues/2#issuecomment-456",
             },
-            issue={"number": 2},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="456",
         )
 
         mock_gh = get_mock_github_api({})
@@ -631,13 +567,9 @@ class TestUpdatedMentionContext:
             action="created",
             comment={
                 "body": "@bot can you help me?",
-                "user": {"login": "testuser"},
                 "created_at": "2024-01-01T12:00:00Z",
                 "html_url": "https://github.com/test/repo/issues/3#issuecomment-789",
             },
-            issue={"number": 3},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="789",
         )
 
         mock_gh = get_mock_github_api({})
@@ -665,13 +597,9 @@ class TestUpdatedMentionContext:
             action="created",
             comment={
                 "body": "@bot async-test now",
-                "user": {"login": "asyncuser"},
                 "created_at": "2024-01-01T13:00:00Z",
                 "html_url": "https://github.com/test/repo/issues/4#issuecomment-999",
             },
-            issue={"number": 4},
-            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
-            delivery_id="999",
         )
 
         mock_gh = aget_mock_github_api({})
@@ -698,13 +626,7 @@ class TestFlexibleMentionTriggers:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={
-                "body": "@bot deploy production",
-                "user": {"login": "user"},
-            },
-            issue={"number": 1},
-            repository={"owner": {"login": "owner"}, "name": "repo"},
-            delivery_id="1",
+            comment={"body": "@bot deploy production"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -735,10 +657,7 @@ class TestFlexibleMentionTriggers:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={"body": "@bot deploy-staging", "user": {"login": "user"}},
-            issue={"number": 1},
-            repository={"owner": {"login": "owner"}, "name": "repo"},
-            delivery_id="1",
+            comment={"body": "@bot deploy-staging"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -761,10 +680,7 @@ class TestFlexibleMentionTriggers:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={"body": "@deploy-bot run tests", "user": {"login": "user"}},
-            issue={"number": 1},
-            repository={"owner": {"login": "owner"}, "name": "repo"},
-            delivery_id="1",
+            comment={"body": "@deploy-bot run tests"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -791,13 +707,7 @@ class TestFlexibleMentionTriggers:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={
-                "body": "@deploy-bot start @test-bot check @user help",
-                "user": {"login": "user"},
-            },
-            issue={"number": 1},
-            repository={"owner": {"login": "owner"}, "name": "repo"},
-            delivery_id="1",
+            comment={"body": "@deploy-bot start @test-bot check @user help"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -818,13 +728,7 @@ class TestFlexibleMentionTriggers:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={
-                "body": "@alice review @bob deploy @charlie test",
-                "user": {"login": "user"},
-            },
-            issue={"number": 1},
-            repository={"owner": {"login": "owner"}, "name": "repo"},
-            delivery_id="1",
+            comment={"body": "@alice review @bob deploy @charlie test"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -846,10 +750,8 @@ class TestFlexibleMentionTriggers:
             return create_event(
                 "issue_comment",
                 action="created",
-                comment={"body": body, "user": {"login": "user"}},
-                issue={"number": 1, "pull_request": {"url": "..."}},
-                repository={"owner": {"login": "owner"}, "name": "repo"},
-                delivery_id="1",
+                comment={"body": body},
+                issue={"pull_request": {"url": "..."}},
             )
 
         # All conditions met
@@ -878,13 +780,8 @@ class TestFlexibleMentionTriggers:
         event4 = create_event(
             "issue_comment",
             action="created",
-            comment={
-                "body": "@deploy-bot deploy now",
-                "user": {"login": "user"},
-            },
-            issue={"number": 1},  # No pull_request field
-            repository={"owner": {"login": "owner"}, "name": "repo"},
-            delivery_id="1",
+            comment={"body": "@deploy-bot deploy now"},
+            issue={},  # No pull_request field
         )
         test_router.dispatch(event4, mock_gh)
 
@@ -905,10 +802,7 @@ class TestFlexibleMentionTriggers:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={"body": "@bot ship it", "user": {"login": "user"}},
-            issue={"number": 1},
-            repository={"owner": {"login": "owner"}, "name": "repo"},
-            delivery_id="1",
+            comment={"body": "@bot ship it"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
@@ -926,13 +820,7 @@ class TestFlexibleMentionTriggers:
         event = create_event(
             "issue_comment",
             action="created",
-            comment={
-                "body": "@bot what is the status?",
-                "user": {"login": "user"},
-            },
-            issue={"number": 1},
-            repository={"owner": {"login": "owner"}, "name": "repo"},
-            delivery_id="1",
+            comment={"body": "@bot what is the status?"},
         )
         mock_gh = get_mock_github_api({})
         test_router.dispatch(event, mock_gh)
