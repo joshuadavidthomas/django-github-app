@@ -17,7 +17,7 @@ from gidgethub.routing import Router as GidgetHubRouter
 from ._typing import override
 from .github import AsyncGitHubAPI
 from .github import SyncGitHubAPI
-from .mentions import MentionEvent
+from .mentions import Mention
 from .mentions import MentionScope
 
 AsyncCallback = Callable[..., Awaitable[None]]
@@ -83,19 +83,19 @@ class GitHubRouter(GidgetHubRouter):
             async def async_wrapper(
                 event: sansio.Event, gh: AsyncGitHubAPI, *args: Any, **kwargs: Any
             ) -> None:
-                for context in MentionEvent.from_event(
+                for mention in Mention.from_event(
                     event, username=username, pattern=pattern, scope=scope
                 ):
-                    await func(event, gh, *args, context=context, **kwargs)  # type: ignore[func-returns-value]
+                    await func(event, gh, *args, context=mention, **kwargs)  # type: ignore[func-returns-value]
 
             @wraps(func)
             def sync_wrapper(
                 event: sansio.Event, gh: SyncGitHubAPI, *args: Any, **kwargs: Any
             ) -> None:
-                for context in MentionEvent.from_event(
+                for mention in Mention.from_event(
                     event, username=username, pattern=pattern, scope=scope
                 ):
-                    func(event, gh, *args, context=context, **kwargs)
+                    func(event, gh, *args, context=mention, **kwargs)
 
             wrapper: MentionHandler
             if iscoroutinefunction(func):

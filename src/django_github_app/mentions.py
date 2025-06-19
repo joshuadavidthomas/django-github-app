@@ -48,7 +48,6 @@ class MentionScope(str, Enum):
 
     @classmethod
     def from_event(cls, event: sansio.Event) -> MentionScope | None:
-        """Determine the scope of a GitHub event based on its type and context."""
         if event.event == "issue_comment":
             issue = event.data.get("issue", {})
             is_pull_request = (
@@ -65,128 +64,134 @@ class MentionScope(str, Enum):
 
 
 @dataclass
-class Mention:
+class RawMention:
+    match: re.Match[str]
     username: str
-    text: str
     position: int
-    line_number: int
-    line_text: str
-    match: re.Match[str] | None = None
-    previous_mention: Mention | None = None
-    next_mention: Mention | None = None
-
-
-def check_pattern_match(
-    text: str, pattern: str | re.Pattern[str] | None
-) -> re.Match[str] | None:
-    """Check if text matches the given pattern (string or regex).
-
-    Returns Match object if pattern matches, None otherwise.
-    If pattern is None, returns a dummy match object.
-    """
-    if pattern is None:
-        return re.match(r"(.*)", text, re.IGNORECASE | re.DOTALL)
-
-    # Check if it's a compiled regex pattern
-    if isinstance(pattern, re.Pattern):
-        # Use the pattern directly, preserving its flags
-        return pattern.match(text)
-
-    # For strings, do exact match (case-insensitive)
-    # Escape the string to treat it literally
-    escaped_pattern = re.escape(pattern)
-    return re.match(escaped_pattern, text, re.IGNORECASE)
+    end: int
 
 
 CODE_BLOCK_PATTERN = re.compile(r"```[\s\S]*?```", re.MULTILINE)
 INLINE_CODE_PATTERN = re.compile(r"`[^`]+`")
-QUOTE_PATTERN = re.compile(r"^\s*>.*$", re.MULTILINE)
+BLOCKQUOTE_PATTERN = re.compile(r"^\s*>.*$", re.MULTILINE)
 
 
-def parse_mentions_for_username(
+# GitHub username rules:
+# - 1-39 characters long
+# - Can only contain alphanumeric characters or hyphens
+# - Cannot start or end with a hyphen
+# - Cannot have multiple consecutive hyphens
+GITHUB_MENTION_PATTERN = re.compile(
+    r"(?:^|(?<=\s))@([a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38})",
+    re.MULTILINE | re.IGNORECASE,
+)
+
+
+def extract_all_mentions(text: str) -> list[RawMention]:
+    # replace all code blocks, inline code, and blockquotes with spaces
+    # this preserves linenos and postitions while not being able to
+    # match against anything in them
+    processed_text = CODE_BLOCK_PATTERN.sub(lambda m: " " * len(m.group(0)), text)
+    processed_text = INLINE_CODE_PATTERN.sub(
+        lambda m: " " * len(m.group(0)), processed_text
+    )
+    processed_text = BLOCKQUOTE_PATTERN.sub(
+        lambda m: " " * len(m.group(0)), processed_text
+    )
+    return [
+        RawMention(
+            match=match,
+            username=match.group(1),
+            position=match.start(),
+            end=match.end(),
+        )
+        for match in GITHUB_MENTION_PATTERN.finditer(processed_text)
+    ]
+
+
+class LineInfo(NamedTuple):
+    lineno: int
+    text: str
+
+    @classmethod
+    def for_mention_in_comment(cls, comment: str, mention_position: int):
+        lines = comment.splitlines()
+        text_before = comment[:mention_position]
+        line_number = text_before.count("\n") + 1
+
+        line_index = line_number - 1
+        line_text = lines[line_index] if line_index < len(lines) else ""
+
+        return cls(lineno=line_number, text=line_text)
+
+
+def extract_mention_text(
+    body: str, current_index: int, all_mentions: list[RawMention], mention_end: int
+) -> str:
+    text_start = mention_end
+
+    # Find next @mention (any mention, not just matched ones) to know where this text ends
+    next_mention_index = None
+    for j in range(current_index + 1, len(all_mentions)):
+        next_mention_index = j
+        break
+
+    if next_mention_index is not None:
+        text_end = all_mentions[next_mention_index].position
+    else:
+        text_end = len(body)
+
+    return body[text_start:text_end].strip()
+
+
+@dataclass
+class ParsedMention:
+    username: str
+    text: str
+    position: int
+    line_info: LineInfo
+    match: re.Match[str] | None = None
+    previous_mention: ParsedMention | None = None
+    next_mention: ParsedMention | None = None
+
+
+def extract_mentions_from_event(
     event: sansio.Event, username_pattern: str | re.Pattern[str] | None = None
-) -> list[Mention]:
-    comment = event.data.get("comment", {})
-    if comment is None:
-        comment = {}
-    body = comment.get("body", "")
+) -> list[ParsedMention]:
+    comment_data = event.data.get("comment", {})
+    if comment_data is None:
+        comment_data = {}
+    comment = comment_data.get("body", "")
 
-    if not body:
+    if not comment:
         return []
 
     # If no pattern specified, use bot username (TODO: get from settings)
     if username_pattern is None:
         username_pattern = "bot"  # Placeholder
 
-    # Handle regex patterns vs literal strings
-    if isinstance(username_pattern, re.Pattern):
-        # Use the pattern string directly, preserving any flags
-        username_regex = username_pattern.pattern
-        # Extract flags from the compiled pattern
-        flags = username_pattern.flags | re.MULTILINE | re.IGNORECASE
-    else:
-        # For strings, escape them to be treated literally
-        username_regex = re.escape(username_pattern)
-        flags = re.MULTILINE | re.IGNORECASE
+    mentions: list[ParsedMention] = []
+    potential_mentions = extract_all_mentions(comment)
+    for i, raw_mention in enumerate(potential_mentions):
+        if not matches_pattern(raw_mention.username, username_pattern):
+            continue
 
-    original_body = body
-    original_lines = original_body.splitlines()
+        text = extract_mention_text(comment, i, potential_mentions, raw_mention.end)
+        line_info = LineInfo.for_mention_in_comment(comment, raw_mention.position)
 
-    processed_text = CODE_BLOCK_PATTERN.sub(lambda m: " " * len(m.group(0)), body)
-    processed_text = INLINE_CODE_PATTERN.sub(
-        lambda m: " " * len(m.group(0)), processed_text
-    )
-    processed_text = QUOTE_PATTERN.sub(lambda m: " " * len(m.group(0)), processed_text)
-
-    # Use \S+ to match non-whitespace characters for username
-    # Special handling for patterns that could match too broadly
-    if ".*" in username_regex:
-        # Replace .* with a more specific pattern that won't match spaces or @
-        username_regex = username_regex.replace(".*", r"[^@\s]*")
-
-    mention_pattern = re.compile(
-        rf"(?:^|(?<=\s))@({username_regex})(?:\s|$|(?=[^\w\-]))",
-        flags,
-    )
-
-    mentions: list[Mention] = []
-
-    for match in mention_pattern.finditer(processed_text):
-        position = match.start()  # Position of @
-        username = match.group(1)  # Captured username
-
-        text_before = original_body[:position]
-        line_number = text_before.count("\n") + 1
-
-        line_index = line_number - 1
-        line_text = (
-            original_lines[line_index] if line_index < len(original_lines) else ""
+        mentions.append(
+            ParsedMention(
+                username=raw_mention.username,
+                text=text,
+                position=raw_mention.position,
+                line_info=line_info,
+                match=None,
+                previous_mention=None,
+                next_mention=None,
+            )
         )
 
-        text_start = match.end()
-
-        # Find next @mention to know where this text ends
-        next_match = mention_pattern.search(processed_text, match.end())
-        if next_match:
-            text_end = next_match.start()
-        else:
-            text_end = len(original_body)
-
-        text = original_body[text_start:text_end].strip()
-
-        mention = Mention(
-            username=username,
-            text=text,
-            position=position,
-            line_number=line_number,
-            line_text=line_text,
-            match=None,
-            previous_mention=None,
-            next_mention=None,
-        )
-
-        mentions.append(mention)
-
+    # link mentions
     for i, mention in enumerate(mentions):
         if i > 0:
             mention.previous_mention = mentions[i - 1]
@@ -202,11 +207,10 @@ class Comment:
     author: str
     created_at: datetime
     url: str
-    mentions: list[Mention]
+    mentions: list[ParsedMention]
 
     @property
     def line_count(self) -> int:
-        """Number of lines in the comment."""
         if not self.body:
             return 0
         return len(self.body.splitlines())
@@ -224,8 +228,7 @@ class Comment:
         if not comment_data:
             raise ValueError(f"Cannot extract comment from event type: {event.event}")
 
-        created_at_str = comment_data.get("created_at", "")
-        if created_at_str:
+        if created_at_str := comment_data.get("created_at", ""):
             # GitHub timestamps are in ISO format: 2024-01-01T12:00:00Z
             created_at_aware = datetime.fromisoformat(
                 created_at_str.replace("Z", "+00:00")
@@ -253,9 +256,9 @@ class Comment:
 
 
 @dataclass
-class MentionEvent:
+class Mention:
     comment: Comment
-    triggered_by: Mention
+    mention: ParsedMention
     scope: MentionScope | None
 
     @classmethod
@@ -271,7 +274,7 @@ class MentionEvent:
         if scope is not None and event_scope != scope:
             return
 
-        mentions = parse_mentions_for_username(event, username)
+        mentions = extract_mentions_from_event(event, username)
         if not mentions:
             return
 
@@ -280,13 +283,36 @@ class MentionEvent:
 
         for mention in mentions:
             if pattern is not None:
-                match = check_pattern_match(mention.text, pattern)
+                match = get_match(mention.text, pattern)
                 if not match:
                     continue
                 mention.match = match
 
             yield cls(
                 comment=comment,
-                triggered_by=mention,
+                mention=mention,
                 scope=event_scope,
             )
+
+
+def matches_pattern(text: str, pattern: str | re.Pattern[str] | None) -> bool:
+    match pattern:
+        case None:
+            return True
+        case re.Pattern():
+            return pattern.fullmatch(text) is not None
+        case str():
+            return text.strip().lower() == pattern.strip().lower()
+
+
+def get_match(text: str, pattern: str | re.Pattern[str] | None) -> re.Match[str] | None:
+    match pattern:
+        case None:
+            return re.match(r"(.*)", text, re.IGNORECASE | re.DOTALL)
+        case re.Pattern():
+            # Use the pattern directly, preserving its flags
+            return pattern.match(text)
+        case str():
+            # For strings, do exact match (case-insensitive)
+            # Escape the string to treat it literally
+            return re.match(re.escape(pattern), text, re.IGNORECASE)

@@ -239,8 +239,8 @@ class TestMentionDecorator:
         @test_router.mention(pattern="?")
         def help_handler(event, *args, **kwargs):
             mention = kwargs.get("context")
-            if mention and mention.triggered_by:
-                text = mention.triggered_by.text.strip()
+            if mention and mention.mention:
+                text = mention.mention.text.strip()
                 if text in call_counts:
                     call_counts[text] += 1
 
@@ -534,7 +534,7 @@ class TestMentionDecorator:
         mention = captured_kwargs["context"]
 
         assert mention.comment.body == "@bot deploy"
-        assert mention.triggered_by.text == "deploy"
+        assert mention.mention.text == "deploy"
         assert mention.scope.name == "PR"
 
 
@@ -577,16 +577,16 @@ class TestUpdatedMentionContext:
         assert comment.url == "https://github.com/test/repo/issues/1#issuecomment-123"
         assert len(comment.mentions) == 1
 
-        triggered = captured_mention.triggered_by
+        triggered = captured_mention.mention
 
         assert triggered.username == "bot"
         assert triggered.text == "test"
         assert triggered.position == 0
-        assert triggered.line_number == 1
+        assert triggered.line_info.lineno == 1
 
         assert captured_mention.scope.name == "ISSUE"
 
-    def test_multiple_mentions_triggered_by(self, test_router, get_mock_github_api):
+    def test_multiple_mentions_mention(self, test_router, get_mock_github_api):
         handler_called = False
         captured_mention = None
 
@@ -618,8 +618,8 @@ class TestUpdatedMentionContext:
         assert handler_called
         assert captured_mention is not None
         assert len(captured_mention.comment.mentions) == 2
-        assert captured_mention.triggered_by.text == "deploy production"
-        assert captured_mention.triggered_by.line_number == 2
+        assert captured_mention.mention.text == "deploy production"
+        assert captured_mention.mention.line_info.lineno == 2
 
         first_mention = captured_mention.comment.mentions[0]
         second_mention = captured_mention.comment.mentions[1]
@@ -657,8 +657,8 @@ class TestUpdatedMentionContext:
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
-        assert captured_mention.triggered_by.text == "can you help me?"
-        assert captured_mention.triggered_by.username == "bot"
+        assert captured_mention.mention.text == "can you help me?"
+        assert captured_mention.mention.username == "bot"
 
     @pytest.mark.asyncio
     async def test_async_mention_context_structure(
@@ -694,7 +694,7 @@ class TestUpdatedMentionContext:
 
         assert handler_called
         assert captured_mention.comment.body == "@bot async-test now"
-        assert captured_mention.triggered_by.text == "async-test now"
+        assert captured_mention.mention.text == "async-test now"
 
 
 class TestFlexibleMentionTriggers:
@@ -725,8 +725,8 @@ class TestFlexibleMentionTriggers:
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
-        assert captured_mention.triggered_by.match is not None
-        assert captured_mention.triggered_by.match.group(0) == "deploy"
+        assert captured_mention.mention.match is not None
+        assert captured_mention.mention.match.group(0) == "deploy"
 
         # Should not match - pattern in middle
         handler_called = False
@@ -759,8 +759,8 @@ class TestFlexibleMentionTriggers:
         test_router.dispatch(event, mock_gh)
 
         assert handler_called
-        assert captured_mention.triggered_by.match is not None
-        assert captured_mention.triggered_by.match.group("env") == "staging"
+        assert captured_mention.mention.match is not None
+        assert captured_mention.mention.match.group("env") == "staging"
 
     def test_username_parameter_exact(self, test_router, get_mock_github_api):
         handler_called = False
@@ -826,7 +826,7 @@ class TestFlexibleMentionTriggers:
         @test_router.mention(username=re.compile(r".*"))
         def all_mentions_handler(event, *args, **kwargs):
             mention = kwargs.get("context")
-            mentions_seen.append(mention.triggered_by.username)
+            mentions_seen.append(mention.mention.username)
 
         event = sansio.Event(
             {
@@ -919,7 +919,7 @@ class TestFlexibleMentionTriggers:
         @test_router.mention(pattern=re.compile(r"release"))
         def deploy_handler(event, *args, **kwargs):
             mention = kwargs.get("context")
-            patterns_matched.append(mention.triggered_by.text.split()[0])
+            patterns_matched.append(mention.mention.text.split()[0])
 
         event = sansio.Event(
             {
@@ -942,7 +942,7 @@ class TestFlexibleMentionTriggers:
         @test_router.mention(pattern=re.compile(r".*\?$"))
         def question_handler(event, *args, **kwargs):
             mention = kwargs.get("context")
-            questions_received.append(mention.triggered_by.text)
+            questions_received.append(mention.mention.text)
 
         event = sansio.Event(
             {
