@@ -26,19 +26,13 @@ SyncCallback = Callable[..., None]
 CB = TypeVar("CB", AsyncCallback, SyncCallback)
 
 
-class MentionHandlerBase(Protocol):
-    _mention_pattern: str | re.Pattern[str] | None
-    _mention_scope: MentionScope | None
-    _mention_username: str | re.Pattern[str] | None
-
-
-class AsyncMentionHandler(MentionHandlerBase, Protocol):
+class AsyncMentionHandler(Protocol):
     async def __call__(
         self, event: sansio.Event, *args: Any, **kwargs: Any
     ) -> None: ...
 
 
-class SyncMentionHandler(MentionHandlerBase, Protocol):
+class SyncMentionHandler(Protocol):
     def __call__(self, event: sansio.Event, *args: Any, **kwargs: Any) -> None: ...
 
 
@@ -102,10 +96,6 @@ class GitHubRouter(GidgetHubRouter):
                 wrapper = cast(AsyncMentionHandler, async_wrapper)
             else:
                 wrapper = cast(SyncMentionHandler, sync_wrapper)
-
-            wrapper._mention_pattern = pattern
-            wrapper._mention_scope = scope
-            wrapper._mention_username = username
 
             events = scope.get_events() if scope else MentionScope.all_events()
             for event_action in events:
