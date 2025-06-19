@@ -160,15 +160,12 @@ class ParsedMention:
 def extract_mentions_from_event(
     event: sansio.Event, username_pattern: str | re.Pattern[str] | None = None
 ) -> list[ParsedMention]:
-    comment_data = event.data.get("comment", {})
-    if comment_data is None:
-        comment_data = {}
-    comment = comment_data.get("body", "")
+    comment = event.data.get("comment", {}).get("body", "")
 
     if not comment:
         return []
 
-    # If no pattern specified, use bot username from settings
+    # If no pattern specified, use github app name from settings
     if username_pattern is None:
         username_pattern = app_settings.SLUG
 
@@ -297,10 +294,8 @@ class Mention:
             )
 
 
-def matches_pattern(text: str, pattern: str | re.Pattern[str] | None) -> bool:
+def matches_pattern(text: str, pattern: str | re.Pattern[str]) -> bool:
     match pattern:
-        case None:
-            return True
         case re.Pattern():
             return pattern.fullmatch(text) is not None
         case str():

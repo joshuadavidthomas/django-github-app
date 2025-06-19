@@ -6,7 +6,6 @@ import re
 import pytest
 from django.http import HttpRequest
 from django.http import JsonResponse
-from gidgethub import sansio
 
 from django_github_app.github import SyncGitHubAPI
 from django_github_app.mentions import MentionScope
@@ -123,7 +122,9 @@ class TestGitHubRouter:
 
 
 class TestMentionDecorator:
-    def test_basic_mention_no_pattern(self, test_router, get_mock_github_api):
+    def test_basic_mention_no_pattern(
+        self, test_router, get_mock_github_api, create_event
+    ):
         handler_called = False
         handler_args = None
 
@@ -133,14 +134,12 @@ class TestMentionDecorator:
             handler_called = True
             handler_args = (event, args, kwargs)
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot hello", "user": {"login": "testuser"}},
-                "issue": {"number": 1},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="issue_comment",
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={"body": "@bot hello", "user": {"login": "testuser"}},
+            issue={"number": 1},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
         mock_gh = get_mock_github_api({})
@@ -149,7 +148,7 @@ class TestMentionDecorator:
         assert handler_called
         assert handler_args[0] == event
 
-    def test_mention_with_pattern(self, test_router, get_mock_github_api):
+    def test_mention_with_pattern(self, test_router, get_mock_github_api, create_event):
         handler_called = False
 
         @test_router.mention(pattern="help")
@@ -158,14 +157,12 @@ class TestMentionDecorator:
             handler_called = True
             return "help response"
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot help", "user": {"login": "testuser"}},
-                "issue": {"number": 2},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="issue_comment",
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={"body": "@bot help", "user": {"login": "testuser"}},
+            issue={"number": 2},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
         mock_gh = get_mock_github_api({})
@@ -173,7 +170,7 @@ class TestMentionDecorator:
 
         assert handler_called
 
-    def test_mention_with_scope(self, test_router, get_mock_github_api):
+    def test_mention_with_scope(self, test_router, get_mock_github_api, create_event):
         pr_handler_called = False
 
         @test_router.mention(pattern="deploy", scope=MentionScope.PR)
@@ -183,27 +180,23 @@ class TestMentionDecorator:
 
         mock_gh = get_mock_github_api({})
 
-        pr_event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot deploy", "user": {"login": "testuser"}},
-                "pull_request": {"number": 3},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="pull_request_review_comment",
+        pr_event = create_event(
+            "pull_request_review_comment",
+            action="created",
+            comment={"body": "@bot deploy", "user": {"login": "testuser"}},
+            pull_request={"number": 3},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
         test_router.dispatch(pr_event, mock_gh)
 
         assert pr_handler_called
 
-        issue_event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot deploy", "user": {"login": "testuser"}},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="commit_comment",  # This is NOT a PR event
+        issue_event = create_event(
+            "commit_comment",  # This is NOT a PR event
+            action="created",
+            comment={"body": "@bot deploy", "user": {"login": "testuser"}},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="124",
         )
         pr_handler_called = False  # Reset
@@ -212,7 +205,9 @@ class TestMentionDecorator:
 
         assert not pr_handler_called
 
-    def test_case_insensitive_pattern(self, test_router, get_mock_github_api):
+    def test_case_insensitive_pattern(
+        self, test_router, get_mock_github_api, create_event
+    ):
         handler_called = False
 
         @test_router.mention(pattern="HELP")
@@ -220,14 +215,12 @@ class TestMentionDecorator:
             nonlocal handler_called
             handler_called = True
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot help", "user": {"login": "testuser"}},
-                "issue": {"number": 4},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="issue_comment",
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={"body": "@bot help", "user": {"login": "testuser"}},
+            issue={"number": 4},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
         mock_gh = get_mock_github_api({})
@@ -236,7 +229,7 @@ class TestMentionDecorator:
         assert handler_called
 
     def test_multiple_decorators_on_same_function(
-        self, test_router, get_mock_github_api
+        self, test_router, get_mock_github_api, create_event
     ):
         call_counts = {"help": 0, "h": 0, "?": 0}
 
@@ -251,17 +244,15 @@ class TestMentionDecorator:
                     call_counts[text] += 1
 
         for pattern in ["help", "h", "?"]:
-            event = sansio.Event(
-                {
-                    "action": "created",
-                    "comment": {
-                        "body": f"@bot {pattern}",
-                        "user": {"login": "testuser"},
-                    },
-                    "issue": {"number": 5},
-                    "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
+            event = create_event(
+                "issue_comment",
+                action="created",
+                comment={
+                    "body": f"@bot {pattern}",
+                    "user": {"login": "testuser"},
                 },
-                event="issue_comment",
+                issue={"number": 5},
+                repository={"owner": {"login": "testowner"}, "name": "testrepo"},
                 delivery_id=f"123-{pattern}",
             )
             mock_gh = get_mock_github_api({})
@@ -275,7 +266,9 @@ class TestMentionDecorator:
         assert call_counts["h"] == 1  # Matched only by "h" pattern
         assert call_counts["?"] == 1  # Matched only by "?" pattern
 
-    def test_async_mention_handler(self, test_router, aget_mock_github_api):
+    def test_async_mention_handler(
+        self, test_router, aget_mock_github_api, create_event
+    ):
         handler_called = False
 
         @test_router.mention(pattern="async-test")
@@ -284,14 +277,12 @@ class TestMentionDecorator:
             handler_called = True
             return "async response"
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot async-test", "user": {"login": "testuser"}},
-                "issue": {"number": 1},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="issue_comment",
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={"body": "@bot async-test", "user": {"login": "testuser"}},
+            issue={"number": 1},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
 
@@ -300,7 +291,7 @@ class TestMentionDecorator:
 
         assert handler_called
 
-    def test_sync_mention_handler(self, test_router, get_mock_github_api):
+    def test_sync_mention_handler(self, test_router, get_mock_github_api, create_event):
         handler_called = False
 
         @test_router.mention(pattern="sync-test")
@@ -309,14 +300,12 @@ class TestMentionDecorator:
             handler_called = True
             return "sync response"
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot sync-test", "user": {"login": "testuser"}},
-                "issue": {"number": 6},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="issue_comment",
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={"body": "@bot sync-test", "user": {"login": "testuser"}},
+            issue={"number": 6},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
         mock_gh = get_mock_github_api({})
@@ -325,7 +314,7 @@ class TestMentionDecorator:
         assert handler_called
 
     def test_scope_validation_issue_comment_on_issue(
-        self, test_router, get_mock_github_api
+        self, test_router, get_mock_github_api, create_event
     ):
         handler_called = False
 
@@ -334,14 +323,12 @@ class TestMentionDecorator:
             nonlocal handler_called
             handler_called = True
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "issue": {"title": "Bug report", "number": 123},
-                "comment": {"body": "@bot issue-only", "user": {"login": "testuser"}},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="issue_comment",
+        event = create_event(
+            "issue_comment",
+            action="created",
+            issue={"title": "Bug report", "number": 123},
+            comment={"body": "@bot issue-only", "user": {"login": "testuser"}},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
         mock_gh = get_mock_github_api({})
@@ -350,7 +337,7 @@ class TestMentionDecorator:
         assert handler_called
 
     def test_scope_validation_issue_comment_on_pr(
-        self, test_router, get_mock_github_api
+        self, test_router, get_mock_github_api, create_event
     ):
         handler_called = False
 
@@ -360,18 +347,16 @@ class TestMentionDecorator:
             handler_called = True
 
         # Issue comment on a pull request (has pull_request field)
-        event = sansio.Event(
-            {
-                "action": "created",
-                "issue": {
-                    "title": "PR title",
-                    "number": 456,
-                    "pull_request": {"url": "https://api.github.com/..."},
-                },
-                "comment": {"body": "@bot issue-only", "user": {"login": "testuser"}},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
+        event = create_event(
+            "issue_comment",
+            action="created",
+            issue={
+                "title": "PR title",
+                "number": 456,
+                "pull_request": {"url": "https://api.github.com/..."},
             },
-            event="issue_comment",
+            comment={"body": "@bot issue-only", "user": {"login": "testuser"}},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
         mock_gh = get_mock_github_api({})
@@ -379,7 +364,9 @@ class TestMentionDecorator:
 
         assert not handler_called
 
-    def test_scope_validation_pr_scope_on_pr(self, test_router, get_mock_github_api):
+    def test_scope_validation_pr_scope_on_pr(
+        self, test_router, get_mock_github_api, create_event
+    ):
         handler_called = False
 
         @test_router.mention(pattern="pr-only", scope=MentionScope.PR)
@@ -387,18 +374,16 @@ class TestMentionDecorator:
             nonlocal handler_called
             handler_called = True
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "issue": {
-                    "title": "PR title",
-                    "number": 456,
-                    "pull_request": {"url": "https://api.github.com/..."},
-                },
-                "comment": {"body": "@bot pr-only", "user": {"login": "testuser"}},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
+        event = create_event(
+            "issue_comment",
+            action="created",
+            issue={
+                "title": "PR title",
+                "number": 456,
+                "pull_request": {"url": "https://api.github.com/..."},
             },
-            event="issue_comment",
+            comment={"body": "@bot pr-only", "user": {"login": "testuser"}},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
         mock_gh = get_mock_github_api({})
@@ -406,7 +391,9 @@ class TestMentionDecorator:
 
         assert handler_called
 
-    def test_scope_validation_pr_scope_on_issue(self, test_router, get_mock_github_api):
+    def test_scope_validation_pr_scope_on_issue(
+        self, test_router, get_mock_github_api, create_event
+    ):
         handler_called = False
 
         @test_router.mention(pattern="pr-only", scope=MentionScope.PR)
@@ -414,14 +401,12 @@ class TestMentionDecorator:
             nonlocal handler_called
             handler_called = True
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "issue": {"title": "Bug report", "number": 123},
-                "comment": {"body": "@bot pr-only", "user": {"login": "testuser"}},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="issue_comment",
+        event = create_event(
+            "issue_comment",
+            action="created",
+            issue={"title": "Bug report", "number": 123},
+            comment={"body": "@bot pr-only", "user": {"login": "testuser"}},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
         mock_gh = get_mock_github_api({})
@@ -429,7 +414,9 @@ class TestMentionDecorator:
 
         assert not handler_called
 
-    def test_scope_validation_commit_scope(self, test_router, get_mock_github_api):
+    def test_scope_validation_commit_scope(
+        self, test_router, get_mock_github_api, create_event
+    ):
         """Test that COMMIT scope works for commit comments."""
         handler_called = False
 
@@ -438,14 +425,12 @@ class TestMentionDecorator:
             nonlocal handler_called
             handler_called = True
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot commit-only", "user": {"login": "testuser"}},
-                "commit": {"sha": "abc123"},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="commit_comment",
+        event = create_event(
+            "commit_comment",
+            action="created",
+            comment={"body": "@bot commit-only", "user": {"login": "testuser"}},
+            commit={"sha": "abc123"},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
         mock_gh = get_mock_github_api({})
@@ -453,7 +438,9 @@ class TestMentionDecorator:
 
         assert handler_called
 
-    def test_scope_validation_no_scope(self, test_router, get_mock_github_api):
+    def test_scope_validation_no_scope(
+        self, test_router, get_mock_github_api, create_event
+    ):
         call_count = 0
 
         @test_router.mention(pattern="all-contexts")
@@ -463,49 +450,45 @@ class TestMentionDecorator:
 
         mock_gh = get_mock_github_api({})
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "issue": {"title": "Issue", "number": 1},
-                "comment": {"body": "@bot all-contexts", "user": {"login": "testuser"}},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="issue_comment",
+        event = create_event(
+            "issue_comment",
+            action="created",
+            issue={"title": "Issue", "number": 1},
+            comment={"body": "@bot all-contexts", "user": {"login": "testuser"}},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
         test_router.dispatch(event, mock_gh)
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "issue": {
-                    "title": "PR",
-                    "number": 2,
-                    "pull_request": {"url": "..."},
-                },
-                "comment": {"body": "@bot all-contexts", "user": {"login": "testuser"}},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
+        event = create_event(
+            "issue_comment",
+            action="created",
+            issue={
+                "title": "PR",
+                "number": 2,
+                "pull_request": {"url": "..."},
             },
-            event="issue_comment",
+            comment={"body": "@bot all-contexts", "user": {"login": "testuser"}},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="124",
         )
         test_router.dispatch(event, mock_gh)
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot all-contexts", "user": {"login": "testuser"}},
-                "commit": {"sha": "abc123"},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
-            },
-            event="commit_comment",
+        event = create_event(
+            "commit_comment",
+            action="created",
+            comment={"body": "@bot all-contexts", "user": {"login": "testuser"}},
+            commit={"sha": "abc123"},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="125",
         )
         test_router.dispatch(event, mock_gh)
 
         assert call_count == 3
 
-    def test_mention_enrichment_pr_scope(self, test_router, get_mock_github_api):
+    def test_mention_enrichment_pr_scope(
+        self, test_router, get_mock_github_api, create_event
+    ):
         handler_called = False
         captured_kwargs = {}
 
@@ -515,19 +498,17 @@ class TestMentionDecorator:
             handler_called = True
             captured_kwargs = kwargs.copy()
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot deploy", "user": {"login": "dev"}},
-                "issue": {
-                    "number": 42,
-                    "pull_request": {
-                        "url": "https://api.github.com/repos/test/repo/pulls/42"
-                    },
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={"body": "@bot deploy", "user": {"login": "dev"}},
+            issue={
+                "number": 42,
+                "pull_request": {
+                    "url": "https://api.github.com/repos/test/repo/pulls/42"
                 },
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
             },
-            event="issue_comment",
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="999",
         )
 
@@ -545,7 +526,9 @@ class TestMentionDecorator:
 
 
 class TestUpdatedMentionContext:
-    def test_mention_context_structure(self, test_router, get_mock_github_api):
+    def test_mention_context_structure(
+        self, test_router, get_mock_github_api, create_event
+    ):
         handler_called = False
         captured_mention = None
 
@@ -555,19 +538,17 @@ class TestUpdatedMentionContext:
             handler_called = True
             captured_mention = kwargs.get("context")
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {
-                    "body": "@bot test",
-                    "user": {"login": "testuser"},
-                    "created_at": "2024-01-01T12:00:00Z",
-                    "html_url": "https://github.com/test/repo/issues/1#issuecomment-123",
-                },
-                "issue": {"number": 1},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={
+                "body": "@bot test",
+                "user": {"login": "testuser"},
+                "created_at": "2024-01-01T12:00:00Z",
+                "html_url": "https://github.com/test/repo/issues/1#issuecomment-123",
             },
-            event="issue_comment",
+            issue={"number": 1},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="123",
         )
 
@@ -592,7 +573,9 @@ class TestUpdatedMentionContext:
 
         assert captured_mention.scope.name == "ISSUE"
 
-    def test_multiple_mentions_mention(self, test_router, get_mock_github_api):
+    def test_multiple_mentions_mention(
+        self, test_router, get_mock_github_api, create_event
+    ):
         handler_called = False
         captured_mention = None
 
@@ -602,19 +585,17 @@ class TestUpdatedMentionContext:
             handler_called = True
             captured_mention = kwargs.get("context")
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {
-                    "body": "@bot help\n@bot deploy production",
-                    "user": {"login": "testuser"},
-                    "created_at": "2024-01-01T12:00:00Z",
-                    "html_url": "https://github.com/test/repo/issues/2#issuecomment-456",
-                },
-                "issue": {"number": 2},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={
+                "body": "@bot help\n@bot deploy production",
+                "user": {"login": "testuser"},
+                "created_at": "2024-01-01T12:00:00Z",
+                "html_url": "https://github.com/test/repo/issues/2#issuecomment-456",
             },
-            event="issue_comment",
+            issue={"number": 2},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="456",
         )
 
@@ -633,7 +614,9 @@ class TestUpdatedMentionContext:
         assert first_mention.next_mention is second_mention
         assert second_mention.previous_mention is first_mention
 
-    def test_mention_without_pattern(self, test_router, get_mock_github_api):
+    def test_mention_without_pattern(
+        self, test_router, get_mock_github_api, create_event
+    ):
         handler_called = False
         captured_mention = None
 
@@ -643,19 +626,17 @@ class TestUpdatedMentionContext:
             handler_called = True
             captured_mention = kwargs.get("context")
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {
-                    "body": "@bot can you help me?",
-                    "user": {"login": "testuser"},
-                    "created_at": "2024-01-01T12:00:00Z",
-                    "html_url": "https://github.com/test/repo/issues/3#issuecomment-789",
-                },
-                "issue": {"number": 3},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={
+                "body": "@bot can you help me?",
+                "user": {"login": "testuser"},
+                "created_at": "2024-01-01T12:00:00Z",
+                "html_url": "https://github.com/test/repo/issues/3#issuecomment-789",
             },
-            event="issue_comment",
+            issue={"number": 3},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="789",
         )
 
@@ -668,7 +649,7 @@ class TestUpdatedMentionContext:
 
     @pytest.mark.asyncio
     async def test_async_mention_context_structure(
-        self, test_router, aget_mock_github_api
+        self, test_router, aget_mock_github_api, create_event
     ):
         handler_called = False
         captured_mention = None
@@ -679,19 +660,17 @@ class TestUpdatedMentionContext:
             handler_called = True
             captured_mention = kwargs.get("context")
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {
-                    "body": "@bot async-test now",
-                    "user": {"login": "asyncuser"},
-                    "created_at": "2024-01-01T13:00:00Z",
-                    "html_url": "https://github.com/test/repo/issues/4#issuecomment-999",
-                },
-                "issue": {"number": 4},
-                "repository": {"owner": {"login": "testowner"}, "name": "testrepo"},
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={
+                "body": "@bot async-test now",
+                "user": {"login": "asyncuser"},
+                "created_at": "2024-01-01T13:00:00Z",
+                "html_url": "https://github.com/test/repo/issues/4#issuecomment-999",
             },
-            event="issue_comment",
+            issue={"number": 4},
+            repository={"owner": {"login": "testowner"}, "name": "testrepo"},
             delivery_id="999",
         )
 
@@ -704,7 +683,9 @@ class TestUpdatedMentionContext:
 
 
 class TestFlexibleMentionTriggers:
-    def test_pattern_parameter_string(self, test_router, get_mock_github_api):
+    def test_pattern_parameter_string(
+        self, test_router, get_mock_github_api, create_event
+    ):
         handler_called = False
         captured_mention = None
 
@@ -714,17 +695,15 @@ class TestFlexibleMentionTriggers:
             handler_called = True
             captured_mention = kwargs.get("context")
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {
-                    "body": "@bot deploy production",
-                    "user": {"login": "user"},
-                },
-                "issue": {"number": 1},
-                "repository": {"owner": {"login": "owner"}, "name": "repo"},
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={
+                "body": "@bot deploy production",
+                "user": {"login": "user"},
             },
-            event="issue_comment",
+            issue={"number": 1},
+            repository={"owner": {"login": "owner"}, "name": "repo"},
             delivery_id="1",
         )
         mock_gh = get_mock_github_api({})
@@ -741,7 +720,9 @@ class TestFlexibleMentionTriggers:
 
         assert not handler_called
 
-    def test_pattern_parameter_regex(self, test_router, get_mock_github_api):
+    def test_pattern_parameter_regex(
+        self, test_router, get_mock_github_api, create_event
+    ):
         handler_called = False
         captured_mention = None
 
@@ -751,14 +732,12 @@ class TestFlexibleMentionTriggers:
             handler_called = True
             captured_mention = kwargs.get("context")
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot deploy-staging", "user": {"login": "user"}},
-                "issue": {"number": 1},
-                "repository": {"owner": {"login": "owner"}, "name": "repo"},
-            },
-            event="issue_comment",
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={"body": "@bot deploy-staging", "user": {"login": "user"}},
+            issue={"number": 1},
+            repository={"owner": {"login": "owner"}, "name": "repo"},
             delivery_id="1",
         )
         mock_gh = get_mock_github_api({})
@@ -768,7 +747,9 @@ class TestFlexibleMentionTriggers:
         assert captured_mention.mention.match is not None
         assert captured_mention.mention.match.group("env") == "staging"
 
-    def test_username_parameter_exact(self, test_router, get_mock_github_api):
+    def test_username_parameter_exact(
+        self, test_router, get_mock_github_api, create_event
+    ):
         handler_called = False
 
         @test_router.mention(username="deploy-bot")
@@ -777,14 +758,12 @@ class TestFlexibleMentionTriggers:
             handler_called = True
 
         # Should match deploy-bot
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@deploy-bot run tests", "user": {"login": "user"}},
-                "issue": {"number": 1},
-                "repository": {"owner": {"login": "owner"}, "name": "repo"},
-            },
-            event="issue_comment",
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={"body": "@deploy-bot run tests", "user": {"login": "user"}},
+            issue={"number": 1},
+            repository={"owner": {"login": "owner"}, "name": "repo"},
             delivery_id="1",
         )
         mock_gh = get_mock_github_api({})
@@ -799,7 +778,9 @@ class TestFlexibleMentionTriggers:
 
         assert not handler_called
 
-    def test_username_parameter_regex(self, test_router, get_mock_github_api):
+    def test_username_parameter_regex(
+        self, test_router, get_mock_github_api, create_event
+    ):
         handler_count = 0
 
         @test_router.mention(username=re.compile(r".*-bot"))
@@ -807,17 +788,15 @@ class TestFlexibleMentionTriggers:
             nonlocal handler_count
             handler_count += 1
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {
-                    "body": "@deploy-bot start @test-bot check @user help",
-                    "user": {"login": "user"},
-                },
-                "issue": {"number": 1},
-                "repository": {"owner": {"login": "owner"}, "name": "repo"},
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={
+                "body": "@deploy-bot start @test-bot check @user help",
+                "user": {"login": "user"},
             },
-            event="issue_comment",
+            issue={"number": 1},
+            repository={"owner": {"login": "owner"}, "name": "repo"},
             delivery_id="1",
         )
         mock_gh = get_mock_github_api({})
@@ -826,7 +805,9 @@ class TestFlexibleMentionTriggers:
         # Should be called twice (deploy-bot and test-bot)
         assert handler_count == 2
 
-    def test_username_all_mentions(self, test_router, get_mock_github_api):
+    def test_username_all_mentions(
+        self, test_router, get_mock_github_api, create_event
+    ):
         mentions_seen = []
 
         @test_router.mention(username=re.compile(r".*"))
@@ -834,17 +815,15 @@ class TestFlexibleMentionTriggers:
             mention = kwargs.get("context")
             mentions_seen.append(mention.mention.username)
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {
-                    "body": "@alice review @bob deploy @charlie test",
-                    "user": {"login": "user"},
-                },
-                "issue": {"number": 1},
-                "repository": {"owner": {"login": "owner"}, "name": "repo"},
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={
+                "body": "@alice review @bob deploy @charlie test",
+                "user": {"login": "user"},
             },
-            event="issue_comment",
+            issue={"number": 1},
+            repository={"owner": {"login": "owner"}, "name": "repo"},
             delivery_id="1",
         )
         mock_gh = get_mock_github_api({})
@@ -852,7 +831,7 @@ class TestFlexibleMentionTriggers:
 
         assert mentions_seen == ["alice", "bob", "charlie"]
 
-    def test_combined_filters(self, test_router, get_mock_github_api):
+    def test_combined_filters(self, test_router, get_mock_github_api, create_event):
         calls = []
 
         @test_router.mention(
@@ -864,14 +843,12 @@ class TestFlexibleMentionTriggers:
             calls.append(kwargs)
 
         def make_event(body):
-            return sansio.Event(
-                {
-                    "action": "created",
-                    "comment": {"body": body, "user": {"login": "user"}},
-                    "issue": {"number": 1, "pull_request": {"url": "..."}},
-                    "repository": {"owner": {"login": "owner"}, "name": "repo"},
-                },
-                event="issue_comment",
+            return create_event(
+                "issue_comment",
+                action="created",
+                comment={"body": body, "user": {"login": "user"}},
+                issue={"number": 1, "pull_request": {"url": "..."}},
+                repository={"owner": {"login": "owner"}, "name": "repo"},
                 delivery_id="1",
             )
 
@@ -898,17 +875,15 @@ class TestFlexibleMentionTriggers:
 
         # Wrong scope (issue instead of PR)
         calls.clear()
-        event4 = sansio.Event(
-            {
-                "action": "created",
-                "comment": {
-                    "body": "@deploy-bot deploy now",
-                    "user": {"login": "user"},
-                },
-                "issue": {"number": 1},  # No pull_request field
-                "repository": {"owner": {"login": "owner"}, "name": "repo"},
+        event4 = create_event(
+            "issue_comment",
+            action="created",
+            comment={
+                "body": "@deploy-bot deploy now",
+                "user": {"login": "user"},
             },
-            event="issue_comment",
+            issue={"number": 1},  # No pull_request field
+            repository={"owner": {"login": "owner"}, "name": "repo"},
             delivery_id="1",
         )
         test_router.dispatch(event4, mock_gh)
@@ -916,7 +891,7 @@ class TestFlexibleMentionTriggers:
         assert len(calls) == 0
 
     def test_multiple_decorators_different_patterns(
-        self, test_router, get_mock_github_api
+        self, test_router, get_mock_github_api, create_event
     ):
         patterns_matched = []
 
@@ -927,14 +902,12 @@ class TestFlexibleMentionTriggers:
             mention = kwargs.get("context")
             patterns_matched.append(mention.mention.text.split()[0])
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {"body": "@bot ship it", "user": {"login": "user"}},
-                "issue": {"number": 1},
-                "repository": {"owner": {"login": "owner"}, "name": "repo"},
-            },
-            event="issue_comment",
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={"body": "@bot ship it", "user": {"login": "user"}},
+            issue={"number": 1},
+            repository={"owner": {"login": "owner"}, "name": "repo"},
             delivery_id="1",
         )
         mock_gh = get_mock_github_api({})
@@ -942,7 +915,7 @@ class TestFlexibleMentionTriggers:
 
         assert patterns_matched == ["ship"]
 
-    def test_question_pattern(self, test_router, get_mock_github_api):
+    def test_question_pattern(self, test_router, get_mock_github_api, create_event):
         questions_received = []
 
         @test_router.mention(pattern=re.compile(r".*\?$"))
@@ -950,17 +923,15 @@ class TestFlexibleMentionTriggers:
             mention = kwargs.get("context")
             questions_received.append(mention.mention.text)
 
-        event = sansio.Event(
-            {
-                "action": "created",
-                "comment": {
-                    "body": "@bot what is the status?",
-                    "user": {"login": "user"},
-                },
-                "issue": {"number": 1},
-                "repository": {"owner": {"login": "owner"}, "name": "repo"},
+        event = create_event(
+            "issue_comment",
+            action="created",
+            comment={
+                "body": "@bot what is the status?",
+                "user": {"login": "user"},
             },
-            event="issue_comment",
+            issue={"number": 1},
+            repository={"owner": {"login": "owner"}, "name": "repo"},
             delivery_id="1",
         )
         mock_gh = get_mock_github_api({})
