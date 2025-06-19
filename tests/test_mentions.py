@@ -4,6 +4,7 @@ import re
 import time
 
 import pytest
+from django.test import override_settings
 from django.utils import timezone
 from gidgethub import sansio
 
@@ -19,19 +20,9 @@ def setup_test_app_name(override_app_settings):
         yield
 
 
-@pytest.fixture
-def create_comment_event():
-    def _create(body: str) -> sansio.Event:
-        return sansio.Event(
-            {"comment": {"body": body}}, event="issue_comment", delivery_id="test"
-        )
-
-    return _create
-
-
 class TestParseMentions:
-    def test_simple_mention_with_command(self, create_comment_event):
-        event = create_comment_event("@mybot help")
+    def test_simple_mention_with_command(self, create_event):
+        event = create_event("issue_comment", comment="@mybot help")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
@@ -40,46 +31,50 @@ class TestParseMentions:
         assert mentions[0].position == 0
         assert mentions[0].line_info.lineno == 1
 
-    def test_mention_without_command(self, create_comment_event):
-        event = create_comment_event("@mybot")
+    def test_mention_without_command(self, create_event):
+        event = create_event("issue_comment", comment="@mybot")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         assert mentions[0].username == "mybot"
         assert mentions[0].text == ""
 
-    def test_case_insensitive_matching(self, create_comment_event):
-        event = create_comment_event("@MyBot help")
+    def test_case_insensitive_matching(self, create_event):
+        event = create_event("issue_comment", comment="@MyBot help")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         assert mentions[0].username == "MyBot"  # Username is preserved as found
         assert mentions[0].text == "help"
 
-    def test_command_case_normalization(self, create_comment_event):
-        event = create_comment_event("@mybot HELP")
+    def test_command_case_normalization(self, create_event):
+        event = create_event("issue_comment", comment="@mybot HELP")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         # Command case is preserved in text, normalization happens elsewhere
         assert mentions[0].text == "HELP"
 
-    def test_multiple_mentions(self, create_comment_event):
-        event = create_comment_event("@mybot help and then @mybot deploy")
+    def test_multiple_mentions(self, create_event):
+        event = create_event(
+            "issue_comment", comment="@mybot help and then @mybot deploy"
+        )
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 2
         assert mentions[0].text == "help and then"
         assert mentions[1].text == "deploy"
 
-    def test_ignore_other_mentions(self, create_comment_event):
-        event = create_comment_event("@otheruser help @mybot deploy @someone else")
+    def test_ignore_other_mentions(self, create_event):
+        event = create_event(
+            "issue_comment", comment="@otheruser help @mybot deploy @someone else"
+        )
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         assert mentions[0].text == "deploy"
 
-    def test_mention_in_code_block(self, create_comment_event):
+    def test_mention_in_code_block(self, create_event):
         text = """
         Here's some text
         ```
@@ -87,104 +82,104 @@ class TestParseMentions:
         ```
         @mybot deploy
         """
-        event = create_comment_event(text)
+        event = create_event("issue_comment", comment=text)
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         assert mentions[0].text == "deploy"
 
-    def test_mention_in_inline_code(self, create_comment_event):
-        event = create_comment_event(
-            "Use `@mybot help` for help, or just @mybot deploy"
+    def test_mention_in_inline_code(self, create_event):
+        event = create_event(
+            "issue_comment", comment="Use `@mybot help` for help, or just @mybot deploy"
         )
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         assert mentions[0].text == "deploy"
 
-    def test_mention_in_quote(self, create_comment_event):
+    def test_mention_in_quote(self, create_event):
         text = """
         > @mybot help
         @mybot deploy
         """
-        event = create_comment_event(text)
+        event = create_event("issue_comment", comment=text)
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         assert mentions[0].text == "deploy"
 
-    def test_empty_text(self, create_comment_event):
-        event = create_comment_event("")
+    def test_empty_text(self, create_event):
+        event = create_event("issue_comment", comment="")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert mentions == []
 
-    def test_none_text(self, create_comment_event):
+    def test_none_text(self, create_event):
         # Create an event with no comment body
-        event = sansio.Event({}, event="issue_comment", delivery_id="test")
+        event = create_event("issue_comment")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert mentions == []
 
-    def test_mention_at_start_of_line(self, create_comment_event):
-        event = create_comment_event("@mybot help")
+    def test_mention_at_start_of_line(self, create_event):
+        event = create_event("issue_comment", comment="@mybot help")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         assert mentions[0].text == "help"
 
-    def test_mention_in_middle_of_text(self, create_comment_event):
-        event = create_comment_event("Hey @mybot help me")
+    def test_mention_in_middle_of_text(self, create_event):
+        event = create_event("issue_comment", comment="Hey @mybot help me")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         assert mentions[0].text == "help me"
 
-    def test_mention_with_punctuation_after(self, create_comment_event):
-        event = create_comment_event("@mybot help!")
+    def test_mention_with_punctuation_after(self, create_event):
+        event = create_event("issue_comment", comment="@mybot help!")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         assert mentions[0].text == "help!"
 
-    def test_hyphenated_username(self, create_comment_event):
-        event = create_comment_event("@my-bot help")
+    def test_hyphenated_username(self, create_event):
+        event = create_event("issue_comment", comment="@my-bot help")
         mentions = extract_mentions_from_event(event, "my-bot")
 
         assert len(mentions) == 1
         assert mentions[0].username == "my-bot"
         assert mentions[0].text == "help"
 
-    def test_underscore_username(self, create_comment_event):
+    def test_underscore_username(self, create_event):
         # GitHub usernames don't support underscores
-        event = create_comment_event("@my_bot help")
+        event = create_event("issue_comment", comment="@my_bot help")
         mentions = extract_mentions_from_event(event, "my_bot")
 
         assert len(mentions) == 0  # Should not match invalid username
 
-    def test_no_space_after_mention(self, create_comment_event):
-        event = create_comment_event("@mybot, please help")
+    def test_no_space_after_mention(self, create_event):
+        event = create_event("issue_comment", comment="@mybot, please help")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         assert mentions[0].text == ", please help"
 
-    def test_multiple_spaces_before_command(self, create_comment_event):
-        event = create_comment_event("@mybot    help")
+    def test_multiple_spaces_before_command(self, create_event):
+        event = create_event("issue_comment", comment="@mybot    help")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         assert mentions[0].text == "help"  # Whitespace is stripped
 
-    def test_hyphenated_command(self, create_comment_event):
-        event = create_comment_event("@mybot async-test")
+    def test_hyphenated_command(self, create_event):
+        event = create_event("issue_comment", comment="@mybot async-test")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
         assert mentions[0].text == "async-test"
 
-    def test_special_character_command(self, create_comment_event):
-        event = create_comment_event("@mybot ?")
+    def test_special_character_command(self, create_event):
+        event = create_event("issue_comment", comment="@mybot ?")
         mentions = extract_mentions_from_event(event, "mybot")
 
         assert len(mentions) == 1
@@ -434,6 +429,28 @@ class TestComment:
         assert comment.created_at.tzinfo is not None
         assert comment.created_at.isoformat() == "2024-01-01T12:00:00+00:00"
 
+    def test_from_event_timezone_handling_use_tz_false(self):
+        event = sansio.Event(
+            {
+                "comment": {
+                    "body": "Test",
+                    "user": {"login": "user"},
+                    "created_at": "2024-01-01T12:00:00Z",
+                    "html_url": "",
+                }
+            },
+            event="issue_comment",
+            delivery_id="test-7",
+        )
+
+        with override_settings(USE_TZ=False, TIME_ZONE="UTC"):
+            comment = Comment.from_event(event)
+
+        # Check that the datetime is naive (no timezone info)
+        assert comment.created_at.tzinfo is None
+        # When USE_TZ=False with TIME_ZONE="UTC", the naive datetime should match the original UTC time
+        assert comment.created_at.isoformat() == "2024-01-01T12:00:00"
+
 
 class TestPatternMatching:
     def test_get_match_none(self):
@@ -577,12 +594,12 @@ class TestPatternMatching:
 class TestReDoSProtection:
     """Test that the ReDoS vulnerability has been fixed."""
 
-    def test_redos_vulnerability_fixed(self, create_comment_event):
+    def test_redos_vulnerability_fixed(self, create_event):
         """Test that malicious input doesn't cause catastrophic backtracking."""
         # Create a malicious comment that would cause ReDoS with the old implementation
         # Pattern: (bot|ai|assistant)+ matching "botbotbot...x"
         malicious_username = "bot" * 20 + "x"
-        event = create_comment_event(f"@{malicious_username} hello")
+        event = create_event("issue_comment", comment=f"@{malicious_username} hello")
 
         # This pattern would cause catastrophic backtracking in the old implementation
         pattern = re.compile(r"(bot|ai|assistant)+")
@@ -601,9 +618,11 @@ class TestReDoSProtection:
             mentions[0].username == "botbotbotbotbotbotbotbotbotbotbotbotbot"
         )  # 39 chars
 
-    def test_nested_quantifier_pattern(self, create_comment_event):
+    def test_nested_quantifier_pattern(self, create_event):
         """Test patterns with nested quantifiers don't cause issues."""
-        event = create_comment_event("@deploy-bot-bot-bot test command")
+        event = create_event(
+            "issue_comment", comment="@deploy-bot-bot-bot test command"
+        )
 
         # This type of pattern could cause issues: (word)+
         pattern = re.compile(r"(deploy|bot)+")
@@ -616,9 +635,9 @@ class TestReDoSProtection:
         # Username contains hyphens, so it won't match this pattern
         assert len(mentions) == 0
 
-    def test_alternation_with_quantifier(self, create_comment_event):
+    def test_alternation_with_quantifier(self, create_event):
         """Test alternation patterns with quantifiers."""
-        event = create_comment_event("@mybot123bot456bot789 deploy")
+        event = create_event("issue_comment", comment="@mybot123bot456bot789 deploy")
 
         # Pattern like (a|b)* that could be dangerous
         pattern = re.compile(r"(my|bot|[0-9])+")
@@ -632,10 +651,11 @@ class TestReDoSProtection:
         assert len(mentions) == 1
         assert mentions[0].username == "mybot123bot456bot789"
 
-    def test_complex_regex_patterns_safe(self, create_comment_event):
+    def test_complex_regex_patterns_safe(self, create_event):
         """Test that complex patterns are handled safely."""
-        event = create_comment_event(
-            "@test @test-bot @test-bot-123 @testbotbotbot @verylongusername123456789"
+        event = create_event(
+            "issue_comment",
+            comment="@test @test-bot @test-bot-123 @testbotbotbot @verylongusername123456789",
         )
 
         # Various potentially problematic patterns
@@ -655,11 +675,14 @@ class TestReDoSProtection:
             # All patterns should execute quickly
             assert execution_time < 0.1
 
-    def test_github_username_constraints(self, create_comment_event):
+    def test_github_username_constraints(self, create_event):
         """Test that only valid GitHub usernames are extracted."""
-        event = create_comment_event(
-            "@validuser @Valid-User-123 @-invalid @invalid- @in--valid "
-            "@toolongusernamethatexceedsthirtyninecharacters @123startswithnumber"
+        event = create_event(
+            "issue_comment",
+            comment=(
+                "@validuser @Valid-User-123 @-invalid @invalid- @in--valid "
+                "@toolongusernamethatexceedsthirtyninecharacters @123startswithnumber"
+            ),
         )
 
         mentions = extract_mentions_from_event(event, re.compile(r".*"))
@@ -685,12 +708,12 @@ class TestReDoSProtection:
         )  # Truncated
         assert "123startswithnumber" in extracted_usernames  # Valid GitHub username
 
-    def test_performance_with_many_mentions(self, create_comment_event):
+    def test_performance_with_many_mentions(self, create_event):
         """Test performance with many mentions in a single comment."""
         # Create a comment with 100 mentions
         usernames = [f"@user{i}" for i in range(100)]
         comment_body = " ".join(usernames) + " Please review all"
-        event = create_comment_event(comment_body)
+        event = create_event("issue_comment", comment=comment_body)
 
         pattern = re.compile(r"user\d+")
 
