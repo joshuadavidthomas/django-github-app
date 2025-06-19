@@ -165,7 +165,6 @@ def extract_mentions_from_event(
     if not comment:
         return []
 
-    # If no pattern specified, use github app name from settings
     if username_pattern is None:
         username_pattern = app_settings.SLUG
 
@@ -190,7 +189,6 @@ def extract_mentions_from_event(
             )
         )
 
-    # link mentions
     for i, mention in enumerate(mentions):
         if i > 0:
             mention.previous_mention = mentions[i - 1]

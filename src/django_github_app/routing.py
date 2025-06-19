@@ -50,7 +50,7 @@ class GitHubRouter(GidgetHubRouter):
     def add(
         self, func: AsyncCallback | SyncCallback, event_type: str, **data_detail: Any
     ) -> None:
-        """Override to accept both async and sync callbacks."""
+        # Override to accept both async and sync callbacks.
         super().add(cast(AsyncCallback, func), event_type, **data_detail)
 
     @classproperty
