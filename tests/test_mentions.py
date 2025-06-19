@@ -8,7 +8,6 @@ from gidgethub import sansio
 
 from django_github_app.mentions import Comment
 from django_github_app.mentions import MentionScope
-from django_github_app.mentions import get_event_scope
 from django_github_app.mentions import parse_mentions_for_username
 
 
@@ -188,25 +187,25 @@ class TestParseMentions:
 
 
 class TestGetEventScope:
-    def test_get_event_scope_for_various_events(self):
+    def test_from_event_for_various_events(self):
         # Issue comment on actual issue
         event1 = sansio.Event({"issue": {}}, event="issue_comment", delivery_id="1")
-        assert get_event_scope(event1) == MentionScope.ISSUE
+        assert MentionScope.from_event(event1) == MentionScope.ISSUE
 
         # PR review comment
         event2 = sansio.Event({}, event="pull_request_review_comment", delivery_id="2")
-        assert get_event_scope(event2) == MentionScope.PR
+        assert MentionScope.from_event(event2) == MentionScope.PR
 
         # Commit comment
         event3 = sansio.Event({}, event="commit_comment", delivery_id="3")
-        assert get_event_scope(event3) == MentionScope.COMMIT
+        assert MentionScope.from_event(event3) == MentionScope.COMMIT
 
     def test_issue_scope_on_issue_comment(self):
         # Issue comment on an actual issue (no pull_request field)
         issue_event = sansio.Event(
             {"issue": {"title": "Bug report"}}, event="issue_comment", delivery_id="1"
         )
-        assert get_event_scope(issue_event) == MentionScope.ISSUE
+        assert MentionScope.from_event(issue_event) == MentionScope.ISSUE
 
         # Issue comment on a pull request (has pull_request field)
         pr_event = sansio.Event(
@@ -214,14 +213,14 @@ class TestGetEventScope:
             event="issue_comment",
             delivery_id="2",
         )
-        assert get_event_scope(pr_event) == MentionScope.PR
+        assert MentionScope.from_event(pr_event) == MentionScope.PR
 
     def test_pr_scope_on_issue_comment(self):
         # Issue comment on an actual issue (no pull_request field)
         issue_event = sansio.Event(
             {"issue": {"title": "Bug report"}}, event="issue_comment", delivery_id="1"
         )
-        assert get_event_scope(issue_event) == MentionScope.ISSUE
+        assert MentionScope.from_event(issue_event) == MentionScope.ISSUE
 
         # Issue comment on a pull request (has pull_request field)
         pr_event = sansio.Event(
@@ -229,42 +228,42 @@ class TestGetEventScope:
             event="issue_comment",
             delivery_id="2",
         )
-        assert get_event_scope(pr_event) == MentionScope.PR
+        assert MentionScope.from_event(pr_event) == MentionScope.PR
 
     def test_pr_scope_allows_pr_specific_events(self):
         # PR scope should allow pull_request_review_comment
         event1 = sansio.Event({}, event="pull_request_review_comment", delivery_id="1")
-        assert get_event_scope(event1) == MentionScope.PR
+        assert MentionScope.from_event(event1) == MentionScope.PR
 
         # PR scope should allow pull_request_review
         event2 = sansio.Event({}, event="pull_request_review", delivery_id="2")
-        assert get_event_scope(event2) == MentionScope.PR
+        assert MentionScope.from_event(event2) == MentionScope.PR
 
         # PR scope should not allow commit_comment
         event3 = sansio.Event({}, event="commit_comment", delivery_id="3")
-        assert get_event_scope(event3) == MentionScope.COMMIT
+        assert MentionScope.from_event(event3) == MentionScope.COMMIT
 
     def test_commit_scope_allows_commit_comment_only(self):
         # Commit scope should allow commit_comment
         event1 = sansio.Event({}, event="commit_comment", delivery_id="1")
-        assert get_event_scope(event1) == MentionScope.COMMIT
+        assert MentionScope.from_event(event1) == MentionScope.COMMIT
 
         # Commit scope should not allow issue_comment
         event2 = sansio.Event({"issue": {}}, event="issue_comment", delivery_id="2")
-        assert get_event_scope(event2) == MentionScope.ISSUE
+        assert MentionScope.from_event(event2) == MentionScope.ISSUE
 
         # Commit scope should not allow PR events
         event3 = sansio.Event({}, event="pull_request_review_comment", delivery_id="3")
-        assert get_event_scope(event3) == MentionScope.PR
+        assert MentionScope.from_event(event3) == MentionScope.PR
 
     def test_different_event_types_have_correct_scope(self):
         # pull_request_review_comment should be PR scope
         event1 = sansio.Event({}, event="pull_request_review_comment", delivery_id="1")
-        assert get_event_scope(event1) == MentionScope.PR
+        assert MentionScope.from_event(event1) == MentionScope.PR
 
         # commit_comment should be COMMIT scope
         event2 = sansio.Event({}, event="commit_comment", delivery_id="2")
-        assert get_event_scope(event2) == MentionScope.COMMIT
+        assert MentionScope.from_event(event2) == MentionScope.COMMIT
 
     def test_pull_request_field_none_treated_as_issue(self):
         # If pull_request field exists but is None, treat as issue
@@ -273,17 +272,17 @@ class TestGetEventScope:
             event="issue_comment",
             delivery_id="1",
         )
-        assert get_event_scope(event) == MentionScope.ISSUE
+        assert MentionScope.from_event(event) == MentionScope.ISSUE
 
     def test_missing_issue_data(self):
         # If issue data is missing entirely, defaults to ISSUE scope for issue_comment
         event = sansio.Event({}, event="issue_comment", delivery_id="1")
-        assert get_event_scope(event) == MentionScope.ISSUE
+        assert MentionScope.from_event(event) == MentionScope.ISSUE
 
     def test_unknown_event_returns_none(self):
         # Unknown event types should return None
         event = sansio.Event({}, event="unknown_event", delivery_id="1")
-        assert get_event_scope(event) is None
+        assert MentionScope.from_event(event) is None
 
 
 class TestComment:
