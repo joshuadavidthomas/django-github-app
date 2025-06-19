@@ -239,14 +239,13 @@ class TestAsyncWebhookView:
         assert isinstance(webhook_data["gh"], AsyncGitHubAPI)
 
     async def test_router_dispatch_unhandled_event(
-        self, monkeypatch, aregister_webhook_event, override_app_settings
+        self, monkeypatch, aregister_webhook_event, override_app_settings, create_event
     ):
         with override_app_settings(LOG_ALL_EVENTS=False):
             aregister_webhook_event("push", should_fail=True)
             view = AsyncWebhookView()
 
-            data = {"action": "opened"}
-            event = sansio.Event(data, event="issues", delivery_id="12345")
+            event = create_event("issues", action="opened", delivery_id="12345")
 
             monkeypatch.setattr(view, "get_event", lambda request: event)
 
@@ -256,14 +255,13 @@ class TestAsyncWebhookView:
             assert json.loads(response.content) == {"message": "ok"}
 
     async def test_unhandled_event_log_creation_with_log_all(
-        self, monkeypatch, aregister_webhook_event, override_app_settings
+        self, monkeypatch, aregister_webhook_event, override_app_settings, create_event
     ):
         with override_app_settings(LOG_ALL_EVENTS=True):
             aregister_webhook_event("push", should_fail=True)
             view = AsyncWebhookView()
 
-            data = {"action": "opened"}
-            event = sansio.Event(data, event="issues", delivery_id="12345")
+            event = create_event("issues", action="opened", delivery_id="12345")
 
             monkeypatch.setattr(view, "get_event", lambda request: event)
 
@@ -275,14 +273,13 @@ class TestAsyncWebhookView:
             assert count_after - count_before == 1
 
     async def test_unhandled_event_log_creation_without_log_all(
-        self, monkeypatch, aregister_webhook_event, override_app_settings
+        self, monkeypatch, aregister_webhook_event, override_app_settings, create_event
     ):
         with override_app_settings(LOG_ALL_EVENTS=False):
             aregister_webhook_event("push", should_fail=True)
             view = AsyncWebhookView()
 
-            data = {"action": "opened"}
-            event = sansio.Event(data, event="issues", delivery_id="12345")
+            event = create_event("issues", action="opened", delivery_id="12345")
 
             monkeypatch.setattr(view, "get_event", lambda request: event)
 
@@ -352,14 +349,13 @@ class TestSyncWebhookView:
         assert isinstance(webhook_data["gh"], SyncGitHubAPI)
 
     def test_router_dispatch_unhandled_event(
-        self, monkeypatch, register_webhook_event, override_app_settings
+        self, monkeypatch, register_webhook_event, override_app_settings, create_event
     ):
         with override_app_settings(LOG_ALL_EVENTS=False):
             register_webhook_event("push", should_fail=True)
             view = SyncWebhookView()
 
-            data = {"action": "opened"}
-            event = sansio.Event(data, event="issues", delivery_id="12345")
+            event = create_event("issues", action="opened", delivery_id="12345")
 
             monkeypatch.setattr(view, "get_event", lambda request: event)
 
@@ -369,14 +365,13 @@ class TestSyncWebhookView:
             assert json.loads(response.content) == {"message": "ok"}
 
     def test_unhandled_event_log_creation_with_log_all(
-        self, monkeypatch, register_webhook_event, override_app_settings
+        self, monkeypatch, register_webhook_event, override_app_settings, create_event
     ):
         with override_app_settings(LOG_ALL_EVENTS=True):
             register_webhook_event("push", should_fail=True)
             view = SyncWebhookView()
 
-            data = {"action": "opened"}
-            event = sansio.Event(data, event="issues", delivery_id="12345")
+            event = create_event("issues", action="opened", delivery_id="12345")
 
             monkeypatch.setattr(view, "get_event", lambda request: event)
 
@@ -388,14 +383,13 @@ class TestSyncWebhookView:
             assert count_after - count_before == 1
 
     def test_unhandled_event_log_creation_without_log_all(
-        self, monkeypatch, register_webhook_event, override_app_settings
+        self, monkeypatch, register_webhook_event, override_app_settings, create_event
     ):
         with override_app_settings(LOG_ALL_EVENTS=False):
             register_webhook_event("push", should_fail=True)
             view = SyncWebhookView()
 
-            data = {"action": "opened"}
-            event = sansio.Event(data, event="issues", delivery_id="12345")
+            event = create_event("issues", action="opened", delivery_id="12345")
 
             monkeypatch.setattr(view, "get_event", lambda request: event)
 

@@ -12,6 +12,8 @@ from django.conf import settings
 from django.test import override_settings
 from django.urls import clear_url_caches
 from django.urls import path
+from faker import Faker
+from gidgethub import sansio
 
 from django_github_app.conf import GITHUB_APP_SETTINGS_NAME
 from django_github_app.github import AsyncGitHubAPI
@@ -232,3 +234,39 @@ async def arepository(ainstallation, get_mock_github_api, baker):
     mock_github_api.installation_id = repository.installation.installation_id
     repository.get_gh_client = MagicMock(return_value=mock_github_api)
     return repository
+
+
+@pytest.fixture
+def faker():
+    return Faker()
+
+
+@pytest.fixture
+def create_event(faker):
+    def _create_event(event_type, delivery_id=None, **data):
+        if delivery_id is None:
+            delivery_id = seq.next()
+
+        if event_type == "issue_comment" and "comment" not in data:
+            data["comment"] = {"body": faker.sentence()}
+
+        if "comment" in data and isinstance(data["comment"], str):
+            # Allow passing just the comment body as a string
+            data["comment"] = {"body": data["comment"]}
+
+        if "comment" in data and "user" not in data["comment"]:
+            data["comment"]["user"] = {"login": faker.user_name()}
+
+        if "repository" not in data and event_type in [
+            "issue_comment",
+            "pull_request",
+            "push",
+        ]:
+            data["repository"] = {
+                "owner": {"login": faker.user_name()},
+                "name": faker.slug(),
+            }
+
+        return sansio.Event(data=data, event=event_type, delivery_id=delivery_id)
+
+    return _create_event
