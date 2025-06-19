@@ -582,10 +582,10 @@ class TestMentionDecorator:
 
 
 class TestUpdatedMentionContext:
-    """Test the updated MentionContext structure with comment and triggered_by fields."""
+    """Test the updated MentionEvent structure with comment and triggered_by fields."""
 
     def test_mention_context_structure(self, test_router, get_mock_github_api_sync):
-        """Test that MentionContext has the new structure with comment and triggered_by."""
+        """Test that MentionEvent has the new structure with comment and triggered_by."""
         handler_called = False
         captured_mention = None
 
@@ -725,7 +725,7 @@ class TestUpdatedMentionContext:
     async def test_async_mention_context_structure(
         self, test_router, get_mock_github_api
     ):
-        """Test async handlers get the same updated MentionContext structure."""
+        """Test async handlers get the same updated MentionEvent structure."""
         handler_called = False
         captured_mention = None
 

@@ -17,11 +17,8 @@ from gidgethub.routing import Router as GidgetHubRouter
 from ._typing import override
 from .github import AsyncGitHubAPI
 from .github import SyncGitHubAPI
-from .mentions import Comment
-from .mentions import MentionContext
+from .mentions import MentionEvent
 from .mentions import MentionScope
-from .mentions import check_pattern_match
-from .mentions import parse_mentions_for_username
 
 AsyncCallback = Callable[..., Awaitable[None]]
 SyncCallback = Callable[..., None]
@@ -73,71 +70,32 @@ class GitHubRouter(GidgetHubRouter):
 
         return decorator
 
-    def mention(self, **kwargs: Any) -> Callable[[CB], CB]:
+    def mention(
+        self,
+        *,
+        pattern: str | re.Pattern[str] | None = None,
+        username: str | re.Pattern[str] | None = None,
+        scope: MentionScope | None = None,
+        **kwargs: Any,
+    ) -> Callable[[CB], CB]:
         def decorator(func: CB) -> CB:
-            pattern = kwargs.pop("pattern", None)
-            username = kwargs.pop("username", None)
-            scope = kwargs.pop("scope", None)
-
             @wraps(func)
             async def async_wrapper(
                 event: sansio.Event, gh: AsyncGitHubAPI, *args: Any, **kwargs: Any
             ) -> None:
-                event_scope = MentionScope.from_event(event)
-                if scope is not None and event_scope != scope:
-                    return
-
-                mentions = parse_mentions_for_username(event, username)
-                if not mentions:
-                    return
-
-                comment = Comment.from_event(event)
-                comment.mentions = mentions
-
-                for mention in mentions:
-                    if pattern is not None:
-                        match = check_pattern_match(mention.text, pattern)
-                        if not match:
-                            continue
-                        mention.match = match
-
-                    kwargs["context"] = MentionContext(
-                        comment=comment,
-                        triggered_by=mention,
-                        scope=event_scope,
-                    )
-
-                    await func(event, gh, *args, **kwargs)  # type: ignore[func-returns-value]
+                for context in MentionEvent.from_event(
+                    event, username=username, pattern=pattern, scope=scope
+                ):
+                    await func(event, gh, *args, context=context, **kwargs)  # type: ignore[func-returns-value]
 
             @wraps(func)
             def sync_wrapper(
                 event: sansio.Event, gh: SyncGitHubAPI, *args: Any, **kwargs: Any
             ) -> None:
-                event_scope = MentionScope.from_event(event)
-                if scope is not None and event_scope != scope:
-                    return
-
-                mentions = parse_mentions_for_username(event, username)
-                if not mentions:
-                    return
-
-                comment = Comment.from_event(event)
-                comment.mentions = mentions
-
-                for mention in mentions:
-                    if pattern is not None:
-                        match = check_pattern_match(mention.text, pattern)
-                        if not match:
-                            continue
-                        mention.match = match
-
-                    kwargs["context"] = MentionContext(
-                        comment=comment,
-                        triggered_by=mention,
-                        scope=event_scope,
-                    )
-
-                    func(event, gh, *args, **kwargs)
+                for context in MentionEvent.from_event(
+                    event, username=username, pattern=pattern, scope=scope
+                ):
+                    func(event, gh, *args, context=context, **kwargs)
 
             wrapper: MentionHandler
             if iscoroutinefunction(func):
