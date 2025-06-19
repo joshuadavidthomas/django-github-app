@@ -10,6 +10,8 @@ from django.conf import settings
 from django.utils import timezone
 from gidgethub import sansio
 
+from .conf import app_settings
+
 
 class EventAction(NamedTuple):
     event: str
@@ -166,9 +168,9 @@ def extract_mentions_from_event(
     if not comment:
         return []
 
-    # If no pattern specified, use bot username (TODO: get from settings)
+    # If no pattern specified, use bot username from settings
     if username_pattern is None:
-        username_pattern = "bot"  # Placeholder
+        username_pattern = app_settings.SLUG
 
     mentions: list[ParsedMention] = []
     potential_mentions = extract_all_mentions(comment)

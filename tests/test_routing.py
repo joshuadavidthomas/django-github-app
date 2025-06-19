@@ -15,6 +15,12 @@ from django_github_app.views import BaseWebhookView
 
 
 @pytest.fixture(autouse=True)
+def setup_test_app_name(override_app_settings):
+    with override_app_settings(NAME="bot"):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def test_router():
     import django_github_app.views
     from django_github_app.routing import GitHubRouter
