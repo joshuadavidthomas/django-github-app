@@ -133,10 +133,52 @@ class Comment:
 
 
 @dataclass
-class MentionContext:
+class MentionEvent:
     comment: Comment
     triggered_by: Mention
     scope: MentionScope | None
+
+    @classmethod
+    def from_event(
+        cls,
+        event: sansio.Event,
+        *,
+        username: str | re.Pattern[str] | None = None,
+        pattern: str | re.Pattern[str] | None = None,
+        scope: MentionScope | None = None,
+    ):
+        """Generate MentionEvent instances from a GitHub event.
+
+        Yields MentionEvent for each mention that matches the given criteria.
+        """
+        # Check scope match first
+        event_scope = MentionScope.from_event(event)
+        if scope is not None and event_scope != scope:
+            return
+
+        # Parse mentions
+        mentions = parse_mentions_for_username(event, username)
+        if not mentions:
+            return
+
+        # Create comment
+        comment = Comment.from_event(event)
+        comment.mentions = mentions
+
+        # Yield contexts for matching mentions
+        for mention in mentions:
+            # Check pattern match if specified
+            if pattern is not None:
+                match = check_pattern_match(mention.text, pattern)
+                if not match:
+                    continue
+                mention.match = match
+
+            yield cls(
+                comment=comment,
+                triggered_by=mention,
+                scope=event_scope,
+            )
 
 
 CODE_BLOCK_PATTERN = re.compile(r"```[\s\S]*?```", re.MULTILINE)
