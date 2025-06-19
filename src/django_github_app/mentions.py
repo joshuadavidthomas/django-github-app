@@ -290,4 +290,3 @@ class MentionEvent:
                 triggered_by=mention,
                 scope=event_scope,
             )
-
