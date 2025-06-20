@@ -274,11 +274,21 @@ def create_event(faker):
         if delivery_id is None:
             delivery_id = seq.next()
 
-        if event_type == "issue_comment" and "comment" not in data:
+        # Auto-create comment field for comment events
+        if event_type in ["issue_comment", "pull_request_review_comment", "commit_comment"] and "comment" not in data:
             data["comment"] = {"body": faker.sentence()}
 
+        # Auto-create review field for pull request review events
+        if event_type == "pull_request_review" and "review" not in data:
+            data["review"] = {"body": faker.sentence()}
+
+        # Add user to comment if not present
         if "comment" in data and "user" not in data["comment"]:
             data["comment"]["user"] = {"login": faker.user_name()}
+
+        # Add user to review if not present
+        if "review" in data and "user" not in data["review"]:
+            data["review"]["user"] = {"login": faker.user_name()}
 
         if event_type == "issue_comment" and "issue" not in data:
             data["issue"] = {"number": faker.random_int(min=1, max=1000)}
