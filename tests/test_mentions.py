@@ -4,18 +4,12 @@ import re
 import time
 
 import pytest
-from django.test import override_settings
-from django.utils import timezone
 
-from django_github_app.mentions import Comment
 from django_github_app.mentions import LineInfo
 from django_github_app.mentions import Mention
 from django_github_app.mentions import MentionScope
-from django_github_app.mentions import RawMention
 from django_github_app.mentions import extract_all_mentions
-from django_github_app.mentions import extract_mention_text
 from django_github_app.mentions import extract_mentions_from_event
-from django_github_app.mentions import get_match
 from django_github_app.mentions import matches_pattern
 
 
@@ -136,109 +130,83 @@ class TestExtractAllMentions:
 
 class TestExtractMentionsFromEvent:
     @pytest.mark.parametrize(
-        "body,username_pattern,expected",
+        "body,username,expected",
         [
             # Simple mention with command
             (
                 "@mybot help",
                 "mybot",
-                [{"username": "mybot", "text": "help"}],
+                [{"username": "mybot"}],
             ),
             # Mention without command
-            ("@mybot", "mybot", [{"username": "mybot", "text": ""}]),
+            ("@mybot", "mybot", [{"username": "mybot"}]),
             # Case insensitive matching - preserves original case
-            ("@MyBot help", "mybot", [{"username": "MyBot", "text": "help"}]),
+            ("@MyBot help", "mybot", [{"username": "MyBot"}]),
             # Command case preserved
-            ("@mybot HELP", "mybot", [{"username": "mybot", "text": "HELP"}]),
+            ("@mybot HELP", "mybot", [{"username": "mybot"}]),
             # Mention in middle
-            ("Hey @mybot help me", "mybot", [{"username": "mybot", "text": "help me"}]),
+            ("Hey @mybot help me", "mybot", [{"username": "mybot"}]),
             # With punctuation
-            ("@mybot help!", "mybot", [{"username": "mybot", "text": "help!"}]),
+            ("@mybot help!", "mybot", [{"username": "mybot"}]),
             # No space after mention
             (
                 "@mybot, please help",
                 "mybot",
-                [{"username": "mybot", "text": ", please help"}],
+                [{"username": "mybot"}],
             ),
             # Multiple spaces before command
-            ("@mybot    help", "mybot", [{"username": "mybot", "text": "help"}]),
+            ("@mybot    help", "mybot", [{"username": "mybot"}]),
             # Hyphenated command
             (
                 "@mybot async-test",
                 "mybot",
-                [{"username": "mybot", "text": "async-test"}],
+                [{"username": "mybot"}],
             ),
             # Special character command
-            ("@mybot ?", "mybot", [{"username": "mybot", "text": "?"}]),
+            ("@mybot ?", "mybot", [{"username": "mybot"}]),
             # Hyphenated username matches pattern
-            ("@my-bot help", "my-bot", [{"username": "my-bot", "text": "help"}]),
+            ("@my-bot help", "my-bot", [{"username": "my-bot"}]),
             # Username with underscore - doesn't match pattern
             ("@my_bot help", "my_bot", []),
             # Empty text
             ("", "mybot", []),
         ],
     )
-    def test_mention_extraction_scenarios(
-        self, body, username_pattern, expected, create_event
-    ):
+    def test_mention_extraction_scenarios(self, body, username, expected, create_event):
         event = create_event("issue_comment", comment={"body": body} if body else {})
 
-        mentions = extract_mentions_from_event(event, username_pattern)
+        mentions = extract_mentions_from_event(event, username)
 
         assert len(mentions) == len(expected)
         for i, exp in enumerate(expected):
             assert mentions[i].username == exp["username"]
-            assert mentions[i].text == exp["text"]
 
     @pytest.mark.parametrize(
-        "body,bot_pattern,expected",
+        "body,bot_pattern,expected_mentions",
         [
             # Multiple mentions of same bot
             (
                 "@mybot help and then @mybot deploy",
                 "mybot",
-                [{"text": "help and then"}, {"text": "deploy"}],
+                ["mybot", "mybot"],
             ),
-            # Ignore other mentions
+            # Filter specific mentions, ignore others
             (
                 "@otheruser help @mybot deploy @someone else",
                 "mybot",
-                [{"text": "deploy"}],
+                ["mybot"],
             ),
-        ],
-    )
-    def test_multiple_and_filtered_mentions(
-        self, body, bot_pattern, expected, create_event
-    ):
-        event = create_event("issue_comment", comment={"body": body})
-
-        mentions = extract_mentions_from_event(event, bot_pattern)
-
-        assert len(mentions) == len(expected)
-        for i, exp in enumerate(expected):
-            assert mentions[i].text == exp["text"]
-
-    def test_missing_comment_body(self, create_event):
-        event = create_event("issue_comment")
-
-        mentions = extract_mentions_from_event(event, "mybot")
-
-        assert mentions == []
-
-    @pytest.mark.parametrize(
-        "body,bot_pattern,expected_mentions",
-        [
-            # Default pattern (None uses "bot" from test settings)
-            ("@bot help @otherbot test", None, [("bot", "help")]),
-            # Specific bot name
+            # Default pattern (None matches all mentions)
+            ("@bot help @otherbot test", None, ["bot", "otherbot"]),
+            # Specific bot name pattern
             (
                 "@bot help @deploy-bot test @test-bot check",
                 "deploy-bot",
-                [("deploy-bot", "test")],
+                ["deploy-bot"],
             ),
         ],
     )
-    def test_extract_mentions_from_event_patterns(
+    def test_mention_filtering_and_patterns(
         self, body, bot_pattern, expected_mentions, create_event
     ):
         event = create_event("issue_comment", comment={"body": body})
@@ -246,9 +214,15 @@ class TestExtractMentionsFromEvent:
         mentions = extract_mentions_from_event(event, bot_pattern)
 
         assert len(mentions) == len(expected_mentions)
-        for i, (username, text) in enumerate(expected_mentions):
+        for i, username in enumerate(expected_mentions):
             assert mentions[i].username == username
-            assert mentions[i].text == text
+
+    def test_missing_comment_body(self, create_event):
+        event = create_event("issue_comment")
+
+        mentions = extract_mentions_from_event(event, "mybot")
+
+        assert mentions == []
 
     def test_mention_linking(self, create_event):
         event = create_event(
@@ -259,31 +233,19 @@ class TestExtractMentionsFromEvent:
         mentions = extract_mentions_from_event(event, re.compile(r"bot\d"))
 
         assert len(mentions) == 3
-        # First mention
-        assert mentions[0].previous_mention is None
-        assert mentions[0].next_mention is mentions[1]
-        # Second mention
-        assert mentions[1].previous_mention is mentions[0]
-        assert mentions[1].next_mention is mentions[2]
-        # Third mention
-        assert mentions[2].previous_mention is mentions[1]
-        assert mentions[2].next_mention is None
 
-    def test_mention_text_extraction_stops_at_next_mention(self, create_event):
-        event = create_event(
-            "issue_comment",
-            comment={"body": "@bot1 first command @bot2 second command @bot3 third"},
-        )
+        first = mentions[0]
+        second = mentions[1]
+        third = mentions[2]
 
-        mentions = extract_mentions_from_event(event, re.compile(r"bot[123]"))
+        assert first.previous_mention is None
+        assert first.next_mention is second
 
-        assert len(mentions) == 3
-        assert mentions[0].username == "bot1"
-        assert mentions[0].text == "first command"
-        assert mentions[1].username == "bot2"
-        assert mentions[1].text == "second command"
-        assert mentions[2].username == "bot3"
-        assert mentions[2].text == "third"
+        assert second.previous_mention is first
+        assert second.next_mention is third
+
+        assert third.previous_mention is second
+        assert third.next_mention is None
 
 
 class TestMentionScope:
@@ -307,197 +269,6 @@ class TestMentionScope:
         event = create_event(event_type=event_type, **data)
 
         assert MentionScope.from_event(event) == expected
-
-
-class TestComment:
-    @pytest.mark.parametrize(
-        "event_type",
-        [
-            "issue_comment",
-            "pull_request_review_comment",
-            "pull_request_review",
-            "commit_comment",
-        ],
-    )
-    def test_from_event(self, event_type, create_event):
-        event = create_event(event_type)
-
-        comment = Comment.from_event(event)
-
-        assert isinstance(comment.body, str)
-        assert isinstance(comment.author, str)
-        assert comment.created_at is not None
-        assert isinstance(comment.url, str)
-        assert comment.mentions == []
-        assert isinstance(comment.line_count, int)
-
-    def test_from_event_missing_fields(self, create_event):
-        event = create_event(
-            "issue_comment",
-            comment={
-                "user": {},  # Empty with no login to test fallback
-            },
-            sender={"login": "fallback-user"},
-        )
-
-        comment = Comment.from_event(event)
-
-        assert comment.author == "fallback-user"
-        assert comment.url == ""
-        # created_at should be roughly now
-        assert (timezone.now() - comment.created_at).total_seconds() < 5
-
-    def test_from_event_invalid_event_type(self, create_event):
-        event = create_event("push", some_data="value")
-
-        with pytest.raises(
-            ValueError, match="Cannot extract comment from event type: push"
-        ):
-            Comment.from_event(event)
-
-    @pytest.mark.parametrize(
-        "body,line_count",
-        [
-            ("Single line", 1),
-            ("Line 1\nLine 2\nLine 3", 3),
-            ("Line 1\n\nLine 3", 3),
-            ("", 0),
-        ],
-    )
-    def test_line_count_property(self, body, line_count):
-        comment = Comment(
-            body=body,
-            author="user",
-            created_at=timezone.now(),
-            url="",
-            mentions=[],
-        )
-        assert comment.line_count == line_count
-
-    @pytest.mark.parametrize(
-        "USE_TZ,created_at,expected",
-        [
-            (True, "2024-01-01T12:00:00Z", "2024-01-01T12:00:00+00:00"),
-            (False, "2024-01-01T12:00:00Z", "2024-01-01T12:00:00"),
-        ],
-    )
-    def test_from_event_timezone_handling(
-        self, USE_TZ, created_at, expected, create_event
-    ):
-        event = create_event(
-            "issue_comment",
-            comment={"created_at": created_at},
-        )
-
-        with override_settings(USE_TZ=USE_TZ, TIME_ZONE="UTC"):
-            comment = Comment.from_event(event)
-
-        assert comment.created_at.isoformat() == expected
-
-
-class TestGetMatch:
-    @pytest.mark.parametrize(
-        "text,pattern,should_match,expected",
-        [
-            # Literal string matching
-            ("deploy production", "deploy", True, "deploy"),
-            # Case insensitive - matches but preserves original case
-            ("DEPLOY production", "deploy", True, "DEPLOY"),
-            # No match
-            ("help me", "deploy", False, None),
-            # Must start with pattern
-            ("please deploy", "deploy", False, None),
-        ],
-    )
-    def test_get_match_literal_string(self, text, pattern, should_match, expected):
-        match = get_match(text, pattern)
-
-        if should_match:
-            assert match is not None
-            assert match.group(0) == expected
-        else:
-            assert match is None
-
-    @pytest.mark.parametrize(
-        "text,pattern,expected_groups",
-        [
-            # Simple regex with capture group
-            (
-                "deploy prod",
-                re.compile(r"deploy (prod|staging)"),
-                {0: "deploy prod", 1: "prod"},
-            ),
-            # Named groups
-            (
-                "deploy-prod",
-                re.compile(r"deploy-(?P<env>prod|staging|dev)"),
-                {0: "deploy-prod", "env": "prod"},
-            ),
-            # Question mark pattern
-            (
-                "can you help?",
-                re.compile(r".*\?$"),
-                {0: "can you help?"},
-            ),
-            # No match
-            (
-                "deploy test",
-                re.compile(r"deploy (prod|staging)"),
-                None,
-            ),
-        ],
-    )
-    def test_get_match_regex(self, text, pattern, expected_groups):
-        match = get_match(text, pattern)
-
-        if expected_groups is None:
-            assert match is None
-        else:
-            assert match is not None
-            for group_key, expected_value in expected_groups.items():
-                assert match.group(group_key) == expected_value
-
-    def test_get_match_none(self):
-        match = get_match("any text", None)
-
-        assert match is not None
-        assert match.group(0) == "any text"
-
-    @pytest.mark.parametrize(
-        "text,pattern,should_match",
-        [
-            # Invalid regex treated as literal - doesn't start with [invalid
-            ("test [invalid", "[invalid", False),
-            # Invalid regex treated as literal - starts with [invalid
-            ("[invalid regex", "[invalid", True),
-        ],
-    )
-    def test_get_match_invalid_regex(self, text, pattern, should_match):
-        match = get_match(text, pattern)
-
-        if should_match:
-            assert match is not None
-        else:
-            assert match is None
-
-    @pytest.mark.parametrize(
-        "text,pattern,should_match",
-        [
-            # Case-sensitive pattern
-            ("deploy", re.compile(r"DEPLOY", re.MULTILINE), False),
-            # Case-insensitive pattern
-            ("deploy", re.compile(r"DEPLOY", re.IGNORECASE), True),
-            # Multiline pattern - expects match from start of text
-            ("staging\nprod\ndev", re.compile(r"^prod$", re.MULTILINE), False),
-        ],
-    )
-    def test_get_match_flag_preservation(self, text, pattern, should_match):
-        match = get_match(text, pattern)
-
-        if should_match:
-            assert match is not None
-        else:
-            assert match is None
 
 
 class TestReDoSProtection:
@@ -794,24 +565,20 @@ class TestMatchesPattern:
 
 class TestMention:
     @pytest.mark.parametrize(
-        "event_type,event_data,username,pattern,scope,expected_count,expected_mentions",
+        "event_type,event_data,username,expected_count,expected_mentions",
         [
             # Basic mention extraction
             (
                 "issue_comment",
                 {"comment": {"body": "@bot help"}},
                 "bot",
-                None,
-                None,
                 1,
-                [{"username": "bot", "text": "help"}],
+                [{"username": "bot"}],
             ),
             # No mentions in event
             (
                 "issue_comment",
                 {"comment": {"body": "No mentions here"}},
-                None,
-                None,
                 None,
                 0,
                 [],
@@ -821,75 +588,45 @@ class TestMention:
                 "issue_comment",
                 {"comment": {"body": "@bot1 help @bot2 deploy @user test"}},
                 re.compile(r"bot\d"),
-                None,
-                None,
                 2,
                 [
-                    {"username": "bot1", "text": "help"},
-                    {"username": "bot2", "text": "deploy"},
+                    {"username": "bot1"},
+                    {"username": "bot2"},
                 ],
             ),
-            # Scope filtering - matching scope
+            # Issue comment with issue data
             (
                 "issue_comment",
                 {"comment": {"body": "@bot help"}, "issue": {}},
                 "bot",
-                None,
-                MentionScope.ISSUE,
                 1,
-                [{"username": "bot", "text": "help"}],
+                [{"username": "bot"}],
             ),
-            # Scope filtering - non-matching scope (PR comment on issue-only scope)
+            # PR comment (issue_comment with pull_request)
             (
                 "issue_comment",
                 {"comment": {"body": "@bot help"}, "issue": {"pull_request": {}}},
                 "bot",
-                None,
-                MentionScope.ISSUE,
-                0,
-                [],
-            ),
-            # Pattern matching on mention text
-            (
-                "issue_comment",
-                {"comment": {"body": "@bot deploy prod @bot help me"}},
-                "bot",
-                re.compile(r"deploy.*"),
-                None,
                 1,
-                [{"username": "bot", "text": "deploy prod"}],
+                [{"username": "bot"}],
             ),
-            # String pattern matching (case insensitive)
-            (
-                "issue_comment",
-                {"comment": {"body": "@bot DEPLOY @bot help"}},
-                "bot",
-                "deploy",
-                None,
-                1,
-                [{"username": "bot", "text": "DEPLOY"}],
-            ),
-            # No username filter defaults to app name (bot)
+            # No username filter matches all mentions
             (
                 "issue_comment",
                 {"comment": {"body": "@alice review @bot help"}},
                 None,
-                None,
-                None,
-                1,
-                [{"username": "bot", "text": "help"}],
+                2,
+                [{"username": "alice"}, {"username": "bot"}],
             ),
             # Get all mentions with wildcard regex pattern
             (
                 "issue_comment",
                 {"comment": {"body": "@alice review @bob help"}},
                 re.compile(r".*"),
-                None,
-                None,
                 2,
                 [
-                    {"username": "alice", "text": "review"},
-                    {"username": "bob", "text": "help"},
+                    {"username": "alice"},
+                    {"username": "bob"},
                 ],
             ),
             # PR review comment
@@ -897,41 +634,21 @@ class TestMention:
                 "pull_request_review_comment",
                 {"comment": {"body": "@reviewer please check"}},
                 "reviewer",
-                None,
-                MentionScope.PR,
                 1,
-                [{"username": "reviewer", "text": "please check"}],
+                [{"username": "reviewer"}],
             ),
             # Commit comment
             (
                 "commit_comment",
                 {"comment": {"body": "@bot test this commit"}},
                 "bot",
-                None,
-                MentionScope.COMMIT,
                 1,
-                [{"username": "bot", "text": "test this commit"}],
-            ),
-            # Complex filtering: username + pattern + scope
-            (
-                "issue_comment",
-                {
-                    "comment": {
-                        "body": "@mybot deploy staging @otherbot deploy prod @mybot help"
-                    }
-                },
-                "mybot",
-                re.compile(r"deploy\s+(staging|prod)"),
-                None,
-                1,
-                [{"username": "mybot", "text": "deploy staging"}],
+                [{"username": "bot"}],
             ),
             # Empty comment body
             (
                 "issue_comment",
                 {"comment": {"body": ""}},
-                None,
-                None,
                 None,
                 0,
                 [],
@@ -941,10 +658,8 @@ class TestMention:
                 "issue_comment",
                 {"comment": {"body": "```\n@bot deploy\n```\n@bot help"}},
                 "bot",
-                None,
-                None,
                 1,
-                [{"username": "bot", "text": "help"}],
+                [{"username": "bot"}],
             ),
         ],
     )
@@ -954,247 +669,15 @@ class TestMention:
         event_type,
         event_data,
         username,
-        pattern,
-        scope,
         expected_count,
         expected_mentions,
     ):
         event = create_event(event_type, **event_data)
+        scope = MentionScope.from_event(event)
 
-        mentions = list(
-            Mention.from_event(event, username=username, pattern=pattern, scope=scope)
-        )
+        mentions = list(Mention.from_event(event, username=username, scope=scope))
 
         assert len(mentions) == expected_count
         for mention, expected in zip(mentions, expected_mentions, strict=False):
-            assert isinstance(mention, Mention)
             assert mention.mention.username == expected["username"]
-            assert mention.mention.text == expected["text"]
-            assert mention.comment.body == event_data["comment"]["body"]
-            assert mention.scope == MentionScope.from_event(event)
-
-            # Verify match object is set when pattern is provided
-            if pattern is not None:
-                assert mention.mention.match is not None
-
-    @pytest.mark.parametrize(
-        "body,username,pattern,expected_matches",
-        [
-            # Pattern groups are accessible via match object
-            (
-                "@bot deploy prod to server1",
-                "bot",
-                re.compile(r"deploy\s+(\w+)\s+to\s+(\w+)"),
-                [("prod", "server1")],
-            ),
-            # Named groups
-            (
-                "@bot deploy staging",
-                "bot",
-                re.compile(r"deploy\s+(?P<env>prod|staging|dev)"),
-                [{"env": "staging"}],
-            ),
-        ],
-    )
-    def test_from_event_pattern_groups(
-        self, create_event, body, username, pattern, expected_matches
-    ):
-        event = create_event("issue_comment", comment={"body": body})
-
-        mentions = list(Mention.from_event(event, username=username, pattern=pattern))
-
-        assert len(mentions) == len(expected_matches)
-        for mention, expected in zip(mentions, expected_matches, strict=False):
-            assert mention.mention.match is not None
-            if isinstance(expected, tuple):
-                assert mention.mention.match.groups() == expected
-            elif isinstance(expected, dict):
-                assert mention.mention.match.groupdict() == expected
-
-
-class TestExtractMentionText:
-    @pytest.fixture
-    def create_raw_mention(self):
-        def _create(username: str, position: int, end: int) -> RawMention:
-            # Create a dummy match object - extract_mention_text doesn't use it
-            dummy_text = f"@{username}"
-            match = re.match(r"@(\w+)", dummy_text)
-            assert match is not None  # For type checker
-            return RawMention(
-                match=match, username=username, position=position, end=end
-            )
-
-        return _create
-
-    @pytest.mark.parametrize(
-        "body,all_mentions_data,mention_end,expected_text",
-        [
-            # Basic case: text after mention until next mention
-            (
-                "@user1 hello world @user2 goodbye",
-                [("user1", 0, 6), ("user2", 19, 25)],
-                6,
-                "hello world",
-            ),
-            # No text after mention (next mention immediately follows)
-            (
-                "@user1@user2 hello",
-                [("user1", 0, 6), ("user2", 6, 12)],
-                6,
-                "",
-            ),
-            # Empty text between mentions (whitespace only)
-            (
-                "@user1   @user2",
-                [("user1", 0, 6), ("user2", 9, 15)],
-                6,
-                "",
-            ),
-            # Single mention with text
-            (
-                "@user hello world",
-                [("user", 0, 5)],
-                5,
-                "hello world",
-            ),
-            # Mention at end of string
-            (
-                "Hello @user",
-                [("user", 6, 11)],
-                11,
-                "",
-            ),
-            # Multiple spaces and newlines (should be stripped)
-            (
-                "@user1  \n\n  hello world  \n  @user2",
-                [("user1", 0, 6), ("user2", 28, 34)],
-                6,
-                "hello world",
-            ),
-            # Text with special characters
-            (
-                "@bot deploy-prod --force @admin",
-                [("bot", 0, 4), ("admin", 25, 31)],
-                4,
-                "deploy-prod --force",
-            ),
-            # Unicode text
-            (
-                "@user こんにちは 🎉 @other",
-                [("user", 0, 5), ("other", 14, 20)],
-                5,
-                "こんにちは 🎉",
-            ),
-            # Empty body
-            (
-                "",
-                [],
-                0,
-                "",
-            ),
-            # Complex multi-line text
-            (
-                "@user1 Line 1\nLine 2\nLine 3 @user2 End",
-                [("user1", 0, 6), ("user2", 28, 34)],
-                6,
-                "Line 1\nLine 2\nLine 3",
-            ),
-            # Trailing whitespace should be stripped
-            (
-                "@user text with trailing spaces    ",
-                [("user", 0, 5)],
-                5,
-                "text with trailing spaces",
-            ),
-        ],
-    )
-    def test_extract_mention_text(
-        self, create_raw_mention, body, all_mentions_data, mention_end, expected_text
-    ):
-        all_mentions = [
-            create_raw_mention(username, pos, end)
-            for username, pos, end in all_mentions_data
-        ]
-
-        result = extract_mention_text(body, 0, all_mentions, mention_end)
-
-        assert result == expected_text
-
-    @pytest.mark.parametrize(
-        "body,current_index,all_mentions_data,mention_end,expected_text",
-        [
-            # Last mention: text until end of string
-            (
-                "@user1 hello @user2 goodbye world",
-                1,
-                [("user1", 0, 6), ("user2", 13, 19)],
-                19,
-                "goodbye world",
-            ),
-            # Current index is not first mention
-            (
-                "@alice intro @bob middle text @charlie end",
-                1,  # Looking at @bob
-                [
-                    ("alice", 0, 6),
-                    ("bob", 13, 17),
-                    ("charlie", 30, 38),
-                ],
-                17,
-                "middle text",
-            ),
-            # Multiple mentions with different current indices
-            (
-                "@a first @b second @c third @d fourth",
-                2,  # Looking at @c
-                [
-                    ("a", 0, 2),
-                    ("b", 9, 11),
-                    ("c", 19, 21),
-                    ("d", 28, 30),
-                ],
-                21,
-                "third",
-            ),
-        ],
-    )
-    def test_extract_mention_text_with_different_current_index(
-        self,
-        create_raw_mention,
-        body,
-        current_index,
-        all_mentions_data,
-        mention_end,
-        expected_text,
-    ):
-        all_mentions = [
-            create_raw_mention(username, pos, end)
-            for username, pos, end in all_mentions_data
-        ]
-
-        result = extract_mention_text(body, current_index, all_mentions, mention_end)
-
-        assert result == expected_text
-
-    @pytest.mark.parametrize(
-        "current_index,expected_text",
-        [
-            # Last mention - should get text until end
-            (1, "world"),
-            # Out of bounds current_index (should still work)
-            (10, "world"),
-        ],
-    )
-    def test_extract_mention_text_with_invalid_indices(
-        self, create_raw_mention, current_index, expected_text
-    ):
-        all_mentions = [
-            create_raw_mention("user1", 0, 6),
-            create_raw_mention("user2", 13, 19),
-        ]
-
-        result = extract_mention_text(
-            "@user1 hello @user2 world", current_index, all_mentions, 19
-        )
-
-        assert result == expected_text
+            assert mention.scope == scope

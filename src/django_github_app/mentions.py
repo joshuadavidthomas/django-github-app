@@ -2,15 +2,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum
 from typing import NamedTuple
 
-from django.conf import settings
-from django.utils import timezone
 from gidgethub import sansio
-
-from .conf import app_settings
 
 
 class EventAction(NamedTuple):
@@ -76,8 +71,6 @@ class RawMention:
 CODE_BLOCK_PATTERN = re.compile(r"```[\s\S]*?```", re.MULTILINE)
 INLINE_CODE_PATTERN = re.compile(r"`[^`]+`")
 BLOCKQUOTE_PATTERN = re.compile(r"^\s*>.*$", re.MULTILINE)
-
-
 # GitHub username rules:
 # - 1-39 characters long
 # - Can only contain alphanumeric characters or hyphens
@@ -127,63 +120,47 @@ class LineInfo(NamedTuple):
         return cls(lineno=line_number, text=line_text)
 
 
-def extract_mention_text(
-    body: str, current_index: int, all_mentions: list[RawMention], mention_end: int
-) -> str:
-    text_start = mention_end
-
-    # Find next @mention (any mention, not just matched ones) to know where this text ends
-    next_mention_index = None
-    for j in range(current_index + 1, len(all_mentions)):
-        next_mention_index = j
-        break
-
-    if next_mention_index is not None:
-        text_end = all_mentions[next_mention_index].position
-    else:
-        text_end = len(body)
-
-    return body[text_start:text_end].strip()
-
-
 @dataclass
 class ParsedMention:
     username: str
-    text: str
     position: int
     line_info: LineInfo
-    match: re.Match[str] | None = None
     previous_mention: ParsedMention | None = None
     next_mention: ParsedMention | None = None
+
+
+def matches_pattern(text: str, pattern: str | re.Pattern[str]) -> bool:
+    match pattern:
+        case re.Pattern():
+            return pattern.fullmatch(text) is not None
+        case str():
+            return text.strip().lower() == pattern.strip().lower()
 
 
 def extract_mentions_from_event(
     event: sansio.Event, username_pattern: str | re.Pattern[str] | None = None
 ) -> list[ParsedMention]:
-    comment = event.data.get("comment", {}).get("body", "")
+    comment_key = "comment" if event.event != "pull_request_review" else "review"
+    comment = event.data.get(comment_key, {}).get("body", "")
 
     if not comment:
         return []
 
-    if username_pattern is None:
-        username_pattern = app_settings.SLUG
-
     mentions: list[ParsedMention] = []
     potential_mentions = extract_all_mentions(comment)
-    for i, raw_mention in enumerate(potential_mentions):
-        if not matches_pattern(raw_mention.username, username_pattern):
+    for raw_mention in potential_mentions:
+        if username_pattern and not matches_pattern(
+            raw_mention.username, username_pattern
+        ):
             continue
-
-        text = extract_mention_text(comment, i, potential_mentions, raw_mention.end)
-        line_info = LineInfo.for_mention_in_comment(comment, raw_mention.position)
 
         mentions.append(
             ParsedMention(
                 username=raw_mention.username,
-                text=text,
                 position=raw_mention.position,
-                line_info=line_info,
-                match=None,
+                line_info=LineInfo.for_mention_in_comment(
+                    comment, raw_mention.position
+                ),
                 previous_mention=None,
                 next_mention=None,
             )
@@ -199,62 +176,7 @@ def extract_mentions_from_event(
 
 
 @dataclass
-class Comment:
-    body: str
-    author: str
-    created_at: datetime
-    url: str
-    mentions: list[ParsedMention]
-
-    @property
-    def line_count(self) -> int:
-        if not self.body:
-            return 0
-        return len(self.body.splitlines())
-
-    @classmethod
-    def from_event(cls, event: sansio.Event) -> Comment:
-        match event.event:
-            case "issue_comment" | "pull_request_review_comment" | "commit_comment":
-                comment_data = event.data.get("comment")
-            case "pull_request_review":
-                comment_data = event.data.get("review")
-            case _:
-                comment_data = None
-
-        if not comment_data:
-            raise ValueError(f"Cannot extract comment from event type: {event.event}")
-
-        if created_at_str := comment_data.get("created_at", ""):
-            # GitHub timestamps are in ISO format: 2024-01-01T12:00:00Z
-            created_at_aware = datetime.fromisoformat(
-                created_at_str.replace("Z", "+00:00")
-            )
-            if settings.USE_TZ:
-                created_at = created_at_aware
-            else:
-                created_at = timezone.make_naive(
-                    created_at_aware, timezone.get_default_timezone()
-                )
-        else:
-            created_at = timezone.now()
-
-        author = comment_data.get("user", {}).get("login", "")
-        if not author and "sender" in event.data:
-            author = event.data.get("sender", {}).get("login", "")
-
-        return cls(
-            body=comment_data.get("body", ""),
-            author=author,
-            created_at=created_at,
-            url=comment_data.get("html_url", ""),
-            mentions=[],
-        )
-
-
-@dataclass
 class Mention:
-    comment: Comment
     mention: ParsedMention
     scope: MentionScope | None
 
@@ -264,50 +186,8 @@ class Mention:
         event: sansio.Event,
         *,
         username: str | re.Pattern[str] | None = None,
-        pattern: str | re.Pattern[str] | None = None,
         scope: MentionScope | None = None,
     ):
-        event_scope = MentionScope.from_event(event)
-        if scope is not None and event_scope != scope:
-            return
-
         mentions = extract_mentions_from_event(event, username)
-        if not mentions:
-            return
-
-        comment = Comment.from_event(event)
-        comment.mentions = mentions
-
         for mention in mentions:
-            if pattern is not None:
-                match = get_match(mention.text, pattern)
-                if not match:
-                    continue
-                mention.match = match
-
-            yield cls(
-                comment=comment,
-                mention=mention,
-                scope=event_scope,
-            )
-
-
-def matches_pattern(text: str, pattern: str | re.Pattern[str]) -> bool:
-    match pattern:
-        case re.Pattern():
-            return pattern.fullmatch(text) is not None
-        case str():
-            return text.strip().lower() == pattern.strip().lower()
-
-
-def get_match(text: str, pattern: str | re.Pattern[str] | None) -> re.Match[str] | None:
-    match pattern:
-        case None:
-            return re.match(r"(.*)", text, re.IGNORECASE | re.DOTALL)
-        case re.Pattern():
-            # Use the pattern directly, preserving its flags
-            return pattern.match(text)
-        case str():
-            # For strings, do exact match (case-insensitive)
-            # Escape the string to treat it literally
-            return re.match(re.escape(pattern), text, re.IGNORECASE)
+            yield cls(mention=mention, scope=scope)
