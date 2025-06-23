@@ -280,11 +280,11 @@ def create_event(faker):
             in ["issue_comment", "pull_request_review_comment", "commit_comment"]
             and "comment" not in data
         ):
-            data["comment"] = {"body": faker.sentence()}
+            data["comment"] = {"body": f"@{faker.user_name()} {faker.sentence()}"}
 
         # Auto-create review field for pull request review events
         if event_type == "pull_request_review" and "review" not in data:
-            data["review"] = {"body": faker.sentence()}
+            data["review"] = {"body": f"@{faker.user_name()} {faker.sentence()}"}
 
         # Add user to comment if not present
         if "comment" in data and "user" not in data["comment"]:

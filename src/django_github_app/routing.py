@@ -67,7 +67,6 @@ class GitHubRouter(GidgetHubRouter):
     def mention(
         self,
         *,
-        pattern: str | re.Pattern[str] | None = None,
         username: str | re.Pattern[str] | None = None,
         scope: MentionScope | None = None,
         **kwargs: Any,
@@ -77,8 +76,12 @@ class GitHubRouter(GidgetHubRouter):
             async def async_wrapper(
                 event: sansio.Event, gh: AsyncGitHubAPI, *args: Any, **kwargs: Any
             ) -> None:
+                event_scope = MentionScope.from_event(event)
+                if scope is not None and event_scope != scope:
+                    return
+
                 for mention in Mention.from_event(
-                    event, username=username, pattern=pattern, scope=scope
+                    event, username=username, scope=event_scope
                 ):
                     await func(event, gh, *args, context=mention, **kwargs)  # type: ignore[func-returns-value]
 
@@ -86,8 +89,12 @@ class GitHubRouter(GidgetHubRouter):
             def sync_wrapper(
                 event: sansio.Event, gh: SyncGitHubAPI, *args: Any, **kwargs: Any
             ) -> None:
+                event_scope = MentionScope.from_event(event)
+                if scope is not None and event_scope != scope:
+                    return
+
                 for mention in Mention.from_event(
-                    event, username=username, pattern=pattern, scope=scope
+                    event, username=username, scope=event_scope
                 ):
                     func(event, gh, *args, context=mention, **kwargs)
 
