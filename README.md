@@ -563,15 +563,13 @@ The library loads either async or sync versions of these handlers based on your 
 
 The `@gh.mention` decorator provides a powerful way to build interactive GitHub Apps that respond to mentions in comments. When users mention your app (e.g., `@mybot help`), the decorator automatically detects these mentions and routes them to your handlers.
 
-#### How It Works
-
 The mention system:
 1. Monitors incoming webhook events for comments containing mentions
 2. Extracts all mentions while ignoring those in code blocks, inline code, or blockquotes
 3. Filters mentions based on your specified criteria (username pattern, scope)
 4. Calls your handler once for each matching mention, providing rich context
 
-#### Mention Context
+#### Context
 
 Each handler receives a `context` parameter with detailed information about the mention:
 
