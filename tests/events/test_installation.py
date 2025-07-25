@@ -131,7 +131,7 @@ def test_sync_installation_repositories(installation, create_event):
             }
         ],
     }
-    event = create_event("installation", delivery_id="1234", **data)
+    event = create_event("installation_repositories", delivery_id="1234", **data)
 
     assert Repository.objects.filter(
         repository_id=data["repositories_removed"][0]["id"]

@@ -43,17 +43,4 @@ async def async_installation_data(event: sansio.Event, gh: GitHubAPI, *args, **k
 async def async_installation_repositories(
     event: sansio.Event, gh: GitHubAPI, *args, **kwargs
 ):
-    removed = [repo["id"] for repo in event.data["repositories_removed"]]
-    added = [
-        Repository(
-            installation=await Installation.objects.aget_from_event(event),
-            repository_id=repo["id"],
-            repository_node_id=repo["node_id"],
-            full_name=repo["full_name"],
-        )
-        for repo in event.data["repositories_added"]
-        if not await Repository.objects.filter(repository_id=repo["id"]).aexists()
-    ]
-
-    await Repository.objects.filter(repository_id__in=removed).adelete()
-    await Repository.objects.abulk_create(added)
+    await Repository.objects.async_repositories_from_event(event)

@@ -22,6 +22,10 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 - Added `@gh.mention` decorator for handling GitHub mentions in comments. Supports filtering by username pattern (exact match or regex) and scope (issues, PRs, or commits).
 
+### Fixed
+
+- Fixed N+1 query pattern in `installation_repositories` event handlers by fetching all existing repository IDs in a single query instead of checking each repository individually.
+
 ## [0.7.0]
 
 ### Added
