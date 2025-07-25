@@ -4,7 +4,9 @@ import datetime
 from enum import Enum
 from typing import Any
 
+from asgiref.sync import sync_to_async
 from django.db import models
+from django.db import transaction
 from django.utils import timezone
 from gidgethub import abc
 from gidgethub import sansio
@@ -210,6 +212,42 @@ class RepositoryManager(models.Manager["Repository"]):
             return await self.aget(repository_id=repository_id)
         except Repository.DoesNotExist:
             return None
+
+    def sync_repositories_from_event(self, event: sansio.Event):
+        if event.event != "installation_repositories":
+            raise ValueError(
+                f"Expected 'installation_repositories' event, got '{event.event}'"
+            )
+
+        installation = Installation.objects.get_from_event(event)
+
+        repositories_added = event.data["repositories_added"]
+        repositories_removed = event.data["repositories_removed"]
+
+        existing_repo_ids = set(
+            self.filter(
+                repository_id__in=[repo["id"] for repo in repositories_added]
+            ).values_list("repository_id", flat=True)
+        )
+        added = [
+            Repository(
+                installation=installation,
+                repository_id=repo["id"],
+                repository_node_id=repo["node_id"],
+                full_name=repo["full_name"],
+            )
+            for repo in repositories_added
+            if repo["id"] not in existing_repo_ids
+        ]
+
+        removed = [repo["id"] for repo in repositories_removed]
+
+        with transaction.atomic():
+            self.bulk_create(added)
+            self.filter(repository_id__in=removed).delete()
+
+    async def async_repositories_from_event(self, event: sansio.Event):
+        await sync_to_async(self.sync_repositories_from_event)(event)
 
     create_from_gh_data = async_to_sync_method(acreate_from_gh_data)
     get_from_event = async_to_sync_method(aget_from_event)

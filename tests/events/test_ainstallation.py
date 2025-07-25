@@ -134,7 +134,7 @@ async def test_async_installation_repositories(ainstallation, create_event):
             }
         ],
     }
-    event = create_event("installation", delivery_id="1234", **data)
+    event = create_event("installation_repositories", delivery_id="1234", **data)
 
     assert await Repository.objects.filter(
         repository_id=data["repositories_removed"][0]["id"]

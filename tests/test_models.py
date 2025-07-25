@@ -438,6 +438,118 @@ class TestRepositoryManager:
         assert repo.full_name == data["repository"]["full_name"]
         assert repo.installation_id == repository.installation.id
 
+    def test_sync_repositories_from_event(self, installation, create_event):
+        existing_repo = baker.make(
+            "django_github_app.Repository",
+            installation=installation,
+            repository_id=seq.next(),
+            repository_node_id="existing_node",
+            full_name="owner/existing",
+        )
+        repo_to_remove = baker.make(
+            "django_github_app.Repository",
+            installation=installation,
+            repository_id=seq.next(),
+            repository_node_id="remove_node",
+            full_name="owner/to_remove",
+        )
+
+        event = create_event(
+            "installation_repositories",
+            installation={"id": installation.installation_id},
+            repositories_added=[
+                {
+                    "id": existing_repo.repository_id,
+                    "node_id": "existing_node",
+                    "full_name": "owner/existing",
+                },
+                {
+                    "id": seq.next(),
+                    "node_id": "new_node",
+                    "full_name": "owner/new",
+                },
+            ],
+            repositories_removed=[
+                {"id": repo_to_remove.repository_id},
+            ],
+        )
+
+        Repository.objects.sync_repositories_from_event(event)
+
+        assert Repository.objects.filter(
+            repository_id=existing_repo.repository_id
+        ).exists()
+        assert not Repository.objects.filter(
+            repository_id=repo_to_remove.repository_id
+        ).exists()
+        assert Repository.objects.filter(full_name="owner/new").exists()
+        assert Repository.objects.filter(installation=installation).count() == 2
+
+    @pytest.mark.asyncio
+    async def test_async_repositories_from_event(self, ainstallation, create_event):
+        existing_repo = await sync_to_async(baker.make)(
+            "django_github_app.Repository",
+            installation=ainstallation,
+            repository_id=seq.next(),
+            repository_node_id="existing_node",
+            full_name="owner/existing",
+        )
+        repo_to_remove = await sync_to_async(baker.make)(
+            "django_github_app.Repository",
+            installation=ainstallation,
+            repository_id=seq.next(),
+            repository_node_id="remove_node",
+            full_name="owner/to_remove",
+        )
+
+        event = create_event(
+            "installation_repositories",
+            installation={"id": ainstallation.installation_id},
+            repositories_added=[
+                {
+                    "id": existing_repo.repository_id,
+                    "node_id": "existing_node",
+                    "full_name": "owner/existing",
+                },
+                {
+                    "id": seq.next(),
+                    "node_id": "new_node",
+                    "full_name": "owner/new",
+                },
+            ],
+            repositories_removed=[
+                {"id": repo_to_remove.repository_id},
+            ],
+        )
+
+        await Repository.objects.async_repositories_from_event(event)
+
+        assert await Repository.objects.filter(
+            repository_id=existing_repo.repository_id
+        ).aexists()
+        assert not await Repository.objects.filter(
+            repository_id=repo_to_remove.repository_id
+        ).aexists()
+        assert await Repository.objects.filter(full_name="owner/new").aexists()
+        assert await Repository.objects.filter(installation=ainstallation).acount() == 2
+
+    def test_sync_repositories_from_event_wrong_event_type(self, create_event):
+        event = create_event("push")
+
+        with pytest.raises(
+            ValueError, match="Expected 'installation_repositories' event"
+        ):
+            Repository.objects.sync_repositories_from_event(event)
+
+    @pytest.mark.asyncio
+    async def test_async_repositories_from_event_wrong_event_type(self, create_event):
+        event = create_event("push")
+
+        with pytest.raises(
+            ValueError, match="Expected 'installation_repositories' event"
+        ):
+            await Repository.objects.async_repositories_from_event(event)
+
 
 class TestRepository:
     def test_get_gh_client(self, repository):
