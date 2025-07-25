@@ -581,10 +581,10 @@ async def handle_mention(event, gh, *args, context, **kwargs):
     mention = context.mention
 
     # Access mention details
-    print(f"Username: {mention.username}")           # "mybot"
-    print(f"Position: {mention.position}")           # Character position in comment
-    print(f"Line: {mention.line_info.lineno}")      # Line number (1-based)
-    print(f"Line text: {mention.line_info.text}")   # Full text of the line
+    print(f"Username: {mention.username}")  # "mybot"
+    print(f"Position: {mention.position}")  # Character position in comment
+    print(f"Line: {mention.line_info.lineno}")  # Line number (1-based)
+    print(f"Line text: {mention.line_info.text}")  # Full text of the line
 
     # Navigate between mentions in the same comment
     if mention.previous_mention:
