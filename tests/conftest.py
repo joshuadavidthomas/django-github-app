@@ -129,8 +129,8 @@ def repository_id():
 
 
 @pytest.fixture
-def get_mock_github_api():
-    def _get_mock_github_api(return_data):
+def aget_mock_github_api():
+    def _aget_mock_github_api(return_data, installation_id=12345):
         mock_api = AsyncMock(spec=AsyncGitHubAPI)
 
         async def mock_getitem(*args, **kwargs):
@@ -144,6 +144,36 @@ def get_mock_github_api():
         mock_api.getiter = mock_getiter
         mock_api.__aenter__.return_value = mock_api
         mock_api.__aexit__.return_value = None
+        mock_api.installation_id = installation_id
+
+        return mock_api
+
+    return _aget_mock_github_api
+
+
+@pytest.fixture
+def get_mock_github_api():
+    def _get_mock_github_api(return_data, installation_id=12345):
+        # For sync tests, we still need an async mock because get_gh_client
+        # always returns AsyncGitHubAPI, even when used through async_to_sync.
+        # long term, we'll probably need to just duplicate the code between
+        # sync and async versions instead of relying on async_to_sync/sync_to_async
+        # from asgiref, so we'll keep this separate sync mock github api client
+        # around so we can swap the internals out without changing tests (hopefully)
+        mock_api = AsyncMock(spec=AsyncGitHubAPI)
+
+        async def mock_getitem(*args, **kwargs):
+            return return_data
+
+        async def mock_getiter(*args, **kwargs):
+            for data in return_data:
+                yield data
+
+        mock_api.getitem = mock_getitem
+        mock_api.getiter = mock_getiter
+        mock_api.__aenter__.return_value = mock_api
+        mock_api.__aexit__.return_value = None
+        mock_api.installation_id = installation_id
 
         return mock_api
 
@@ -167,11 +197,11 @@ def installation(get_mock_github_api, baker):
 
 
 @pytest_asyncio.fixture
-async def ainstallation(get_mock_github_api, baker):
+async def ainstallation(aget_mock_github_api, baker):
     installation = await sync_to_async(baker.make)(
         "django_github_app.Installation", installation_id=seq.next()
     )
-    mock_github_api = get_mock_github_api(
+    mock_github_api = aget_mock_github_api(
         [
             {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"},
             {"id": seq.next(), "node_id": "node2", "full_name": "owner/repo2"},
@@ -210,14 +240,14 @@ def repository(installation, get_mock_github_api, baker):
 
 
 @pytest_asyncio.fixture
-async def arepository(ainstallation, get_mock_github_api, baker):
+async def arepository(ainstallation, aget_mock_github_api, baker):
     repository = await sync_to_async(baker.make)(
         "django_github_app.Repository",
         repository_id=seq.next(),
         full_name="owner/repo",
         installation=ainstallation,
     )
-    mock_github_api = get_mock_github_api(
+    mock_github_api = aget_mock_github_api(
         [
             {
                 "number": 1,
@@ -247,19 +277,40 @@ def create_event(faker):
         if delivery_id is None:
             delivery_id = seq.next()
 
-        if event_type == "issue_comment" and "comment" not in data:
-            data["comment"] = {"body": faker.sentence()}
+        # Auto-create comment field for comment events
+        if (
+            event_type
+            in ["issue_comment", "pull_request_review_comment", "commit_comment"]
+            and "comment" not in data
+        ):
+            data["comment"] = {"body": f"@{faker.user_name()} {faker.sentence()}"}
 
-        if "comment" in data and isinstance(data["comment"], str):
-            # Allow passing just the comment body as a string
-            data["comment"] = {"body": data["comment"]}
+        # Auto-create review field for pull request review events
+        if event_type == "pull_request_review" and "review" not in data:
+            data["review"] = {"body": f"@{faker.user_name()} {faker.sentence()}"}
 
+        # Add user to comment if not present
         if "comment" in data and "user" not in data["comment"]:
             data["comment"]["user"] = {"login": faker.user_name()}
+
+        # Add user to review if not present
+        if "review" in data and "user" not in data["review"]:
+            data["review"]["user"] = {"login": faker.user_name()}
+
+        if event_type == "issue_comment" and "issue" not in data:
+            data["issue"] = {"number": faker.random_int(min=1, max=1000)}
+
+        if event_type == "commit_comment" and "commit" not in data:
+            data["commit"] = {"sha": faker.sha1()}
+
+        if event_type == "pull_request_review_comment" and "pull_request" not in data:
+            data["pull_request"] = {"number": faker.random_int(min=1, max=1000)}
 
         if "repository" not in data and event_type in [
             "issue_comment",
             "pull_request",
+            "pull_request_review_comment",
+            "commit_comment",
             "push",
         ]:
             data["repository"] = {

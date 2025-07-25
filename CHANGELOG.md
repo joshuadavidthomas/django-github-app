@@ -18,6 +18,10 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Added
+
+- Added `@gh.mention` decorator for handling GitHub mentions in comments. Supports filtering by username pattern (exact match or regex) and scope (issues, PRs, or commits).
+
 ## [0.7.0]
 
 ### Added

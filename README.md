@@ -211,6 +211,8 @@ cog.outl(f"- Django {', '.join([version for version in DJ_VERSIONS if version !=
 
 ## Getting Started
 
+### Webhook Events
+
 django-github-app provides a router-based system for handling GitHub webhook events, built on top of [gidgethub](https://github.com/gidgethub/gidgethub). The router matches incoming webhooks to your handler functions based on the event type and optional action.
 
 To start handling GitHub webhooks, create your event handlers in a new file (e.g., `events.py`) within your Django app.
@@ -314,6 +316,78 @@ For more information about GitHub webhook events and payloads, see these pages i
 - [About webhooks](https://docs.github.com/en/webhooks/about-webhooks)
 
 For more details about how `gidgethub.sansio.Event` and webhook routing work, see the [gidgethub documentation](https://gidgethub.readthedocs.io).
+
+### Mentions
+
+django-github-app provides a `@gh.mention` decorator to easily respond when your GitHub App is mentioned in comments. This is useful for building interactive bots that respond to user commands.
+
+For ASGI projects:
+
+```python
+# your_app/events.py
+import re
+from django_github_app.routing import GitHubRouter
+from django_github_app.mentions import MentionScope
+
+gh = GitHubRouter()
+
+# Respond to mentions of your bot
+@gh.mention(username="mybot")
+async def handle_bot_mention(event, gh, *args, context, **kwargs):
+    """Respond when someone mentions @mybot"""
+    mention = context.mention
+    issue_url = event.data["issue"]["comments_url"]
+
+    await gh.post(
+        issue_url,
+        data={"body": f"Hello! You mentioned me at position {mention.position}"},
+    )
+
+
+# Use regex to match multiple bot names
+@gh.mention(username=re.compile(r".*-bot"))
+async def handle_any_bot(event, gh, *args, context, **kwargs):
+    """Respond to any mention ending with '-bot'"""
+    mention = context.mention
+    await gh.post(
+        event.data["issue"]["comments_url"],
+        data={"body": f"Bot {mention.username} at your service!"},
+    )
+
+
+# Restrict to pull request mentions only
+@gh.mention(username="deploy-bot", scope=MentionScope.PR)
+async def handle_deploy_command(event, gh, *args, context, **kwargs):
+    """Only respond to @deploy-bot in pull requests"""
+    await gh.post(
+        event.data["issue"]["comments_url"], data={"body": "Starting deployment..."}
+    )
+```
+
+For WSGI projects:
+
+```python
+# your_app/events.py
+import re
+from django_github_app.routing import GitHubRouter
+from django_github_app.mentions import MentionScope
+
+gh = GitHubRouter()
+
+# Respond to mentions of your bot
+@gh.mention(username="mybot")
+def handle_bot_mention(event, gh, *args, context, **kwargs):
+    """Respond when someone mentions @mybot"""
+    mention = context.mention
+    issue_url = event.data["issue"]["comments_url"]
+
+    gh.post(
+        issue_url,
+        data={"body": f"Hello! You mentioned me at position {mention.position}"},
+    )
+```
+
+The mention decorator automatically extracts mentions from comments and provides context about each mention. Handlers are called once for each matching mention in a comment.
 
 ## Features
 
@@ -484,6 +558,135 @@ The library includes event handlers for managing GitHub App installations and re
   - `repository.renamed`: Updates repository details
 
 The library loads either async or sync versions of these handlers based on your `GITHUB_APP["WEBHOOK_TYPE"]` setting.
+
+### Mentions
+
+The `@gh.mention` decorator provides a powerful way to build interactive GitHub Apps that respond to mentions in comments. When users mention your app (e.g., `@mybot help`), the decorator automatically detects these mentions and routes them to your handlers.
+
+The mention system:
+1. Monitors incoming webhook events for comments containing mentions
+2. Extracts all mentions while ignoring those in code blocks, inline code, or blockquotes
+3. Filters mentions based on your specified criteria (username pattern, scope)
+4. Calls your handler once for each matching mention, providing rich context
+
+#### Context
+
+Each handler receives a `context` parameter with detailed information about the mention:
+
+```python
+@gh.mention(username="mybot")
+async def handle_mention(event, gh, *args, context, **kwargs):
+    mention = context.mention
+
+    # Access mention details
+    print(f"Username: {mention.username}")  # "mybot"
+    print(f"Position: {mention.position}")  # Character position in comment
+    print(f"Line: {mention.line_info.lineno}")  # Line number (1-based)
+    print(f"Line text: {mention.line_info.text}")  # Full text of the line
+
+    # Navigate between mentions in the same comment
+    if mention.previous_mention:
+        print(f"Previous: @{mention.previous_mention.username}")
+    if mention.next_mention:
+        print(f"Next: @{mention.next_mention.username}")
+
+    # Check the scope (ISSUE, PR, or COMMIT)
+    print(f"Scope: {context.scope}")
+```
+
+#### Filtering Options
+
+##### Username Patterns
+
+Filter mentions by username using exact matches or regular expressions:
+
+```python
+# Exact match (case-insensitive)
+@gh.mention(username="deploy-bot")
+def exact_match_mention():
+    ...
+
+
+# Regular expression pattern
+@gh.mention(username=re.compile(r".*-bot"))
+def regex_mention():
+    ...
+
+
+# Respond to all mentions (no filter)
+@gh.mention()
+def all_mentions():
+    ...
+```
+
+##### Scopes
+
+Limit mentions to specific GitHub contexts:
+
+```python
+from django_github_app.mentions import MentionScope
+
+# Only respond in issues (not PRs)
+@gh.mention(username="issue-bot", scope=MentionScope.ISSUE)
+def issue_mention():
+    ...
+
+
+# Only respond in pull requests
+@gh.mention(username="review-bot", scope=MentionScope.PR)
+def pull_request_mention():
+    ...
+
+
+# Only respond in commit comments
+@gh.mention(username="commit-bot", scope=MentionScope.COMMIT)
+def commit_mention():
+    ...
+```
+
+Scope mappings:
+- `MentionScope.ISSUE`: Issue comments only
+- `MentionScope.PR`: PR comments, PR reviews, and PR review comments
+- `MentionScope.COMMIT`: Commit comments only
+
+#### Parsing Rules
+
+The mention parser follows GitHub's rules:
+
+- **Valid mentions**: Must start with `@` followed by a GitHub username
+- **Username format**: 1-39 characters, alphanumeric or single hyphens, no consecutive hyphens
+- **Position**: Must be preceded by whitespace or start of line
+- **Exclusions**: Mentions in code blocks, inline code, or blockquotes are ignored
+
+Examples:
+```
+@bot help                    ✓ Detected
+Hey @bot can you help?       ✓ Detected
+@deploy-bot start            ✓ Detected
+See @user's comment          ✓ Detected
+
+email@example.com            ✗ Not a mention
+@@bot                        ✗ Invalid format
+`@bot help`                  ✗ Inside code
+```@bot in code```           ✗ Inside code block
+> @bot quoted                ✗ Inside blockquote
+```
+
+#### Multiple Mentions
+
+When a comment contains multiple mentions, each matching mention triggers a separate handler call:
+
+```python
+@gh.mention(username=re.compile(r".*-bot"))
+async def handle_bot_mention(event, gh, *args, context, **kwargs):
+    mention = context.mention
+
+    # For comment: "@deploy-bot start @test-bot validate @user check"
+    # This handler is called twice:
+    # 1. For @deploy-bot (mention.username = "deploy-bot")
+    # 2. For @test-bot (mention.username = "test-bot")
+    # The @user mention is filtered out by the regex pattern
+```
 
 ### System Checks
 

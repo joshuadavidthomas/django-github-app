@@ -272,10 +272,10 @@ class TestInstallation:
         account_type,
         private_key,
         ainstallation,
-        get_mock_github_api,
+        aget_mock_github_api,
         override_app_settings,
     ):
-        mock_github_api = get_mock_github_api({"foo": "bar"})
+        mock_github_api = aget_mock_github_api({"foo": "bar"})
         ainstallation.get_gh_client = MagicMock(return_value=mock_github_api)
 
         with override_app_settings(PRIVATE_KEY=private_key):
