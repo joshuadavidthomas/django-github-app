@@ -337,7 +337,7 @@ async def handle_bot_mention(event, gh, *args, context, **kwargs):
     """Respond when someone mentions @mybot"""
     mention = context.mention
     issue_url = event.data["issue"]["comments_url"]
-    
+
     await gh.post(
         issue_url,
         data={"body": f"Hello! You mentioned me at position {mention.position}"}
@@ -379,7 +379,7 @@ def handle_bot_mention(event, gh, *args, context, **kwargs):
     """Respond when someone mentions @mybot"""
     mention = context.mention
     issue_url = event.data["issue"]["comments_url"]
-    
+
     gh.post(
         issue_url,
         data={"body": f"Hello! You mentioned me at position {mention.position}"}
@@ -578,19 +578,19 @@ Each handler receives a `context` parameter with detailed information about the 
 @gh.mention(username="mybot")
 async def handle_mention(event, gh, *args, context, **kwargs):
     mention = context.mention
-    
+
     # Access mention details
     print(f"Username: {mention.username}")           # "mybot"
     print(f"Position: {mention.position}")           # Character position in comment
     print(f"Line: {mention.line_info.lineno}")      # Line number (1-based)
     print(f"Line text: {mention.line_info.text}")   # Full text of the line
-    
+
     # Navigate between mentions in the same comment
     if mention.previous_mention:
         print(f"Previous: @{mention.previous_mention.username}")
     if mention.next_mention:
         print(f"Next: @{mention.next_mention.username}")
-    
+
     # Check the scope (ISSUE, PR, or COMMIT)
     print(f"Scope: {context.scope}")
 ```
@@ -646,7 +646,7 @@ The mention parser follows GitHub's rules:
 Examples:
 ```
 @bot help                    ✓ Detected
-Hey @bot can you help?       ✓ Detected  
+Hey @bot can you help?       ✓ Detected
 @deploy-bot start            ✓ Detected
 See @user's comment          ✓ Detected
 
@@ -665,7 +665,7 @@ When a comment contains multiple mentions, each matching mention triggers a sepa
 @gh.mention(username=re.compile(r".*-bot"))
 async def handle_bot_mention(event, gh, *args, context, **kwargs):
     mention = context.mention
-    
+
     # For comment: "@deploy-bot start @test-bot validate @user check"
     # This handler is called twice:
     # 1. For @deploy-bot (mention.username = "deploy-bot")
