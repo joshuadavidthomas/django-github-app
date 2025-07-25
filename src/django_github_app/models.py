@@ -247,6 +247,9 @@ class RepositoryManager(models.Manager["Repository"]):
             self.filter(repository_id__in=removed).delete()
 
     async def async_repositories_from_event(self, event: sansio.Event):
+        # Django's `transaction` is not async compatible yet, so we have the sync
+        # version called using `sync_to_async` -- an inversion from the rest of the library
+        # only defining async methods
         await sync_to_async(self.sync_repositories_from_event)(event)
 
     create_from_gh_data = async_to_sync_method(acreate_from_gh_data)
