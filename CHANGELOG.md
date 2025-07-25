@@ -18,6 +18,8 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+## [0.8.0]
+
 ### Added
 
 - Added `@gh.mention` decorator for handling GitHub mentions in comments. Supports filtering by username pattern (exact match or regex) and scope (issues, PRs, or commits).
@@ -117,7 +119,7 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 - Josh Thomas <josh@joshthomas.dev> (maintainer)
 
-[unreleased]: https://github.com/joshuadavidthomas/django-github-app/compare/v0.7.0...HEAD
+[unreleased]: https://github.com/joshuadavidthomas/django-github-app/compare/v0.8.0...HEAD
 [0.1.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.1.0
 [0.2.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.2.0
 [0.2.1]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.2.1
@@ -127,3 +129,4 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 [0.6.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.6.0
 [0.6.1]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.6.1
 [0.7.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.7.0
+[0.8.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.8.0
