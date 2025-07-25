@@ -154,22 +154,25 @@ def aget_mock_github_api():
 @pytest.fixture
 def get_mock_github_api():
     def _get_mock_github_api(return_data, installation_id=12345):
-        from django_github_app.github import SyncGitHubAPI
+        # For sync tests, we still need an async mock because get_gh_client
+        # always returns AsyncGitHubAPI, even when used through async_to_sync.
+        # long term, we'll probably need to just duplicate the code between
+        # sync and async versions instead of relying on async_to_sync/sync_to_async
+        # from asgiref, so we'll keep this separate sync mock github api client
+        # around so we can swap the internals out without changing tests (hopefully)
+        mock_api = AsyncMock(spec=AsyncGitHubAPI)
 
-        mock_api = MagicMock(spec=SyncGitHubAPI)
-
-        def mock_getitem(*args, **kwargs):
+        async def mock_getitem(*args, **kwargs):
             return return_data
 
-        def mock_getiter(*args, **kwargs):
-            yield from return_data
-
-        def mock_post(*args, **kwargs):
-            pass
+        async def mock_getiter(*args, **kwargs):
+            for data in return_data:
+                yield data
 
         mock_api.getitem = mock_getitem
         mock_api.getiter = mock_getiter
-        mock_api.post = mock_post
+        mock_api.__aenter__.return_value = mock_api
+        mock_api.__aexit__.return_value = None
         mock_api.installation_id = installation_id
 
         return mock_api
@@ -178,11 +181,11 @@ def get_mock_github_api():
 
 
 @pytest.fixture
-def installation(aget_mock_github_api, baker):
+def installation(get_mock_github_api, baker):
     installation = baker.make(
         "django_github_app.Installation", installation_id=seq.next()
     )
-    mock_github_api = aget_mock_github_api(
+    mock_github_api = get_mock_github_api(
         [
             {"id": seq.next(), "node_id": "node1", "full_name": "owner/repo1"},
             {"id": seq.next(), "node_id": "node2", "full_name": "owner/repo2"},
@@ -210,14 +213,14 @@ async def ainstallation(aget_mock_github_api, baker):
 
 
 @pytest.fixture
-def repository(installation, aget_mock_github_api, baker):
+def repository(installation, get_mock_github_api, baker):
     repository = baker.make(
         "django_github_app.Repository",
         repository_id=seq.next(),
         full_name="owner/repo",
         installation=installation,
     )
-    mock_github_api = aget_mock_github_api(
+    mock_github_api = get_mock_github_api(
         [
             {
                 "number": 1,
