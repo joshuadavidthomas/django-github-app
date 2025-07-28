@@ -147,7 +147,7 @@ Choose the appropriate setup method based on your situation:
 
 > [!IMPORTANT]
 > django-github-app needs to create `Installation` and `Repository` models in your database to track where your GitHub App is installed. How this happens depends on your setup method:
-> 
+>
 > - **New GitHub App**: When you install the app for the first time, GitHub sends an `installation.created` webhook event. django-github-app automatically creates the necessary models when it receives this event.
 > - **Existing GitHub App**: If the app is already installed, no `installation.created` webhook event is sent. You must use the `github import-app` management command to manually create the models.
 
