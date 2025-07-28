@@ -91,7 +91,9 @@ class InstallationManager(models.Manager["Installation"]):
         if installation is None and "installation" in event.data:
             app_id = event.data["installation"]["app_id"]
             if app_id == int(app_settings.APP_ID):
-                installation = await self.acreate_from_gh_data(event.data["installation"])
+                installation = await self.acreate_from_gh_data(
+                    event.data["installation"]
+                )
         return installation
 
     create_from_event = async_to_sync_method(acreate_from_event)
