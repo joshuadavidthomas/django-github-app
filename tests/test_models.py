@@ -328,6 +328,23 @@ class TestInstallationManager:
         assert result.installation_id == installation_id
         assert result.data == installation_data
 
+    def test_get_or_create_from_event_wrong_app_id(
+        self, create_event, override_app_settings
+    ):
+        installation_data = {
+            "id": seq.next(),
+            "app_id": seq.next(),
+        }
+        event = create_event(
+            "installation_repositories",
+            installation=installation_data,
+        )
+
+        with override_app_settings(APP_ID="999999"):
+            result = Installation.objects.get_or_create_from_event(event)
+
+        assert result is None
+
 
 class TestInstallationStatus:
     @pytest.mark.parametrize(
