@@ -18,6 +18,10 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Changed
+
+- Changed `installation_repositories` internal event handlers to automatically create missing `Installation` models using new `(a)get_or_create_from_event` method, eliminating the need for manual import when connecting to pre-existing GitHub App installations.
+
 ## [0.8.0]
 
 ### Added

@@ -148,3 +148,39 @@ def test_sync_installation_repositories(installation, create_event):
     assert Repository.objects.filter(
         repository_id=data["repositories_added"][0]["id"]
     ).exists()
+
+
+def test_sync_installation_repositories_creates_installation(
+    create_event, override_app_settings
+):
+    app_id = seq.next()
+    installation_id = seq.next()
+
+    data = {
+        "installation": {
+            "id": installation_id,
+            "app_id": app_id,
+            "account": {"login": "testorg", "type": "Organization"},
+        },
+        "repositories_removed": [],
+        "repositories_added": [
+            {
+                "id": seq.next(),
+                "node_id": "repo1234",
+                "full_name": "owner/repo",
+            }
+        ],
+    }
+    event = create_event("installation_repositories", delivery_id="1234", **data)
+
+    assert not Installation.objects.filter(installation_id=installation_id).exists()
+
+    with override_app_settings(APP_ID=str(app_id)):
+        sync_installation_repositories(event, None)
+
+    installation = Installation.objects.get(installation_id=installation_id)
+
+    assert installation.data == data["installation"]
+    assert Repository.objects.filter(
+        repository_id=data["repositories_added"][0]["id"], installation=installation
+    ).exists()
