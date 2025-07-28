@@ -86,9 +86,18 @@ class InstallationManager(models.Manager["Installation"]):
         except (Installation.DoesNotExist, KeyError):
             return None
 
+    async def aget_or_create_from_event(self, event: sansio.Event):
+        installation = await self.aget_from_event(event)
+        if installation is None and "installation" in event.data:
+            app_id = event.data["installation"]["app_id"]
+            if app_id == int(app_settings.APP_ID):
+                installation = await self.acreate_from_gh_data(event.data["installation"])
+        return installation
+
     create_from_event = async_to_sync_method(acreate_from_event)
     create_from_gh_data = async_to_sync_method(acreate_from_gh_data)
     get_from_event = async_to_sync_method(aget_from_event)
+    get_or_create_from_event = async_to_sync_method(aget_or_create_from_event)
 
 
 class InstallationStatus(models.IntegerChoices):
@@ -219,7 +228,7 @@ class RepositoryManager(models.Manager["Repository"]):
                 f"Expected 'installation_repositories' event, got '{event.event}'"
             )
 
-        installation = Installation.objects.get_from_event(event)
+        installation = Installation.objects.get_or_create_from_event(event)
 
         repositories_added = event.data["repositories_added"]
         repositories_removed = event.data["repositories_removed"]

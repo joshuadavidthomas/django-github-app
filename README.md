@@ -149,7 +149,7 @@ Choose the appropriate setup method based on your situation:
 > django-github-app needs to create `Installation` and `Repository` models in your database to track where your GitHub App is installed. How this happens depends on your setup method:
 >
 > - **New GitHub App**: When you install the app for the first time, GitHub sends an `installation.created` webhook event. django-github-app automatically creates the necessary models when it receives this event.
-> - **Existing GitHub App**: If the app is already installed, no `installation.created` webhook event is sent. You must use the `github import-app` management command to manually create the models.
+> - **Existing GitHub App**: If the app is already installed, no `installation.created` webhook event is sent. django-github-app will automatically create the models when it receives the first `installation_repositories` event (e.g., when repositories are added/removed). Alternatively, you can use the `github import-app` management command to import the installation immediately.
 
 #### Create a New GitHub App
 
@@ -188,7 +188,9 @@ Choose the appropriate setup method based on your situation:
 
 #### Use an Existing GitHub App and Installation
 
-If your GitHub App is already installed on organizations/repositories, the `installation.created` webhook event won't be sent when you connect django-github-app to your existing app. In this case, you need to manually import the installation data.
+If your GitHub App is already installed on organizations/repositories, the `installation.created` webhook event won't be sent when you connect django-github-app to your existing app. django-github-app will automatically create the necessary models when it receives the first webhook event that includes installation data (such as `installation_repositories`).
+
+However, if you want to import the installation immediately without waiting for a webhook event, you can use the management command below.
 
 1. Collect your existing app and installation's information.
 

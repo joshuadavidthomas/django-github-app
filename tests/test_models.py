@@ -234,6 +234,100 @@ class TestInstallationManager:
 
         assert result == installation
 
+    @pytest.mark.asyncio
+    async def test_aget_or_create_from_event_existing(
+        self, ainstallation, create_event
+    ):
+        event = create_event(
+            "installation_repositories",
+            installation={"id": ainstallation.installation_id, "app_id": seq.next()},
+        )
+
+        result = await Installation.objects.aget_or_create_from_event(event)
+
+        assert result == ainstallation
+
+    @pytest.mark.asyncio
+    async def test_aget_or_create_from_event_new(
+        self, create_event, override_app_settings
+    ):
+        installation_id = seq.next()
+        app_id = seq.next()
+        installation_data = {
+            "id": installation_id,
+            "app_id": app_id,
+            "account": {"login": "testorg", "type": "Organization"},
+        }
+        event = create_event(
+            "installation_repositories",
+            installation=installation_data,
+            repositories_added=[],
+            repositories_removed=[],
+        )
+
+        assert not await Installation.objects.filter(
+            installation_id=installation_id
+        ).aexists()
+
+        with override_app_settings(APP_ID=str(app_id)):
+            result = await Installation.objects.aget_or_create_from_event(event)
+
+        assert result is not None
+        assert result.installation_id == installation_id
+        assert result.data == installation_data
+
+    @pytest.mark.asyncio
+    async def test_aget_or_create_from_event_wrong_app_id(
+        self, create_event, override_app_settings
+    ):
+        installation_data = {
+            "id": seq.next(),
+            "app_id": seq.next(),
+        }
+        event = create_event(
+            "installation_repositories",
+            installation=installation_data,
+        )
+
+        with override_app_settings(APP_ID="999999"):
+            result = await Installation.objects.aget_or_create_from_event(event)
+
+        assert result is None
+
+    def test_get_or_create_from_event_existing(self, installation, create_event):
+        event = create_event(
+            "installation_repositories",
+            installation={"id": installation.installation_id, "app_id": seq.next()},
+        )
+
+        result = Installation.objects.get_or_create_from_event(event)
+
+        assert result == installation
+
+    def test_get_or_create_from_event_new(self, create_event, override_app_settings):
+        installation_id = seq.next()
+        app_id = seq.next()
+        installation_data = {
+            "id": installation_id,
+            "app_id": app_id,
+            "account": {"login": "testorg", "type": "Organization"},
+        }
+        event = create_event(
+            "installation_repositories",
+            installation=installation_data,
+            repositories_added=[],
+            repositories_removed=[],
+        )
+
+        assert not Installation.objects.filter(installation_id=installation_id).exists()
+
+        with override_app_settings(APP_ID=str(app_id)):
+            result = Installation.objects.get_or_create_from_event(event)
+
+        assert result is not None
+        assert result.installation_id == installation_id
+        assert result.data == installation_data
+
 
 class TestInstallationStatus:
     @pytest.mark.parametrize(
