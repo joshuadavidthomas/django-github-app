@@ -188,7 +188,7 @@ Choose the appropriate setup method based on your situation:
 
 #### Use an Existing GitHub App and Installation
 
-If your GitHub App is already installed on organization/repositories, the `installation.created` webhook event won't be sent when you connect django-github-app to your existing app. In this case, you need to manually import the installation data.
+If your GitHub App is already installed on organizations/repositories, the `installation.created` webhook event won't be sent when you connect django-github-app to your existing app. In this case, you need to manually import the installation data.
 
 1. Collect your existing app and installation's information.
 
