@@ -107,7 +107,7 @@ cog.outl(f"- Django {', '.join([version for version in DJ_VERSIONS if version !=
 > - Use `"async"` with `AsyncWebhookView`
 > - Use `"sync"` with `SyncWebhookView`
 
-5. Setup your GitHub App, either by registering a new one or importing an existing one, and configure django-github-app using your GitHub App's information.
+5. Setup your GitHub App and configure django-github-app using your GitHub App's information.
 
    You will need the following information from your GitHub App:
 
@@ -136,7 +136,22 @@ cog.outl(f"- Django {', '.join([version for version in DJ_VERSIONS if version !=
 >
 > django-github-app will automatically detect if `GITHUB_APP["PRIVATE_KEY"]` is a path and load the file contents. For more information, see the [`PRIVATE_KEY`](#private_key) section in the [Configuration](#configuration) documentation below.
 
-### Create a New GitHub App
+### GitHub App Setup
+
+After completing the [Installation](#installation) steps above, you will need to set up your GitHub App using the information from Step 5 above.
+
+Choose the appropriate setup method based on your situation:
+
+- **[Create a New GitHub App](#create-a-new-github-app)**: If you're setting up a fresh GitHub App
+- **[Use an Existing GitHub App](#use-an-existing-github-app-and-installation)**: If your GitHub App is already installed on organizations/repositories
+
+> [!IMPORTANT]
+> django-github-app needs to create `Installation` and `Repository` models in your database to track where your GitHub App is installed. How this happens depends on your setup method:
+> 
+> - **New GitHub App**: When you install the app for the first time, GitHub sends an `installation.created` webhook event. django-github-app automatically creates the necessary models when it receives this event.
+> - **Existing GitHub App**: If the app is already installed, no `installation.created` webhook event is sent. You must use the `github import-app` management command to manually create the models.
+
+#### Create a New GitHub App
 
 1. Register a new GitHub App, following [these instructions](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) from the GitHub Docs. For a more detailed tutorial, there is also [this page](https://docs.github.com/en/apps/creating-github-apps/writing-code-for-a-github-app/building-a-github-app-that-responds-to-webhook-events) -- in particular the section on [Setup](https://docs.github.com/en/apps/creating-github-apps/writing-code-for-a-github-app/building-a-github-app-that-responds-to-webhook-events#setup).
 
@@ -169,9 +184,11 @@ cog.outl(f"- Django {', '.join([version for version in DJ_VERSIONS if version !=
    - Select the account to install it on
    - Choose which repositories to give it access to
 
-   When you install the app, django-github-app will automatically create the necessary `Installation` and `Repository` models when it receives the `installation.created` webhook event.
+   When you install the app **for the first time**, django-github-app will automatically create the necessary `Installation` and `Repository` models when it receives the `installation.created` webhook event.
 
-### Use an Existing GitHub App and Installation
+#### Use an Existing GitHub App and Installation
+
+If your GitHub App is already installed on organization/repositories, the `installation.created` webhook event won't be sent when you connect django-github-app to your existing app. In this case, you need to manually import the installation data.
 
 1. Collect your existing app and installation's information.
 
@@ -199,7 +216,7 @@ cog.outl(f"- Django {', '.join([version for version in DJ_VERSIONS if version !=
    }
    ```
 
-3. Import your existing GitHub App by using the `github import-app` management command.
+3. Import your existing GitHub App by using the `github import-app` management command to create the necessary `Installation` and `Repository` models.
 
    ```bash
    python manage.py github import-app --type user --name <username> --installation-id 123456
@@ -208,6 +225,9 @@ cog.outl(f"- Django {', '.join([version for version in DJ_VERSIONS if version !=
 
    uv run manage.py github import-app --type user --name <username> --installation-id 123456
    ```
+
+> [!NOTE]
+> After importing, django-github-app will handle future webhook events normally, including repository additions/removals via the `installation_repositories` event.
 
 ## Getting Started
 
