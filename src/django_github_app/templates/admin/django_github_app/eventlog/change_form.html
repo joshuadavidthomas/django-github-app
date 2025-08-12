@@ -1,0 +1,94 @@
+{# inspired by https://til.simonwillison.net/django/pretty-print-json-admin #}
+{% extends "admin/change_form.html" %}
+{% block admin_change_form_document_ready %}
+    {{ block.super }}
+    <script>
+// Recursively sort object keys (case-insensitive)
+const sortObject = (obj, depth = 0) => {
+    if (depth > 100) return obj;
+
+    if (obj === null || typeof obj !== 'object') {
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => sortObject(item, depth + 1));
+    }
+
+    return Object.keys(obj)
+        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+        .reduce((sorted, key) => {
+            sorted[key] = sortObject(obj[key], depth + 1);
+            return sorted;
+        }, {});
+};
+
+Array.from(document.querySelectorAll('div.readonly')).forEach(div => {
+    let data;
+    try {
+        data = JSON.parse(div.textContent || div.innerText);
+    } catch {
+        return;
+    }
+
+    Object.assign(div.style, {
+        backgroundColor: 'var(--darkened-bg, #f5f5f5)',
+        border: '1px solid var(--border-color, #ddd)',
+        borderRadius: '0.25rem',
+        fontFamily: "ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace",
+        fontSize: '.75rem',
+        lineHeight: '1.4',
+        padding: '0.75rem',
+        overflow: 'auto',
+        maxHeight: '600px',
+        whiteSpace: 'pre'
+    });
+    div.textContent = JSON.stringify(sortObject(data), null, 2);
+
+    const label = div.previousElementSibling;
+    if (label && label.tagName === 'LABEL') {
+        label.style.display = 'flex';
+        label.style.flexDirection = 'column';
+        label.style.alignItems = 'flex-start';
+        label.style.gap = '0.5rem';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.textContent = 'Copy';
+        copyBtn.type = 'button';
+        Object.assign(copyBtn.style, {
+            backgroundColor: 'var(--button-bg, var(--body-bg, #fff))',
+            border: '1px solid var(--border-color, #ddd)',
+            borderRadius: '0.2rem',
+            color: 'var(--body-fg, #333)',
+            cursor: 'pointer',
+            opacity: '0.8',
+            padding: '0.2rem 0.5rem',
+            transition: 'opacity 0.2s',
+        });
+
+        copyBtn.onmouseover = () => copyBtn.style.opacity = '1';
+        copyBtn.onmouseout = () => copyBtn.style.opacity = '0.8';
+        copyBtn.onclick = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                await navigator.clipboard.writeText(div.textContent);
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => copyBtn.textContent = originalText, 1500);
+            } catch {
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(div);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                document.execCommand('copy');
+                selection.removeAllRanges();
+            }
+        };
+
+        label.appendChild(copyBtn);
+    }
+});
+    </script>
+{% endblock %}
