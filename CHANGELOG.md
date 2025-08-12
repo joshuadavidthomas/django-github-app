@@ -20,7 +20,7 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ### Added
 
-- Added custom admin change form for `EventLog` with JSON pretty printing and copy functionality for webhook payloads.
+- Added JSON pretty printing and copy functionality to `EventLog` and `Installation` admin change forms
 
 ## [0.9.0]
 
