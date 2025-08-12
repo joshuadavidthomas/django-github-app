@@ -20,6 +20,9 @@
             }, {});
     };
 
+    // Make sure to only target the two fields we care about:
+    // - EventLog.payload
+    // - Installation.data
     Array.from(document.querySelectorAll('.field-data div.readonly, .field-payload div.readonly')).forEach(div => {
         let data;
         try {
