@@ -202,7 +202,7 @@ const animationObserver = new IntersectionObserver((entries) => {
     });
 }, {
     root: container, // Observe within the scroll container
-    threshold: 0.1   // Trigger when 10% visible
+    threshold: 0.5   // Trigger when 50% visible
 });
 
 function updateStatus(status, className) {
