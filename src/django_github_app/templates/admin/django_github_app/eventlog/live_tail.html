@@ -1,0 +1,296 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
+{% endblock %}
+
+{% block nav-breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="live-tail-container">
+    <div class="live-tail-header">
+        <h2>{{ title }}</h2>
+        <div class="controls">
+            <button id="pause-btn" class="button">Pause</button>
+            <button id="clear-btn" class="button">Clear</button>
+            <span class="connection-status" id="status">Connecting...</span>
+        </div>
+    </div>
+    
+    <div class="live-tail-output" id="events-container">
+        <!-- Events will be displayed here -->
+    </div>
+</div>
+
+<style>
+.live-tail-container {
+    margin: 20px 0;
+    background: #000;
+    color: #0f0;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.live-tail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: #f8f8f8;
+    border-bottom: 1px solid #ccc;
+    color: #333;
+}
+
+.live-tail-header h2 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.controls button {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+.connection-status {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: #ffc107;
+    color: #000;
+}
+
+.connection-status.connected {
+    background: #28a745;
+    color: #fff;
+}
+
+.connection-status.error {
+    background: #dc3545;
+    color: #fff;
+}
+
+.live-tail-output {
+    height: 600px;
+    overflow-y: auto;
+    padding: 15px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.event-entry {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #333;
+}
+
+.event-meta {
+    color: #888;
+    margin-bottom: 5px;
+}
+
+.event-type {
+    color: #0ff;
+    font-weight: bold;
+}
+
+.event-action {
+    color: #ff0;
+}
+
+.event-payload {
+    margin-top: 8px;
+    padding: 8px;
+    background: #111;
+    border-radius: 3px;
+    white-space: pre-wrap;
+    font-size: 11px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+</style>
+
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<script>
+let eventSource = null;
+let lastEventId = 0;
+let isPaused = false;
+
+const statusEl = document.getElementById('status');
+const pauseBtn = document.getElementById('pause-btn');
+const clearBtn = document.getElementById('clear-btn');
+const container = document.getElementById('events-container');
+
+function updateStatus(status, className) {
+    statusEl.textContent = status;
+    statusEl.className = 'connection-status ' + className;
+}
+
+function formatEvent(eventData) {
+    const timestamp = new Date(eventData.received_at).toLocaleString();
+    const eventType = eventData.event || 'unknown';
+    const action = eventData.action ? ':' + eventData.action : '';
+    const payload = eventData.payload ? JSON.stringify(eventData.payload, null, 2) : '';
+    
+    return `
+        <div class="event-entry">
+            <div class="event-meta">
+                [${timestamp}] ID: ${eventData.id}
+            </div>
+            <div>
+                <span class="event-type">${eventType}</span><span class="event-action">${action}</span>
+            </div>
+            ${payload ? `<div class="event-payload">${payload}</div>` : ''}
+        </div>
+    `;
+}
+
+function addEvent(eventData) {
+    if (!eventData.id) return;
+    
+    lastEventId = Math.max(lastEventId, eventData.id);
+    const eventHtml = formatEvent(eventData);
+    container.insertAdjacentHTML('afterbegin', eventHtml);
+    
+    // Keep only the latest 50 events
+    const events = container.querySelectorAll('.event-entry');
+    if (events.length > 50) {
+        for (let i = 50; i < events.length; i++) {
+            events[i].remove();
+        }
+    }
+}
+
+function startSSE() {
+    if (eventSource) {
+        eventSource.close();
+    }
+    
+    updateStatus('Connecting...', '');
+    
+    const streamUrl = new URL('stream/', window.location.href);
+    if (lastEventId > 0) {
+        streamUrl.searchParams.set('last_id', lastEventId.toString());
+    }
+    
+    eventSource = new EventSource(streamUrl.toString());
+    
+    eventSource.onopen = function() {
+        updateStatus('Connected', 'connected');
+    };
+    
+    eventSource.onmessage = function(event) {
+        if (isPaused) return;
+        
+        try {
+            const eventData = JSON.parse(event.data);
+            if (eventData.id) {
+                addEvent(eventData);
+            }
+        } catch (e) {
+            console.error('Error parsing event data:', e);
+        }
+    };
+    
+    eventSource.onerror = function() {
+        updateStatus('Connection Error - Retrying...', 'error');
+        setTimeout(() => {
+            if (!isPaused) {
+                startPolling();
+            }
+        }, 3000);
+    };
+}
+
+function startPolling() {
+    if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+    }
+    
+    updateStatus('Polling...', 'connected');
+    
+    const poll = () => {
+        if (isPaused) {
+            setTimeout(poll, 2000);
+            return;
+        }
+        
+        const streamUrl = new URL('stream/', window.location.href);
+        if (lastEventId > 0) {
+            streamUrl.searchParams.set('last_id', lastEventId.toString());
+        }
+        
+        fetch(streamUrl.toString())
+            .then(response => {
+                if (!response.ok) throw new Error('Network error');
+                return response.text();
+            })
+            .then(text => {
+                const lines = text.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const eventData = JSON.parse(line.substring(6));
+                            if (eventData.id) {
+                                addEvent(eventData);
+                            }
+                        } catch (e) {
+                            // Ignore parse errors
+                        }
+                    }
+                }
+                setTimeout(poll, 2000);
+            })
+            .catch(() => {
+                updateStatus('Polling Error - Retrying...', 'error');
+                setTimeout(poll, 5000);
+            });
+    };
+    
+    setTimeout(poll, 1000);
+}
+
+// Event listeners
+pauseBtn.addEventListener('click', function() {
+    isPaused = !isPaused;
+    this.textContent = isPaused ? 'Resume' : 'Pause';
+    updateStatus(isPaused ? 'Paused' : 'Connected', isPaused ? '' : 'connected');
+});
+
+clearBtn.addEventListener('click', function() {
+    container.innerHTML = '';
+});
+
+// Start with SSE, fallback to polling
+if (typeof EventSource !== 'undefined') {
+    startSSE();
+} else {
+    startPolling();
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (eventSource) {
+        eventSource.close();
+    }
+});
+</script>
+{% endblock %}

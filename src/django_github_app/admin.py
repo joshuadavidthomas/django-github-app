@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import datetime
+import json
+import time
+from collections.abc import Iterator
 from collections.abc import Sequence
 
 from django import forms
@@ -10,6 +13,7 @@ from django.core.exceptions import ValidationError
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
+from django.http import StreamingHttpResponse
 from django.shortcuts import render
 from django.urls import URLPattern
 from django.urls import URLResolver
@@ -64,6 +68,16 @@ class EventLogModelAdmin(admin.ModelAdmin):
         urls = super().get_urls()
         custom_urls = [
             path(
+                "live-tail/",
+                self.admin_site.admin_view(self.live_tail_view),
+                name="django_github_app_eventlog_live_tail",
+            ),
+            path(
+                "live-tail/stream/",
+                self.admin_site.admin_view(self.live_tail_stream_view),
+                name="django_github_app_eventlog_live_tail_stream",
+            ),
+            path(
                 "cleanup/",
                 self.admin_site.admin_view(self.cleanup_view),
                 name="django_github_app_eventlog_cleanup",
@@ -102,6 +116,51 @@ class EventLogModelAdmin(admin.ModelAdmin):
             template = "cleanup.html"
 
         return render(request, f"admin/django_github_app/eventlog/{template}", context)
+
+    def live_tail_view(self, request: HttpRequest) -> HttpResponse:
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Live Tail - Event Log",
+            "opts": self.model._meta,
+        }
+        return render(
+            request, "admin/django_github_app/eventlog/live_tail.html", context
+        )
+
+    def live_tail_stream_view(self, request: HttpRequest) -> StreamingHttpResponse:
+        def event_stream() -> Iterator[str]:
+            last_id = 0
+            if "last_id" in request.GET:
+                try:
+                    last_id = int(str(request.GET["last_id"]))
+                except (ValueError, TypeError):
+                    last_id = 0
+
+            while True:
+                events = EventLog.objects.filter(id__gt=last_id).order_by("id")[:10]
+
+                for event in events:
+                    last_id = event.id
+                    event_data = {
+                        "id": event.id,
+                        "event": event.event,
+                        "action": event.action,
+                        "received_at": event.received_at.isoformat(),
+                        "payload": event.payload,
+                    }
+                    yield f"data: {json.dumps(event_data)}\n\n"
+
+                if not events:
+                    yield "data: {}\n\n"
+
+                time.sleep(1)
+
+        response = StreamingHttpResponse(
+            event_stream(), content_type="text/event-stream"
+        )
+        response["Cache-Control"] = "no-cache"
+        response["X-Accel-Buffering"] = "no"
+        return response
 
 
 @admin.register(Installation)

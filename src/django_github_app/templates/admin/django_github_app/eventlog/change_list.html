@@ -2,6 +2,10 @@
 {% load i18n admin_urls %}
 {% block object-tools-items %}
     <li>
+        {% url opts|admin_urlname:'live_tail' as live_tail_url %}
+        <a href="{{ live_tail_url }}">{% translate "Live Tail" %}</a>
+    </li>
+    <li>
         {% url opts|admin_urlname:'cleanup' as cleanup_url %}
         <a href="{{ cleanup_url }}">{% blocktranslate with verbose_name_plural=opts.verbose_name_plural %}Clean up {{ verbose_name_plural }}{% endblocktranslate %}</a>
     </li>
