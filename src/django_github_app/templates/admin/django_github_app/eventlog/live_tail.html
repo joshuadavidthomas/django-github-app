@@ -37,11 +37,11 @@
 <style>
 .live-tail-container {
     margin: 20px 0;
-    background: var(--body-bg, #121212);
-    color: var(--body-fg, #eeeeee);
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    background: var(--body-bg);
+    color: var(--body-fg);
+    font-family: var(--font-family-monospace);
     font-size: 12px;
-    border: 1px solid var(--border-color, #353535);
+    border: 1px solid var(--border-color);
     border-radius: 4px;
 }
 
@@ -50,9 +50,9 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px 15px;
-    background: var(--darkened-bg, #212121);
-    border-bottom: 1px solid var(--border-color, #353535);
-    color: var(--body-fg, #eeeeee);
+    background: var(--darkened-bg);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--body-fg);
 }
 
 .status-section {
@@ -69,40 +69,50 @@
 
 .queue-info {
     font-size: 12px;
-    color: var(--body-quiet-color, #d0d0d0);
+    color: var(--body-quiet-color);
     font-style: italic;
 }
 
 .controls button {
-    padding: 5px 10px;
-    font-size: 12px;
-    background: var(--close-button-bg, #333333);
-    color: var(--body-fg, #eeeeee);
-    border: 1px solid var(--border-color, #353535);
-    border-radius: 3px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: normal;
+    background: var(--button-bg);
+    color: var(--button-fg);
+    border: none;
+    border-radius: 4px;
     cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    font-family: var(--font-family-primary);
+    line-height: normal;
 }
 
-.controls button:hover {
-    background: var(--close-button-hover-bg, #666666);
+.controls button:hover,
+.controls button:focus {
+    background: var(--button-hover-bg);
+}
+
+.controls button:active {
+    background: var(--default-button-hover-bg);
 }
 
 .connection-status {
     font-size: 12px;
     padding: 3px 8px;
     border-radius: 3px;
-    background: var(--message-warning-bg, #583305);
-    color: var(--body-fg, #eeeeee);
+    background: var(--message-warning-bg);
+    color: var(--body-fg);
 }
 
 .connection-status.connected {
-    background: var(--message-success-bg, #006b1b);
-    color: var(--body-fg, #eeeeee);
+    background: var(--message-success-bg);
+    color: var(--body-fg);
 }
 
 .connection-status.error {
-    background: var(--message-error-bg, #570808);
-    color: var(--error-fg, #e35f5f);
+    background: var(--message-error-bg);
+    color: var(--error-fg);
 }
 
 .live-tail-output {
@@ -111,41 +121,41 @@
     padding: 15px;
     line-height: 1.4;
     word-break: break-word;
-    background: var(--body-bg, #121212);
+    background: var(--body-bg);
 }
 
 .event-entry {
     margin-bottom: 15px;
     padding-bottom: 10px;
-    border-bottom: 1px solid var(--hairline-color, #272727);
+    border-bottom: 1px solid var(--hairline-color);
 }
 
 .event-meta {
-    color: var(--body-quiet-color, #d0d0d0);
+    color: var(--body-quiet-color);
     margin-bottom: 5px;
     font-size: 11px;
 }
 
 .event-type {
-    color: var(--link-fg, #81d4fa);
+    color: var(--link-fg);
     font-weight: bold;
 }
 
 .event-action {
-    color: var(--body-medium-color, #e0e0e0);
+    color: var(--body-medium-color);
 }
 
 .event-payload {
     margin-top: 8px;
     padding: 8px;
-    background: var(--selected-bg, #1b1b1b);
-    border: 1px solid var(--hairline-color, #272727);
+    background: var(--selected-bg);
+    border: 1px solid var(--hairline-color);
     border-radius: 3px;
     white-space: pre-wrap;
     font-size: 11px;
     max-height: 200px;
     overflow-y: auto;
-    color: var(--body-quiet-color, #d0d0d0);
+    color: var(--body-quiet-color);
 }
 </style>
 
