@@ -13,7 +13,6 @@
     <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2"
             integrity="sha384-yhS+rWHB2hwrHEg86hWiQV7XL6u+PH9X+3BlmS2+CNBaGYU8Nd7RZ2rZ9DWXgTdr"
             crossorigin="anonymous"></script>
-    <script src="{% static 'django_github_app/js/live_tail_htmx.js' %}"></script>
 {% endblock extrahead %}
 {% block content %}
     <div class="live-tail-container"
@@ -35,4 +34,5 @@
              sse-swap="event"
              hx-swap="afterbegin"></div>
     </div>
+    <script src="{% static 'django_github_app/js/live_tail_htmx.js' %}"></script>
 {% endblock content %}
