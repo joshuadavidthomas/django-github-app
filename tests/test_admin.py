@@ -179,3 +179,44 @@ class TestEventLogModelAdmin:
         messages = list(get_messages(response.wsgi_request))
         assert len(messages) == 1
         assert "Successfully deleted 1 event older than 5 days" in str(messages[0])
+
+    def test_live_tail_view(self, client, admin_user):
+        client.login(username="admin", password="adminpass")
+        response = client.get(reverse("admin:django_github_app_eventlog_live_tail"))
+
+        assert response.status_code == 200
+        assert b'hx-ext="sse"' in response.content
+        assert b"sse-connect" in response.content
+        assert b"live-tail-container" in response.content
+
+    def test_live_tail_stream_returns_html(self, client, admin_user, baker):
+        client.login(username="admin", password="adminpass")
+
+        # Create a test event with current time
+        now = timezone.now()
+        event = baker.make(
+            EventLog,
+            event="push",
+            payload={"action": "synchronize", "ref": "refs/heads/main"},
+            received_at=now,
+        )
+
+        # Test the stream endpoint with since parameter before the event
+        since = (now - datetime.timedelta(seconds=1)).isoformat()
+        response = client.get(
+            reverse("admin:django_github_app_eventlog_live_tail_stream"),
+            {"since": since},
+        )
+
+        assert response.status_code == 200
+        assert response["Content-Type"] == "text/event-stream"
+        assert "no-cache" in response["Cache-Control"]
+
+        # Read the first chunk of the stream
+        content = next(response.streaming_content).decode()
+
+        # Should contain SSE event format with HTML
+        assert "event: event" in content
+        assert "data: " in content
+        assert '<div class="event-entry new-event"' in content
+        assert str(event.id) in content

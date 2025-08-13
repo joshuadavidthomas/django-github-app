@@ -117,6 +117,53 @@ class TestEventLog:
 
         assert event.action == expected
 
+    def test_payload_formatted_none(self):
+        event = baker.make("django_github_app.EventLog", payload=None)
+        assert event.payload_formatted == ""
+
+    def test_payload_formatted_simple(self):
+        payload = {"action": "opened", "number": 42}
+        event = baker.make("django_github_app.EventLog", payload=payload)
+
+        formatted = event.payload_formatted
+        assert '"action": "opened"' in formatted
+        assert '"number": 42' in formatted
+        assert formatted.startswith("{\n")  # Should be pretty-printed
+
+    def test_payload_formatted_sorted_keys(self):
+        payload = {"zebra": 1, "alpha": 2, "Beta": 3, "apple": 4}
+        event = baker.make("django_github_app.EventLog", payload=payload)
+
+        formatted = event.payload_formatted
+        lines = formatted.split("\n")
+
+        # Should be sorted case-insensitively
+        # Expected order: alpha, apple, Beta, zebra
+        alpha_line = next(i for i, line in enumerate(lines) if "alpha" in line)
+        apple_line = next(i for i, line in enumerate(lines) if "apple" in line)
+        beta_line = next(i for i, line in enumerate(lines) if "Beta" in line)
+        zebra_line = next(i for i, line in enumerate(lines) if "zebra" in line)
+
+        assert alpha_line < apple_line < beta_line < zebra_line
+
+    def test_payload_formatted_nested_objects(self):
+        payload = {
+            "pull_request": {
+                "title": "Fix bug",
+                "author": {"login": "user"},
+                "labels": [{"name": "bug"}, {"name": "urgent"}],
+            },
+            "action": "opened",
+        }
+        event = baker.make("django_github_app.EventLog", payload=payload)
+
+        formatted = event.payload_formatted
+        # Should recursively sort nested objects
+        assert '"action": "opened"' in formatted
+        assert '"pull_request"' in formatted
+        assert '"author"' in formatted
+        assert '"labels"' in formatted
+
 
 class TestInstallationManager:
     @pytest.mark.asyncio

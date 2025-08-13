@@ -62,6 +62,38 @@ class EventLog(models.Model):
             return None
         return self.payload.get("action")
 
+    def _sort_object(self, obj: Any, depth: int = 0) -> Any:
+        if depth > 100:
+            return obj
+
+        if obj is None or not isinstance(obj, dict | list):
+            return obj
+
+        if isinstance(obj, list):
+            return [self._sort_object(item, depth + 1) for item in obj]
+
+        if isinstance(obj, dict):
+            return {
+                key: self._sort_object(value, depth + 1)
+                for key, value in sorted(obj.items(), key=lambda x: x[0].lower())
+            }
+
+        return obj
+
+    @property
+    def payload_formatted(self) -> str:
+        if self.payload is None:
+            return ""
+        try:
+            import json
+
+            sorted_payload = self._sort_object(self.payload)
+            return json.dumps(sorted_payload, indent=2)
+        except (TypeError, ValueError):
+            import json
+
+            return json.dumps(self.payload, indent=2)
+
 
 class InstallationManager(models.Manager["Installation"]):
     async def acreate_from_event(self, event: sansio.Event):

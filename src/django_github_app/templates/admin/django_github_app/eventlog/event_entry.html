@@ -1,0 +1,12 @@
+{% load admin_urls static %}
+<div class="event-entry new-event" data-event-id="{{ event.id }}">
+    <div class="event-meta">
+        [{{ event.received_at|date:"SHORT_DATETIME_FORMAT" }}] ID: {{ event.id }}
+    </div>
+    <div>
+        <span class="event-type">{{ event.event }}</span>{% if event.action %}<span class="event-action">:{{ event.action }}</span>{% endif %}
+    </div>
+    {% if event.payload %}
+        <div class="event-payload">{{ event.payload_formatted }}</div>
+    {% endif %}
+</div>

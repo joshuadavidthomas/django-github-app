@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import json
 import time
 from collections.abc import Iterator
 from collections.abc import Sequence
@@ -15,6 +14,7 @@ from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.http import StreamingHttpResponse
 from django.shortcuts import render
+from django.template.loader import render_to_string
 from django.urls import URLPattern
 from django.urls import URLResolver
 from django.urls import path
@@ -118,18 +118,20 @@ class EventLogModelAdmin(admin.ModelAdmin):
         return render(request, f"admin/django_github_app/eventlog/{template}", context)
 
     def live_tail_view(self, request: HttpRequest) -> HttpResponse:
-        context = {
-            **self.admin_site.each_context(request),
-            "title": "Live tail",
-            "opts": self.model._meta,
-        }
         return render(
-            request, "admin/django_github_app/eventlog/live_tail.html", context
+            request,
+            "admin/django_github_app/eventlog/live_tail.html",
+            context={
+                **self.admin_site.each_context(request),
+                "title": "Live tail",
+                "opts": self.model._meta,
+                "page_load_time": timezone.now().isoformat(),
+            },
         )
 
     def live_tail_stream_view(self, request: HttpRequest) -> StreamingHttpResponse:
         def event_stream() -> Iterator[str]:
-            since = timezone.now()  # Default to now
+            since = timezone.now()
 
             if "since" in request.GET:
                 since_param = str(request.GET["since"])
@@ -143,9 +145,7 @@ class EventLogModelAdmin(admin.ModelAdmin):
                     else:
                         since = parsed_time
                 except (ValueError, TypeError):
-                    since = timezone.now()
-            else:
-                since = timezone.now()
+                    pass
 
             while True:
                 events = EventLog.objects.filter(received_at__gt=since).order_by(
@@ -154,26 +154,25 @@ class EventLogModelAdmin(admin.ModelAdmin):
 
                 for event in events:
                     since = event.received_at  # Update cursor to this event's timestamp
-                    event_data = {
-                        "id": event.id,
-                        "event": event.event,
-                        "action": event.action,
-                        "received_at": event.received_at.isoformat(),
-                        "payload": event.payload,
-                    }
-                    yield f"data: {json.dumps(event_data)}\n\n"
+                    # Render HTML using the event entry template
+                    html = render_to_string(
+                        "admin/django_github_app/eventlog/event_entry.html",
+                        {"event": event},
+                        request=request,
+                    )
+                    yield f"event: event\ndata: {html}\n\n"
 
                 if not events:
                     # Send keepalive
-                    yield "data: {}\n\n"
+                    yield "event: keepalive\ndata: \n\n"
 
                 time.sleep(1)
 
         response = StreamingHttpResponse(
-            event_stream(), content_type="text/event-stream"
+            event_stream(),
+            content_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
-        response["Cache-Control"] = "no-cache"
-        response["X-Accel-Buffering"] = "no"
         return response
 
 
