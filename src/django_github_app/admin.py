@@ -160,7 +160,9 @@ class EventLogModelAdmin(admin.ModelAdmin):
                         {"event": event},
                         request=request,
                     )
-                    yield f"event: event\ndata: {html}\n\n"
+                    # Strip newlines and minify HTML for SSE compatibility
+                    minified_html = " ".join(html.split())
+                    yield f"event: event\ndata: {minified_html}\n\n"
 
                 if not events:
                     # Send keepalive
