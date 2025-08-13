@@ -19,11 +19,13 @@
 {% block content %}
 <div class="live-tail-container">
     <div class="live-tail-header">
-        <h2>{{ title }}</h2>
+        <div class="status-section">
+            <span class="connection-status" id="status">Connecting...</span>
+            <span class="queue-info" id="queue-info"></span>
+        </div>
         <div class="controls">
             <button id="pause-btn" class="button">Pause</button>
             <button id="clear-btn" class="button">Clear</button>
-            <span class="connection-status" id="status">Connecting...</span>
         </div>
     </div>
     
@@ -53,15 +55,22 @@
     color: #333;
 }
 
-.live-tail-header h2 {
-    margin: 0;
-    font-size: 16px;
+.status-section {
+    display: flex;
+    gap: 15px;
+    align-items: center;
 }
 
 .controls {
     display: flex;
     gap: 10px;
     align-items: center;
+}
+
+.queue-info {
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
 }
 
 .controls button {
@@ -132,8 +141,14 @@
 let eventSource = null;
 let pageLoadTime = new Date().toISOString();
 let isPaused = false;
+let isConnected = false;
+let eventQueue = [];
+let pauseTimer = null;
+
+const PAUSE_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 const statusEl = document.getElementById('status');
+const queueInfoEl = document.getElementById('queue-info');
 const pauseBtn = document.getElementById('pause-btn');
 const clearBtn = document.getElementById('clear-btn');
 const container = document.getElementById('events-container');
@@ -141,6 +156,58 @@ const container = document.getElementById('events-container');
 function updateStatus(status, className) {
     statusEl.textContent = status;
     statusEl.className = 'connection-status ' + className;
+}
+
+function updatePauseButton() {
+    if (!isConnected) {
+        pauseBtn.textContent = 'Reconnect';
+        pauseBtn.disabled = false;
+        queueInfoEl.textContent = '';
+    } else if (isPaused) {
+        pauseBtn.textContent = 'Resume';
+        if (eventQueue.length > 0) {
+            queueInfoEl.textContent = `${eventQueue.length} queued`;
+        } else {
+            queueInfoEl.textContent = '';
+        }
+    } else {
+        pauseBtn.textContent = 'Pause';
+        queueInfoEl.textContent = '';
+    }
+}
+
+function startPauseTimer() {
+    if (pauseTimer) {
+        clearTimeout(pauseTimer);
+    }
+    
+    pauseTimer = setTimeout(() => {
+        // Auto-disconnect after timeout
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+        isConnected = false;
+        isPaused = false;
+        eventQueue = []; // Clear queue on disconnect
+        updateStatus('Disconnected', 'error');
+        updatePauseButton();
+    }, PAUSE_TIMEOUT);
+}
+
+function cancelPauseTimer() {
+    if (pauseTimer) {
+        clearTimeout(pauseTimer);
+        pauseTimer = null;
+    }
+}
+
+function drainEventQueue() {
+    while (eventQueue.length > 0) {
+        const eventData = eventQueue.shift();
+        addEventToDOM(eventData);
+    }
+    updatePauseButton();
 }
 
 function formatEvent(eventData) {
@@ -162,7 +229,7 @@ function formatEvent(eventData) {
     `;
 }
 
-function addEvent(eventData) {
+function addEventToDOM(eventData) {
     if (!eventData.id) return;
     
     const eventHtml = formatEvent(eventData);
@@ -175,6 +242,19 @@ function addEvent(eventData) {
             events[i].remove();
         }
     }
+}
+
+function addEvent(eventData) {
+    if (!eventData.id) return;
+    
+    if (isPaused) {
+        // Queue the event instead of displaying it
+        eventQueue.push(eventData);
+        updatePauseButton();
+        return;
+    }
+    
+    addEventToDOM(eventData);
 }
 
 function startSSE() {
@@ -190,16 +270,16 @@ function startSSE() {
     eventSource = new EventSource(streamUrl.toString());
     
     eventSource.onopen = function() {
+        isConnected = true;
         updateStatus('Connected', 'connected');
+        updatePauseButton();
     };
     
     eventSource.onmessage = function(event) {
-        if (isPaused) return;
-        
         try {
             const eventData = JSON.parse(event.data);
             if (eventData.id) {
-                addEvent(eventData);
+                addEvent(eventData); // addEvent handles pausing internally now
             }
         } catch (e) {
             console.error('Error parsing event data:', e);
@@ -207,7 +287,9 @@ function startSSE() {
     };
     
     eventSource.onerror = function() {
+        isConnected = false;
         updateStatus('Connection Error - Retrying...', 'error');
+        updatePauseButton();
         setTimeout(() => {
             if (!isPaused) {
                 startPolling();
@@ -222,7 +304,9 @@ function startPolling() {
         eventSource = null;
     }
     
+    isConnected = true;
     updateStatus('Polling...', 'connected');
+    updatePauseButton();
     
     const poll = () => {
         if (isPaused) {
@@ -245,7 +329,7 @@ function startPolling() {
                         try {
                             const eventData = JSON.parse(line.substring(6));
                             if (eventData.id) {
-                                addEvent(eventData);
+                                addEvent(eventData); // addEvent handles pausing internally
                             }
                         } catch (e) {
                             // Ignore parse errors
@@ -255,7 +339,9 @@ function startPolling() {
                 setTimeout(poll, 2000);
             })
             .catch(() => {
+                isConnected = false;
                 updateStatus('Polling Error - Retrying...', 'error');
+                updatePauseButton();
                 setTimeout(poll, 5000);
             });
     };
@@ -265,13 +351,40 @@ function startPolling() {
 
 // Event listeners
 pauseBtn.addEventListener('click', function() {
-    isPaused = !isPaused;
-    this.textContent = isPaused ? 'Resume' : 'Pause';
-    updateStatus(isPaused ? 'Paused' : 'Connected', isPaused ? '' : 'connected');
+    if (!isConnected) {
+        // Reconnect
+        eventQueue = [];
+        isPaused = false;
+        pageLoadTime = new Date().toISOString(); // Reset to current time
+        if (typeof EventSource !== 'undefined') {
+            startSSE();
+        } else {
+            startPolling();
+        }
+        return;
+    }
+    
+    if (isPaused) {
+        // Resume: drain queue and continue
+        isPaused = false;
+        cancelPauseTimer();
+        drainEventQueue();
+        updateStatus('Connected', 'connected');
+    } else {
+        // Pause: start queuing events
+        isPaused = true;
+        startPauseTimer();
+        updateStatus('Paused', '');
+    }
+    
+    updatePauseButton();
 });
 
 clearBtn.addEventListener('click', function() {
     container.innerHTML = '';
+    // Also clear the queue if paused
+    eventQueue = [];
+    updatePauseButton();
 });
 
 // Start with SSE, fallback to polling
@@ -285,6 +398,9 @@ if (typeof EventSource !== 'undefined') {
 window.addEventListener('beforeunload', function() {
     if (eventSource) {
         eventSource.close();
+    }
+    if (pauseTimer) {
+        clearTimeout(pauseTimer);
     }
 });
 </script>
