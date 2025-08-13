@@ -120,7 +120,7 @@ class EventLogModelAdmin(admin.ModelAdmin):
     def live_tail_view(self, request: HttpRequest) -> HttpResponse:
         context = {
             **self.admin_site.each_context(request),
-            "title": "Live Tail - Event Log",
+            "title": "Live tail",
             "opts": self.model._meta,
         }
         return render(
