@@ -37,11 +37,11 @@
 <style>
 .live-tail-container {
     margin: 20px 0;
-    background: #000;
-    color: #0f0;
+    background: var(--body-bg, #121212);
+    color: var(--body-fg, #eeeeee);
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 12px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-color, #353535);
     border-radius: 4px;
 }
 
@@ -50,9 +50,9 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px 15px;
-    background: #f8f8f8;
-    border-bottom: 1px solid #ccc;
-    color: #333;
+    background: var(--darkened-bg, #212121);
+    border-bottom: 1px solid var(--border-color, #353535);
+    color: var(--body-fg, #eeeeee);
 }
 
 .status-section {
@@ -69,31 +69,40 @@
 
 .queue-info {
     font-size: 12px;
-    color: #666;
+    color: var(--body-quiet-color, #d0d0d0);
     font-style: italic;
 }
 
 .controls button {
     padding: 5px 10px;
     font-size: 12px;
+    background: var(--close-button-bg, #333333);
+    color: var(--body-fg, #eeeeee);
+    border: 1px solid var(--border-color, #353535);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.controls button:hover {
+    background: var(--close-button-hover-bg, #666666);
 }
 
 .connection-status {
     font-size: 12px;
     padding: 3px 8px;
     border-radius: 3px;
-    background: #ffc107;
-    color: #000;
+    background: var(--message-warning-bg, #583305);
+    color: var(--body-fg, #eeeeee);
 }
 
 .connection-status.connected {
-    background: #28a745;
-    color: #fff;
+    background: var(--message-success-bg, #006b1b);
+    color: var(--body-fg, #eeeeee);
 }
 
 .connection-status.error {
-    background: #dc3545;
-    color: #fff;
+    background: var(--message-error-bg, #570808);
+    color: var(--error-fg, #e35f5f);
 }
 
 .live-tail-output {
@@ -102,37 +111,41 @@
     padding: 15px;
     line-height: 1.4;
     word-break: break-word;
+    background: var(--body-bg, #121212);
 }
 
 .event-entry {
     margin-bottom: 15px;
     padding-bottom: 10px;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--hairline-color, #272727);
 }
 
 .event-meta {
-    color: #888;
+    color: var(--body-quiet-color, #d0d0d0);
     margin-bottom: 5px;
+    font-size: 11px;
 }
 
 .event-type {
-    color: #0ff;
+    color: var(--link-fg, #81d4fa);
     font-weight: bold;
 }
 
 .event-action {
-    color: #ff0;
+    color: var(--body-medium-color, #e0e0e0);
 }
 
 .event-payload {
     margin-top: 8px;
     padding: 8px;
-    background: #111;
+    background: var(--selected-bg, #1b1b1b);
+    border: 1px solid var(--hairline-color, #272727);
     border-radius: 3px;
     white-space: pre-wrap;
     font-size: 11px;
     max-height: 200px;
     overflow-y: auto;
+    color: var(--body-quiet-color, #d0d0d0);
 }
 </style>
 
