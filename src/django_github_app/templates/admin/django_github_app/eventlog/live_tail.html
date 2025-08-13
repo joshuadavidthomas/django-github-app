@@ -1,5 +1,5 @@
 {% extends "admin/base_site.html" %}
-{% load admin_urls static %}
+{% load admin_urls %}
 {% load i18n %}
 {% load static %}
 {% block extrastyle %}
@@ -13,6 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2"
             integrity="sha384-yhS+rWHB2hwrHEg86hWiQV7XL6u+PH9X+3BlmS2+CNBaGYU8Nd7RZ2rZ9DWXgTdr"
             crossorigin="anonymous"></script>
+    <script src="{% static 'django_github_app/js/live_tail_htmx.js' %}"></script>
 {% endblock extrahead %}
 {% block content %}
     <div class="live-tail-container"
@@ -35,6 +36,3 @@
              hx-swap="afterbegin"></div>
     </div>
 {% endblock content %}
-{% block extrabody %}
-    <script src="{% static 'django_github_app/js/live_tail_htmx.js' %}"></script>
-{% endblock extrabody %}

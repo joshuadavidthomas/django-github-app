@@ -136,12 +136,12 @@ function reconnectSSE() {
   if (container) {
     pageLoadTime = new Date().toISOString();
     const newUrl = `stream/?since=${pageLoadTime}`;
-    
+
     // Close existing connection
     if (container.sseEventSource) {
       container.sseEventSource.close();
     }
-    
+
     // Update the sse-connect attribute and reinitialize
     container.setAttribute('sse-connect', newUrl);
     htmx.process(container);
@@ -149,20 +149,20 @@ function reconnectSSE() {
 }
 
 // HTMX SSE event listeners
-document.body.addEventListener('htmx:sseOpen', function(event) {
+document.body.addEventListener('htmx:sseOpen', function (event) {
   isConnected = true;
   updateStatus('Connected', 'connected');
   updatePauseButton();
   cancelPauseTimer();
 });
 
-document.body.addEventListener('htmx:sseError', function(event) {
+document.body.addEventListener('htmx:sseError', function (event) {
   isConnected = false;
   updateStatus('Connection Error - Retrying...', 'error');
   updatePauseButton();
 });
 
-document.body.addEventListener('htmx:sseClose', function(event) {
+document.body.addEventListener('htmx:sseClose', function (event) {
   if (isConnected) {
     isConnected = false;
     updateStatus('Connection Closed', 'error');
@@ -171,14 +171,14 @@ document.body.addEventListener('htmx:sseClose', function(event) {
 });
 
 // Custom event handler for SSE messages
-document.body.addEventListener('htmx:sseMessage', function(event) {
+document.body.addEventListener('htmx:sseMessage', function (event) {
   if (event.detail.type === 'event' && event.detail.data.trim()) {
     addEvent(event.detail.data);
   }
 });
 
 // Override HTMX's default SSE swap behavior to handle our pause logic
-document.body.addEventListener('htmx:beforeSwap', function(event) {
+document.body.addEventListener('htmx:beforeSwap', function (event) {
   if (event.detail.xhr === undefined && event.detail.serverResponse) {
     // This is an SSE event
     if (isPaused) {
@@ -192,7 +192,7 @@ document.body.addEventListener('htmx:beforeSwap', function(event) {
 });
 
 // Handle the actual swapping and animation setup
-document.body.addEventListener('htmx:afterSwap', function(event) {
+document.body.addEventListener('htmx:afterSwap', function (event) {
   if (event.detail.xhr === undefined) {
     // This is an SSE swap, set up animation observer
     const newEvent = container.firstElementChild;
@@ -212,7 +212,7 @@ document.body.addEventListener('htmx:afterSwap', function(event) {
 });
 
 // Button event listeners
-pauseBtn.addEventListener('click', function() {
+pauseBtn.addEventListener('click', function () {
   if (!isConnected) {
     eventQueue = [];
     isPaused = false;
@@ -234,10 +234,10 @@ pauseBtn.addEventListener('click', function() {
   updatePauseButton();
 });
 
-clearBtn.addEventListener('click', function() {
+clearBtn.addEventListener('click', function () {
   const events = container.querySelectorAll('.event-entry');
   events.forEach(event => animationObserver.unobserve(event));
-  
+
   container.innerHTML = '';
   eventQueue = [];
   updatePauseButton();
@@ -247,7 +247,7 @@ clearBtn.addEventListener('click', function() {
 updateStatus('Connecting...', '');
 
 // Cleanup on page unload
-window.addEventListener('beforeunload', function() {
+window.addEventListener('beforeunload', function () {
   if (pauseTimer) {
     clearTimeout(pauseTimer);
   }
