@@ -128,6 +128,20 @@
     margin-bottom: 15px;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--hairline-color);
+    transition: background-color 0.8s ease-out;
+}
+
+.event-entry.new-event {
+    /* Light mode: start darker than normal */
+    background-color: var(--selected-bg);
+}
+
+/* Dark mode: start lighter than normal */
+html[data-theme="dark"] .event-entry.new-event,
+@media (prefers-color-scheme: dark) {
+    .event-entry.new-event {
+        background-color: var(--darkened-bg);
+    }
 }
 
 .event-meta {
@@ -175,6 +189,21 @@ const queueInfoEl = document.getElementById('queue-info');
 const pauseBtn = document.getElementById('pause-btn');
 const clearBtn = document.getElementById('clear-btn');
 const container = document.getElementById('events-container');
+
+// Create intersection observer for animations
+const animationObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting && entry.target.classList.contains('new-event')) {
+            // Only remove the class (trigger animation) when visible
+            setTimeout(() => {
+                entry.target.classList.remove('new-event');
+            }, 50);
+        }
+    });
+}, {
+    root: container, // Observe within the scroll container
+    threshold: 0.1   // Trigger when 10% visible
+});
 
 function updateStatus(status, className) {
     statusEl.textContent = status;
@@ -226,11 +255,30 @@ function cancelPauseTimer() {
 }
 
 function drainEventQueue() {
-    while (eventQueue.length > 0) {
-        const eventData = eventQueue.shift();
-        addEventToDOM(eventData);
-    }
-    updatePauseButton();
+    if (eventQueue.length === 0) return;
+    
+    const calculateDelay = () => {
+        // Speed up based on queue size
+        if (eventQueue.length > 50) return 20;  // Very fast for large backlogs
+        if (eventQueue.length > 20) return 50;  // Fast
+        if (eventQueue.length > 5) return 75;   // Medium
+        return 100; // Normal speed for small queues
+    };
+    
+    const drainNext = () => {
+        if (eventQueue.length > 0 && !isPaused) {
+            const eventData = eventQueue.shift();
+            addEventToDOM(eventData);
+            updatePauseButton();
+            
+            // Continue draining with adaptive delay
+            if (eventQueue.length > 0) {
+                setTimeout(drainNext, calculateDelay());
+            }
+        }
+    };
+    
+    drainNext();
 }
 
 // Recursively sort object keys (case-insensitive) - matches admin JSON formatting
@@ -288,10 +336,19 @@ function addEventToDOM(eventData) {
     const eventHtml = formatEvent(eventData);
     container.insertAdjacentHTML('afterbegin', eventHtml);
     
+    // Get the newly added element and add animation class
+    const newEvent = container.firstElementChild;
+    newEvent.classList.add('new-event');
+    
+    // Observe this element for visibility-based animation
+    animationObserver.observe(newEvent);
+    
     // Keep only the latest 50 events
     const events = container.querySelectorAll('.event-entry');
     if (events.length > 50) {
         for (let i = 50; i < events.length; i++) {
+            // Clean up observer for removed elements
+            animationObserver.unobserve(events[i]);
             events[i].remove();
         }
     }
@@ -434,6 +491,10 @@ pauseBtn.addEventListener('click', function() {
 });
 
 clearBtn.addEventListener('click', function() {
+    // Clean up all observers before clearing
+    const events = container.querySelectorAll('.event-entry');
+    events.forEach(event => animationObserver.unobserve(event));
+    
     container.innerHTML = '';
     // Also clear the queue if paused
     eventQueue = [];
@@ -455,6 +516,8 @@ window.addEventListener('beforeunload', function() {
     if (pauseTimer) {
         clearTimeout(pauseTimer);
     }
+    // Clean up intersection observer
+    animationObserver.disconnect();
 });
 </script>
 {% endblock %}
