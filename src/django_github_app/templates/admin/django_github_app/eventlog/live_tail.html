@@ -223,11 +223,41 @@ function drainEventQueue() {
     updatePauseButton();
 }
 
+// Recursively sort object keys (case-insensitive) - matches admin JSON formatting
+function sortObject(obj, depth = 0) {
+    if (depth > 100) return obj;
+
+    if (obj === null || typeof obj !== 'object') {
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => sortObject(item, depth + 1));
+    }
+
+    return Object.keys(obj)
+        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+        .reduce((sorted, key) => {
+            sorted[key] = sortObject(obj[key], depth + 1);
+            return sorted;
+        }, {});
+}
+
 function formatEvent(eventData) {
     const timestamp = new Date(eventData.received_at).toLocaleString();
     const eventType = eventData.event || 'unknown';
     const action = eventData.action ? ':' + eventData.action : '';
-    const payload = eventData.payload ? JSON.stringify(eventData.payload, null, 2) : '';
+    
+    // Sort the payload keys to match admin interface formatting
+    let payload = '';
+    if (eventData.payload) {
+        try {
+            const sortedPayload = sortObject(eventData.payload);
+            payload = JSON.stringify(sortedPayload, null, 2);
+        } catch (e) {
+            payload = JSON.stringify(eventData.payload, null, 2);
+        }
+    }
     
     return `
         <div class="event-entry">
