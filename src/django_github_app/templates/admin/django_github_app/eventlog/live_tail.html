@@ -130,7 +130,7 @@
 <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 <script>
 let eventSource = null;
-let lastEventId = 0;
+let pageLoadTime = new Date().toISOString();
 let isPaused = false;
 
 const statusEl = document.getElementById('status');
@@ -165,7 +165,6 @@ function formatEvent(eventData) {
 function addEvent(eventData) {
     if (!eventData.id) return;
     
-    lastEventId = Math.max(lastEventId, eventData.id);
     const eventHtml = formatEvent(eventData);
     container.insertAdjacentHTML('afterbegin', eventHtml);
     
@@ -186,9 +185,7 @@ function startSSE() {
     updateStatus('Connecting...', '');
     
     const streamUrl = new URL('stream/', window.location.href);
-    if (lastEventId > 0) {
-        streamUrl.searchParams.set('last_id', lastEventId.toString());
-    }
+    streamUrl.searchParams.set('since', pageLoadTime);
     
     eventSource = new EventSource(streamUrl.toString());
     
@@ -234,9 +231,7 @@ function startPolling() {
         }
         
         const streamUrl = new URL('stream/', window.location.href);
-        if (lastEventId > 0) {
-            streamUrl.searchParams.set('last_id', lastEventId.toString());
-        }
+        streamUrl.searchParams.set('since', pageLoadTime);
         
         fetch(streamUrl.toString())
             .then(response => {

@@ -129,18 +129,31 @@ class EventLogModelAdmin(admin.ModelAdmin):
 
     def live_tail_stream_view(self, request: HttpRequest) -> StreamingHttpResponse:
         def event_stream() -> Iterator[str]:
-            last_id = 0
-            if "last_id" in request.GET:
+            since = timezone.now()  # Default to now
+
+            if "since" in request.GET:
+                since_param = str(request.GET["since"])
                 try:
-                    last_id = int(str(request.GET["last_id"]))
+                    # Handle ISO format with Z suffix
+                    if since_param.endswith("Z"):
+                        since_param = since_param[:-1] + "+00:00"
+                    parsed_time = datetime.datetime.fromisoformat(since_param)
+                    if parsed_time.tzinfo is None:
+                        since = timezone.make_aware(parsed_time)
+                    else:
+                        since = parsed_time
                 except (ValueError, TypeError):
-                    last_id = 0
+                    since = timezone.now()
+            else:
+                since = timezone.now()
 
             while True:
-                events = EventLog.objects.filter(id__gt=last_id).order_by("id")[:10]
+                events = EventLog.objects.filter(received_at__gt=since).order_by(
+                    "received_at"
+                )[:10]
 
                 for event in events:
-                    last_id = event.id
+                    since = event.received_at  # Update cursor to this event's timestamp
                     event_data = {
                         "id": event.id,
                         "event": event.event,
@@ -151,6 +164,7 @@ class EventLogModelAdmin(admin.ModelAdmin):
                     yield f"data: {json.dumps(event_data)}\n\n"
 
                 if not events:
+                    # Send keepalive
                     yield "data: {}\n\n"
 
                 time.sleep(1)
