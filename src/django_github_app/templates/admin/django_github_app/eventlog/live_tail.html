@@ -12,6 +12,7 @@
 {% endblock extrahead %}
 {% block content %}
     <div class="live-tail-container"
+         id="live-tail-sse-container"
          hx-ext="sse"
          sse-connect="stream/?since={{ page_load_time }}"
          data-page-load-time="{{ page_load_time }}">
