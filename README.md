@@ -194,7 +194,7 @@ However, if you want to import the installation immediately without waiting for 
 
 1. Collect your existing app and installation's information.
 
-   - All GitHub App information and credentials listed above in step 5 of [Installation](#instalation)
+   - All GitHub App information and credentials listed above in step 5 of [Installation](#installation)
      - Make sure the Webhook URL matches the endpoint configured in step 4 of [Installation](#installation)
    - Account type where installed (`org` or `user`)
    - Account name (username or organization name)
