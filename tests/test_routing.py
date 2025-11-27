@@ -115,14 +115,14 @@ class TestGitHubRouter:
         assert not all(view.router is view1_router for view in views)
 
     def test_importing_module_add_handler(self, create_event):
-        foo = SyncWebhookView()
+        view = SyncWebhookView()
 
         event = create_event(
             "installation",
             action="created",
         )
 
-        routes = foo.router.fetch(event)
+        routes = view.router.fetch(event)
         assert len(routes) > 0
 
 
