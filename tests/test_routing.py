@@ -115,8 +115,6 @@ class TestGitHubRouter:
         assert not all(view.router is view1_router for view in views)
 
     def test_importing_module_add_handler(self, create_event):
-        from django_github_app.events.installation import gh
-
         foo = SyncWebhookView()
 
         event = create_event(
@@ -126,6 +124,7 @@ class TestGitHubRouter:
 
         routes = foo.router.fetch(event)
         assert len(routes) > 0
+
 
 class TestMentionDecorator:
     def test_mention(self, test_router, get_mock_github_api, create_event):
@@ -540,4 +539,3 @@ class TestMentionDecorator:
         assert second.line_info.lineno == 2
         assert second.previous_mention is first
         assert second.next_mention is None
-
