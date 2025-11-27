@@ -131,5 +131,5 @@ class GitHubRouter(GidgetHubRouter):
 
         for router in self.routers:
             result |= GidgetHubRouter.fetch(router, event)
-        
+
         return frozenset(result)
