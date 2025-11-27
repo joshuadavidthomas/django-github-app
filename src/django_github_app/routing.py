@@ -124,3 +124,12 @@ class GitHubRouter(GidgetHubRouter):
         found_callbacks = self.fetch(event)
         for callback in found_callbacks:
             callback(event, *args, **kwargs)
+
+    @override
+    def fetch(self, event: sansio.Event) -> frozenset[AsyncCallback]:
+        result = set()
+
+        for router in self.routers:
+            result |= GidgetHubRouter.fetch(router, event)
+        
+        return frozenset(result)
