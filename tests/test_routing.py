@@ -115,7 +115,7 @@ class TestGitHubRouter:
         assert not all(view.router is view1_router for view in views)
 
     def test_importing_module_add_handler(self, create_event):
-        from django_github_app import events as _  # noqa
+        import django_github_app.events.installation  # noqa
 
         view = SyncWebhookView()
 
