@@ -129,6 +129,8 @@ class TestGitHubRouter:
         view = SyncWebhookView()
         router = view.router
 
+        assert router is not None
+        assert views_module._router is not None
         assert views_module._router is router
         assert len(views_module._router._deep_routes) == 1
 
