@@ -22,6 +22,10 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 - Added JSON pretty printing and copy functionality to `EventLog` and `Installation` admin change forms
 
+### Fixed
+
+- Fixed built-in event handlers not being found due to router initialization timing.
+
 ## [0.9.0]
 
 ### Changed
