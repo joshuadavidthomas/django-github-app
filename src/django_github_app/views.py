@@ -27,7 +27,14 @@ from .routing import GitHubRouter
 
 GitHubAPIType = TypeVar("GitHubAPIType", AsyncGitHubAPI, SyncGitHubAPI)
 
-_router = GitHubRouter(*GitHubRouter.routers)
+_router: GitHubRouter | None = None
+
+
+def get_router() -> GitHubRouter:
+    global _router
+    if _router is None:
+        _router = GitHubRouter(*GitHubRouter.routers)
+    return _router
 
 
 class BaseWebhookView(View, ABC, Generic[GitHubAPIType]):
@@ -59,7 +66,7 @@ class BaseWebhookView(View, ABC, Generic[GitHubAPIType]):
 
     @property
     def router(self) -> GitHubRouter:
-        return _router
+        return get_router()
 
     @abstractmethod
     def post(

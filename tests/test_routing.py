@@ -10,6 +10,7 @@ from django_github_app.github import SyncGitHubAPI
 from django_github_app.mentions import MentionScope
 from django_github_app.routing import GitHubRouter
 from django_github_app.views import BaseWebhookView
+from django_github_app.views import SyncWebhookView
 
 
 @pytest.fixture(autouse=True)
@@ -112,6 +113,29 @@ class TestGitHubRouter:
 
         assert len(views) == view_count
         assert not all(view.router is view1_router for view in views)
+
+    def test_lazy_router_initialization_finds_handlers(self, create_event):
+        import django_github_app.views as views_module
+
+        views_module._router = None
+
+        handler_router = GitHubRouter()
+
+        @handler_router.event("installation", action="created")
+        def dummy_handler(event, gh, *args, **kwargs): ...
+
+        assert views_module._router is None
+
+        view = SyncWebhookView()
+        router = view.router
+
+        assert views_module._router is router
+        assert len(views_module._router._deep_routes) == 1
+
+        event = create_event("installation", action="created")
+        callbacks = view.router.fetch(event)
+
+        assert len(callbacks) == 1
 
 
 class TestMentionDecorator:
