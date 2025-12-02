@@ -18,6 +18,8 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+## [0.10.0]
+
 ### Added
 
 - Added JSON pretty printing and copy functionality to `EventLog` and `Installation` admin change forms
@@ -133,7 +135,7 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 - Josh Thomas <josh@joshthomas.dev> (maintainer)
 
-[unreleased]: https://github.com/joshuadavidthomas/django-github-app/compare/v0.9.0...HEAD
+[unreleased]: https://github.com/joshuadavidthomas/django-github-app/compare/v0.10.0...HEAD
 [0.1.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.1.0
 [0.2.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.2.0
 [0.2.1]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.2.1
@@ -145,3 +147,4 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 [0.7.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.7.0
 [0.8.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.8.0
 [0.9.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.9.0
+[0.10.0]: https://github.com/joshuadavidthomas/django-github-app/releases/tag/v0.10.0
