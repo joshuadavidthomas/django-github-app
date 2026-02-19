@@ -40,6 +40,8 @@ class AppSettings:
         value = user_settings.get(__name, super().__getattribute__(__name))
 
         match __name:
+            case "APP_ID":
+                return str(value) if value else ""
             case "PRIVATE_KEY":
                 return self._parse_private_key(value)
             case _:
