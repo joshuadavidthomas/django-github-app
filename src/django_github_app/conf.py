@@ -12,6 +12,15 @@ from ._typing import override
 
 GITHUB_APP_SETTINGS_NAME = "GITHUB_APP"
 
+DEPRECATED_SETTINGS = {
+    "WEBHOOK_TYPE": (
+        "The GITHUB_APP['WEBHOOK_TYPE'] setting is deprecated and will be "
+        "removed in a future version. The webhook type is now automatically "
+        "determined by the view class used (AsyncWebhookView or "
+        "SyncWebhookView). You can safely remove this setting."
+    ),
+}
+
 
 @dataclass(frozen=True)
 class AppSettings:
@@ -31,6 +40,8 @@ class AppSettings:
         value = user_settings.get(__name, super().__getattribute__(__name))
 
         match __name:
+            case "APP_ID":
+                return str(value) if value else ""
             case "PRIVATE_KEY":
                 return self._parse_private_key(value)
             case _:

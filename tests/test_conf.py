@@ -31,6 +31,22 @@ def test_default_settings(setting, default_setting):
 
 
 @pytest.mark.parametrize(
+    "app_id,expected",
+    [
+        ("12345", "12345"),
+        (12345, "12345"),
+        ("", ""),
+        (0, ""),
+        (None, ""),
+    ],
+)
+def test_app_id_coerced_to_string(app_id, expected, override_app_settings):
+    with override_app_settings(APP_ID=app_id):
+        assert app_settings.APP_ID == expected
+        assert isinstance(app_settings.APP_ID, str)
+
+
+@pytest.mark.parametrize(
     "private_key,expected",
     [
         (

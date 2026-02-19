@@ -19,7 +19,9 @@ def test_router():
     from django_github_app.routing import GitHubRouter
 
     old_routers = GitHubRouter._routers.copy()
+    old_handlers_loaded = GitHubRouter._library_handlers_loaded
     GitHubRouter._routers = []
+    GitHubRouter._library_handlers_loaded = True
 
     old_router = django_github_app.views._router
 
@@ -29,6 +31,7 @@ def test_router():
     yield test_router
 
     GitHubRouter._routers = old_routers
+    GitHubRouter._library_handlers_loaded = old_handlers_loaded
     django_github_app.views._router = old_router
 
 
@@ -138,6 +141,50 @@ class TestGitHubRouter:
         callbacks = view.router.fetch(event)
 
         assert len(callbacks) == 1
+
+
+class TestEnsureLibraryHandlers:
+    @pytest.fixture(autouse=True)
+    def reset_handlers(self):
+        from django_github_app.routing import GitHubRouter
+
+        old_loaded = GitHubRouter._library_handlers_loaded
+        GitHubRouter._library_handlers_loaded = False
+        yield
+        GitHubRouter._library_handlers_loaded = old_loaded
+
+    def test_loads_async_handlers(self):
+        GitHubRouter._library_handlers_loaded = False
+
+        GitHubRouter.ensure_library_handlers("async")
+
+        assert GitHubRouter._library_handlers_loaded is True
+
+    def test_loads_sync_handlers(self):
+        GitHubRouter._library_handlers_loaded = False
+
+        GitHubRouter.ensure_library_handlers("sync")
+
+        assert GitHubRouter._library_handlers_loaded is True
+
+    def test_only_loads_once(self):
+        GitHubRouter._library_handlers_loaded = False
+
+        GitHubRouter.ensure_library_handlers("async")
+        routers_after_first = len(GitHubRouter._routers)
+
+        GitHubRouter.ensure_library_handlers("async")
+        routers_after_second = len(GitHubRouter._routers)
+
+        assert routers_after_first == routers_after_second
+
+    def test_skips_when_already_loaded(self):
+        GitHubRouter._library_handlers_loaded = True
+        routers_before = len(GitHubRouter._routers)
+
+        GitHubRouter.ensure_library_handlers("async")
+
+        assert len(GitHubRouter._routers) == routers_before
 
 
 class TestMentionDecorator:

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import warnings
+
 from django.apps import AppConfig
+from django.conf import settings
 
 from ._typing import override
 
@@ -13,9 +16,10 @@ class GitHubAppConfig(AppConfig):
     @override
     def ready(self):
         from . import checks  # noqa: F401
-        from .conf import app_settings
+        from .conf import DEPRECATED_SETTINGS
+        from .conf import GITHUB_APP_SETTINGS_NAME
 
-        if app_settings.WEBHOOK_TYPE == "async":
-            from .events import ahandlers  # noqa: F401
-        elif app_settings.WEBHOOK_TYPE == "sync":
-            from .events import handlers  # noqa: F401
+        user_settings = getattr(settings, GITHUB_APP_SETTINGS_NAME, {})
+        for setting, message in DEPRECATED_SETTINGS.items():
+            if setting in user_settings:
+                warnings.warn(message, DeprecationWarning, stacklevel=1)

@@ -78,6 +78,11 @@ class BaseWebhookView(View, ABC, Generic[GitHubAPIType]):
 class AsyncWebhookView(BaseWebhookView[AsyncGitHubAPI]):
     github_api_class = AsyncGitHubAPI
 
+    @property
+    def router(self) -> GitHubRouter:
+        GitHubRouter.ensure_library_handlers("async")
+        return get_router()
+
     @override
     async def post(self, request: HttpRequest) -> JsonResponse:
         event = self.get_event(request)
@@ -103,6 +108,11 @@ class AsyncWebhookView(BaseWebhookView[AsyncGitHubAPI]):
 @method_decorator(csrf_exempt, name="dispatch")
 class SyncWebhookView(BaseWebhookView[SyncGitHubAPI]):
     github_api_class = SyncGitHubAPI
+
+    @property
+    def router(self) -> GitHubRouter:
+        GitHubRouter.ensure_library_handlers("sync")
+        return get_router()
 
     def post(self, request: HttpRequest) -> JsonResponse:  # pragma: no cover
         event = self.get_event(request)
