@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from typing import Literal
 
 from django.conf import settings
 from django.utils.text import slugify
@@ -10,6 +12,15 @@ from django.utils.text import slugify
 from ._typing import override
 
 GITHUB_APP_SETTINGS_NAME = "GITHUB_APP"
+
+DEPRECATED_SETTINGS = {
+    "WEBHOOK_TYPE": (
+        "The GITHUB_APP['WEBHOOK_TYPE'] setting is deprecated and will be "
+        "removed in a future version. The webhook type is now automatically "
+        "determined by the view class used (AsyncWebhookView or "
+        "SyncWebhookView). You can safely remove this setting."
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -22,6 +33,7 @@ class AppSettings:
     NAME: str = ""
     PRIVATE_KEY: str = ""
     WEBHOOK_SECRET: str = ""
+    WEBHOOK_TYPE: Literal["async", "sync"] = "async"
 
     @override
     def __getattribute__(self, __name: str) -> Any:

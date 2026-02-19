@@ -20,6 +20,7 @@ from django_github_app.conf import app_settings
         ("NAME", ""),
         ("PRIVATE_KEY", ""),
         ("WEBHOOK_SECRET", ""),
+        ("WEBHOOK_TYPE", "async"),
     ],
 )
 def test_default_settings(setting, default_setting):
