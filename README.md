@@ -101,12 +101,6 @@ cog.outl(f"- Django {', '.join([version for version in DJ_VERSIONS if version !=
    ]
    ```
 
-> [!IMPORTANT]
-> Make sure your `GITHUB_APP["WEBHOOK_TYPE"]` setting matches your view choice:
->
-> - Use `"async"` with `AsyncWebhookView`
-> - Use `"sync"` with `SyncWebhookView`
-
 5. Setup your GitHub App and configure django-github-app using your GitHub App's information.
 
    You will need the following information from your GitHub App:
@@ -173,7 +167,6 @@ Choose the appropriate setup method based on your situation:
        "NAME": env.str("GITHUB_NAME"),
        "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
        "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
-       "WEBHOOK_TYPE": "async",  # Use "async" for ASGI projects or "sync" for WSGI projects
    }
    ```
 
@@ -214,7 +207,6 @@ However, if you want to import the installation immediately without waiting for 
        "NAME": env.str("GITHUB_NAME"),
        "PRIVATE_KEY": env.str("GITHUB_PRIVATE_KEY"),
        "WEBHOOK_SECRET": env.str("GITHUB_WEBHOOK_SECRET"),
-       "WEBHOOK_TYPE": "async",  # Use "async" for ASGI projects or "sync" for WSGI projects
    }
    ```
 
@@ -579,7 +571,7 @@ The library includes event handlers for managing GitHub App installations and re
 - Repository events:
   - `repository.renamed`: Updates repository details
 
-The library loads either async or sync versions of these handlers based on your `GITHUB_APP["WEBHOOK_TYPE"]` setting.
+The library automatically loads the correct version (async or sync) of these handlers based on the webhook view class used in your URL configuration.
 
 ### Mentions
 
@@ -739,7 +731,6 @@ GITHUB_APP = {
     "NAME": "",
     "PRIVATE_KEY": "",
     "WEBHOOK_SECRET": "",
-    "WEBHOOK_TYPE": "async",
 }
 ```
 
@@ -750,7 +741,6 @@ The following settings are required:
 - `NAME`
 - `PRIVATE_KEY`
 - `WEBHOOK_SECRET`
-- `WEBHOOK_TYPE`
 
 ### `APP_ID`
 
@@ -852,12 +842,10 @@ Secret used to verify webhook payloads from GitHub.
 
 ### `WEBHOOK_TYPE`
 
-> 🔴 **Required** | `Literal["async", "sync"]` | Default: `"async"`
+> **Deprecated** | `Literal["async", "sync"]` | Default: `"async"`
 
-Determines whether the library uses async or sync handlers for processing webhook events:
-
-- `"async"`: Use with `AsyncWebhookView` in ASGI projects
-- `"sync"`: Use with `SyncWebhookView` in WSGI projects
+> [!WARNING]
+> This setting is deprecated and will be removed in a future release. The library now automatically determines the handler type based on the webhook view class used (`AsyncWebhookView` or `SyncWebhookView`). You can safely remove this setting from your configuration.
 
 ## Development
 

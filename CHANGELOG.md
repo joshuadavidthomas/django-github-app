@@ -18,6 +18,18 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Changed
+
+- The webhook type (async/sync) is now automatically determined by the view class used (`AsyncWebhookView` or `SyncWebhookView`). The `GITHUB_APP["WEBHOOK_TYPE"]` setting is no longer needed.
+
+### Deprecated
+
+- The `GITHUB_APP["WEBHOOK_TYPE"]` setting is deprecated and will be removed in a future release. The library now automatically loads the correct handlers based on which webhook view is used. If the setting is present, a `DeprecationWarning` is emitted at startup.
+
+### Fixed
+
+- Fixed `APP_ID` not being coerced to a string when provided as an integer, which caused a `TypeError` ("Issuer (iss) must be a string") during JWT encoding with newer versions of PyJWT.
+
 ## [0.10.0]
 
 ### Added
