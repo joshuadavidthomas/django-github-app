@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from typing import Literal
 
 from django.conf import settings
 from django.utils.text import slugify
@@ -23,7 +22,6 @@ class AppSettings:
     NAME: str = ""
     PRIVATE_KEY: str = ""
     WEBHOOK_SECRET: str = ""
-    WEBHOOK_TYPE: Literal["async", "sync"] = "async"
 
     @override
     def __getattribute__(self, __name: str) -> Any:

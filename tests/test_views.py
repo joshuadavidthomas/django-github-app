@@ -75,7 +75,9 @@ def test_router():
     from django_github_app.routing import GitHubRouter
 
     old_routers = GitHubRouter._routers.copy()
+    old_handlers_loaded = GitHubRouter._library_handlers_loaded
     GitHubRouter._routers = []
+    GitHubRouter._library_handlers_loaded = True
 
     old_router = django_github_app.views._router
 
@@ -85,6 +87,7 @@ def test_router():
     yield test_router
 
     GitHubRouter._routers = old_routers
+    GitHubRouter._library_handlers_loaded = old_handlers_loaded
     django_github_app.views._router = old_router
 
 

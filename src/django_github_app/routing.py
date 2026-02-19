@@ -41,10 +41,23 @@ MentionHandler = AsyncMentionHandler | SyncMentionHandler
 
 class GitHubRouter(GidgetHubRouter):
     _routers: list[GidgetHubRouter] = []
+    _library_handlers_loaded: bool = False
 
     def __init__(self, *args) -> None:
         super().__init__(*args)
         GitHubRouter._routers.append(self)
+
+    @classmethod
+    def ensure_library_handlers(cls, webhook_type: str) -> None:
+        if cls._library_handlers_loaded:
+            return
+
+        if webhook_type == "async":
+            from .events import ahandlers  # noqa: F401
+        else:
+            from .events import handlers  # noqa: F401
+
+        cls._library_handlers_loaded = True
 
     @override
     def add(
