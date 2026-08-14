@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import re
-from asyncio import iscoroutinefunction
 from collections.abc import Awaitable
 from collections.abc import Callable
 from functools import wraps
+from inspect import iscoroutinefunction
 from typing import Any
 from typing import Protocol
 from typing import TypeVar
@@ -96,7 +96,11 @@ class GitHubRouter(GidgetHubRouter):
                 for mention in Mention.from_event(
                     event, username=username, scope=event_scope
                 ):
-                    await func(event, gh, *args, context=mention, **kwargs)  # type: ignore[func-returns-value]
+                    result = func(  # type: ignore[func-returns-value]
+                        event, gh, *args, context=mention, **kwargs
+                    )
+                    if result is not None:
+                        await result
 
             @wraps(func)
             def sync_wrapper(

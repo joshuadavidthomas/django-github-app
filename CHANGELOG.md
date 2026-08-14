@@ -18,6 +18,11 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Added
+
+- Support for Django 6.0 and 6.1.
+- Support for Python 3.14.
+
 ### Changed
 
 - The webhook type (async/sync) is now automatically determined by the view class used (`AsyncWebhookView` or `SyncWebhookView`). The `GITHUB_APP["WEBHOOK_TYPE"]` setting is no longer needed.
@@ -26,8 +31,13 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 - The `GITHUB_APP["WEBHOOK_TYPE"]` setting is deprecated and will be removed in a future release. The library now automatically loads the correct handlers based on which webhook view is used. If the setting is present, a `DeprecationWarning` is emitted at startup.
 
+### Removed
+
+- Support for Django 4.2 and 5.1.
+
 ### Fixed
 
+- Avoided Python 3.14 deprecation warnings when registering async handlers.
 - Fixed `APP_ID` not being coerced to a string when provided as an integer, which caused a `TypeError` ("Issuer (iss) must be a string") during JWT encoding with newer versions of PyJWT.
 
 ## [0.10.0]
