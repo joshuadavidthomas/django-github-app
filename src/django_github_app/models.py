@@ -128,7 +128,7 @@ class Installation(models.Model):
     installation_id = models.PositiveBigIntegerField(unique=True)
     data = models.JSONField(default=dict)
     status = models.SmallIntegerField(
-        choices=InstallationStatus.choices, default=InstallationStatus.ACTIVE
+        choices=InstallationStatus, default=InstallationStatus.ACTIVE
     )
 
     objects = InstallationManager()
