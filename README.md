@@ -239,6 +239,7 @@ from django_github_app.routing import GitHubRouter
 
 gh = GitHubRouter()
 
+
 # Handle any issue event
 @gh.event("issues")
 async def handle_issue(event, gh, *args, **kwargs):
@@ -273,6 +274,7 @@ For WSGI projects using `django_github_app.views.SyncWebhookView`:
 from django_github_app.routing import GitHubRouter
 
 gh = GitHubRouter()
+
 
 # Handle any issue event
 @gh.event("issues")
@@ -345,6 +347,7 @@ from django_github_app.mentions import MentionScope
 
 gh = GitHubRouter()
 
+
 # Respond to mentions of your bot
 @gh.mention(username="mybot")
 async def handle_bot_mention(event, gh, *args, context, **kwargs):
@@ -387,6 +390,7 @@ from django_github_app.routing import GitHubRouter
 from django_github_app.mentions import MentionScope
 
 gh = GitHubRouter()
+
 
 # Respond to mentions of your bot
 @gh.mention(username="mybot")
@@ -639,6 +643,7 @@ Limit mentions to specific GitHub contexts:
 
 ```python
 from django_github_app.mentions import MentionScope
+
 
 # Only respond in issues (not PRs)
 @gh.mention(username="issue-bot", scope=MentionScope.ISSUE)
