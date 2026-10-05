@@ -8,13 +8,13 @@ repos:
       - id: check-yaml
 
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: 1.32.0
+    rev: 1.33.0
     hooks:
       - id: django-upgrade
         args: [--target-version, "5.2"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.7
+    rev: v0.16.10
     hooks:
       - id: ruff
         args: [--fix]
