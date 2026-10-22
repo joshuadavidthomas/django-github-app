@@ -96,7 +96,7 @@ def coverage(session):
         "sync",
         "--frozen",
         "--python",
-        PY_DEFAULT,
+        PY_LATEST,
         env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location},
     )
 
