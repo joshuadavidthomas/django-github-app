@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Amp orb setup: installs the toolchain and dependencies once so fresh orbs
+# start ready. Must stay non-interactive and idempotent (reruns on stale snapshots).
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+export UV_NO_PROGRESS=1
+export PATH="$HOME/.local/bin:$PATH"
+
+step() {
+  local name="$1"
+  shift
+  echo "==> $name"
+  local start=$SECONDS
+  "$@"
+  echo "<== $name ($((SECONDS - start))s)"
+}
+
+install_just() {
+  if ! command -v just >/dev/null 2>&1; then
+    uv tool install rust-just
+  fi
+  just --version
+}
+
+# Python versions from noxfile.PY_VERSIONS (tests matrix; types/lint use the latest).
+py_versions() {
+  python3 -c 'import ast; t = ast.parse(open("noxfile.py").read()); v = {n.targets[0].id: n.value for n in t.body if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name)}; print(" ".join(ast.literal_eval(v[e.id]) for e in v["PY_VERSIONS"].elts))'
+}
+
+install_pythons() {
+  # shellcheck disable=SC2046
+  uv python install $(py_versions)
+}
+
+# uv.lock is gitignored, so resolve locally instead of `uv sync --locked`.
+sync_dev_env() {
+  uv sync
+}
+
+# Pre-build the venv for `just test` (nox default Python and Django).
+warm_nox_test_session() {
+  uv run nox --session test --install-only
+}
+
+# Cache the hook environments used by `just lint`.
+warm_pre_commit() {
+  uv tool run --with pre-commit-uv --python "$(py_versions | awk '{print $NF}')" pre-commit install-hooks
+}
+
+step "install just" install_just
+step "install Python versions" install_pythons
+step "uv sync" sync_dev_env
+step "warm nox test session" warm_nox_test_session
+step "warm pre-commit hooks" warm_pre_commit
+
