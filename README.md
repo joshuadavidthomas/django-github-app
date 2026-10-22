@@ -18,7 +18,7 @@ cog.outl(f"![Django Version](https://img.shields.io/badge/django-{'%20%7C%20'.jo
 
 A Django toolkit providing the batteries needed to build GitHub Apps - from webhook handling to API integration.
 
-Built on [gidgethub](https://github.com/gidgethub/gidgethub) and [httpx](https://github.com/encode/httpx), django-github-app handles the boilerplate of GitHub App development. Features include webhook event routing and storage, API client with automatic authentication, and models for managing GitHub App installations, repositories, and webhook event history.
+Built on [gidgethub](https://github.com/gidgethub/gidgethub) and [httpx2](https://github.com/pydantic/httpx2), django-github-app handles the boilerplate of GitHub App development. Features include webhook event routing and storage, API client with automatic authentication, and models for managing GitHub App installations, repositories, and webhook event history.
 
 Fully supports both sync (WSGI) and async (ASGI) Django applications.
 
@@ -40,7 +40,7 @@ from noxfile import PY_VERSIONS
 cog.outl(f"- Python {', '.join([version for version in PY_VERSIONS])}")
 cog.outl(f"- Django {', '.join([version for version in DJ_VERSIONS if version != 'main'])}")
 ]]] -->
-- Python 3.10, 3.11, 3.12, 3.13, 3.14
+- Python 3.11, 3.12, 3.13, 3.14, 3.15
 - Django 5.2, 6.0, 6.1
 <!-- [[[end]]] -->
 
@@ -411,7 +411,7 @@ The mention decorator automatically extracts mentions from comments and provides
 
 ### GitHub API Client
 
-The library provides `AsyncGitHubAPI` and `SyncGitHubAPI`, implementations of gidgethub's abstract `GitHubAPI` class that handle authentication and use [httpx](https://github.com/encode/httpx) as their HTTP client. While they're automatically provided in webhook handlers, you can also use them directly in your code.
+The library provides `AsyncGitHubAPI` and `SyncGitHubAPI`, implementations of gidgethub's abstract `GitHubAPI` class that handle authentication and use [httpx2](https://github.com/pydantic/httpx2) as their HTTP client. While they're automatically provided in webhook handlers, you can also use them directly in your code.
 
 The clients automatically handle authentication and token refresh when an installation ID is provided. The installation ID is GitHub's identifier for where your app is installed, which you can get from the `installation_id` field on the `Installation` model.
 

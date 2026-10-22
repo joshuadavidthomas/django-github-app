@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import NamedTuple
 
 from gidgethub import sansio
@@ -13,7 +13,7 @@ class EventAction(NamedTuple):
     action: str
 
 
-class MentionScope(str, Enum):
+class MentionScope(StrEnum):
     COMMIT = "commit"
     ISSUE = "issue"
     PR = "pr"

@@ -18,6 +18,19 @@ and this project attempts to adhere to [Semantic Versioning](https://semver.org/
 
 ## [Unreleased]
 
+### Added
+
+- Support for Python 3.15.
+
+### Changed
+
+- Switched the HTTP client from `httpx` to `httpx2`.
+- Bumped minimum `django-typer` version to 3.6.0. Versions before 3.0 are incompatible with Click 8.2+, and 3.6.0 is the first to always install `rich`.
+
+### Removed
+
+- Support for Python 3.10, as `httpx2` requires Python 3.11+.
+
 ## [0.11.0]
 
 ### Added

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from asgiref.sync import sync_to_async
@@ -118,7 +118,7 @@ class InstallationStatus(models.IntegerChoices):
                 raise ValueError(f"Unknown installation action: {action}")
 
 
-class AccountType(str, Enum):
+class AccountType(StrEnum):
     ORG = "org"
     USER = "user"
 
