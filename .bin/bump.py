@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
 from typing import Any
@@ -159,13 +159,13 @@ def update_uv_lock(new_version: str) -> None:
 cli = typer.Typer()
 
 
-class Version(str, Enum):
+class Version(StrEnum):
     MAJOR = "major"
     MINOR = "minor"
     PATCH = "patch"
 
 
-class Tag(str, Enum):
+class Tag(StrEnum):
     DEV = "dev"
     ALPHA = "alpha"
     BETA = "beta"

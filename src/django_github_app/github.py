@@ -12,7 +12,7 @@ from urllib.parse import urlencode
 
 import cachetools
 import gidgethub
-import httpx
+import httpx2
 from asgiref.sync import async_to_sync
 from gidgethub import abc as gh_abc
 from gidgethub import sansio
@@ -29,7 +29,7 @@ cache: cachetools.LRUCache[Any, Any] = cachetools.LRUCache(maxsize=500)
 # - https://github.com/pallets/flask/discussions/5387#discussioncomment-10835348
 # - https://github.com/indygreg/python-build-standalone/issues/207
 # - https://github.com/jsirois/pex/blob/b88855f72f46b29709e8a514b6a13432a08a097d/pex/fetcher.py#L68-L118
-ssl_context = httpx.create_ssl_context()
+ssl_context = httpx2.create_ssl_context()
 
 
 class AsyncGitHubAPI(gh_abc.GitHubAPI):
@@ -46,7 +46,7 @@ class AsyncGitHubAPI(gh_abc.GitHubAPI):
         self.installation = installation
         self.installation_id = installation_id
         self.oauth_token = None
-        self._client = httpx.AsyncClient(verify=ssl_context)
+        self._client = httpx2.AsyncClient(verify=ssl_context)
         super().__init__(*args, cache=cache, **kwargs)
 
     async def __aenter__(self) -> AsyncGitHubAPI:
@@ -78,7 +78,7 @@ class AsyncGitHubAPI(gh_abc.GitHubAPI):
         url: str,
         headers: Mapping[str, str],
         body: bytes = b"",
-    ) -> tuple[int, httpx.Headers, bytes]:
+    ) -> tuple[int, httpx2.Headers, bytes]:
         response = await self._client.request(
             method, url, headers=dict(headers), content=body
         )

@@ -21,8 +21,8 @@ class TestAsyncGitHubAPI:
                 installation_id=ainstallation.installation_id,
             )
 
-    async def test_request(self, httpx_mock):
-        httpx_mock.add_response(json={"foo": "bar"})
+    async def test_request(self, httpx2_mock):
+        httpx2_mock.add_response(json={"foo": "bar"})
 
         async with AsyncGitHubAPI("test") as gh:
             response = await gh.getitem("/foo")
@@ -103,56 +103,56 @@ class TestSyncGitHubAPI:
         with SyncGitHubAPI("test") as gh:
             assert gh.oauth_token is None
 
-    def test_getitem(self, httpx_mock):
-        httpx_mock.add_response(json={"foo": "bar"})
+    def test_getitem(self, httpx2_mock):
+        httpx2_mock.add_response(json={"foo": "bar"})
 
         with SyncGitHubAPI("test") as gh:
             response = gh.getitem("/foo")
 
         assert response == {"foo": "bar"}
 
-    def test_getstatus(self, httpx_mock):
-        httpx_mock.add_response(status_code=204)
+    def test_getstatus(self, httpx2_mock):
+        httpx2_mock.add_response(status_code=204)
 
         with SyncGitHubAPI("test") as gh:
             status = gh.getstatus("/foo")
 
         assert status == 204
 
-    def test_post(self, httpx_mock):
-        httpx_mock.add_response(json={"created": "success"})
+    def test_post(self, httpx2_mock):
+        httpx2_mock.add_response(json={"created": "success"})
 
         with SyncGitHubAPI("test") as gh:
             response = gh.post("/foo", data={"key": "value"})
 
         assert response == {"created": "success"}
 
-    def test_patch(self, httpx_mock):
-        httpx_mock.add_response(json={"updated": "success"})
+    def test_patch(self, httpx2_mock):
+        httpx2_mock.add_response(json={"updated": "success"})
 
         with SyncGitHubAPI("test") as gh:
             response = gh.patch("/foo", data={"key": "value"})
 
         assert response == {"updated": "success"}
 
-    def test_put(self, httpx_mock):
-        httpx_mock.add_response(json={"replaced": "success"})
+    def test_put(self, httpx2_mock):
+        httpx2_mock.add_response(json={"replaced": "success"})
 
         with SyncGitHubAPI("test") as gh:
             response = gh.put("/foo", data={"key": "value"})
 
         assert response == {"replaced": "success"}
 
-    def test_delete(self, httpx_mock):
-        httpx_mock.add_response(status_code=204)
+    def test_delete(self, httpx2_mock):
+        httpx2_mock.add_response(status_code=204)
 
         with SyncGitHubAPI("test") as gh:
             response = gh.delete("/foo")
 
         assert response is None  # assuming 204 returns None
 
-    def test_graphql(self, httpx_mock):
-        httpx_mock.add_response(json={"data": {"viewer": {"login": "octocat"}}})
+    def test_graphql(self, httpx2_mock):
+        httpx2_mock.add_response(json={"data": {"viewer": {"login": "octocat"}}})
 
         with SyncGitHubAPI("test") as gh:
             response = gh.graphql("""
@@ -170,29 +170,29 @@ class TestSyncGitHubAPI:
             with SyncGitHubAPI("test") as gh:
                 gh.sleep(1)
 
-    def test_getiter(self, httpx_mock):
-        httpx_mock.add_response(json={"items": [{"id": 1}, {"id": 2}]})
+    def test_getiter(self, httpx2_mock):
+        httpx2_mock.add_response(json={"items": [{"id": 1}, {"id": 2}]})
 
         with SyncGitHubAPI("test") as gh:
             items = list(gh.getiter("/foo"))
 
         assert items == [{"id": 1}, {"id": 2}]
 
-    def test_getiter_pagination(self, httpx_mock):
-        httpx_mock.add_response(
+    def test_getiter_pagination(self, httpx2_mock):
+        httpx2_mock.add_response(
             json={"items": [{"id": 1}]},
             headers={"Link": '<next>; rel="next"'},
         )
-        httpx_mock.add_response(json={"items": [{"id": 2}]})
+        httpx2_mock.add_response(json={"items": [{"id": 2}]})
 
         with SyncGitHubAPI("test") as gh:
             items = list(gh.getiter("/foo"))
 
         assert items == [{"id": 1}, {"id": 2}]
-        assert len(httpx_mock.get_requests()) == 2
+        assert len(httpx2_mock.get_requests()) == 2
 
-    def test_getiter_list(self, httpx_mock):
-        httpx_mock.add_response(json=[{"id": 1}, {"id": 2}])
+    def test_getiter_list(self, httpx2_mock):
+        httpx2_mock.add_response(json=[{"id": 1}, {"id": 2}])
 
         with SyncGitHubAPI("test") as gh:
             items = list(gh.getiter("/foo"))
