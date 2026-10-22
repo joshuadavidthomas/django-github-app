@@ -20,14 +20,6 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/adamchainz/blacken-docs
-    rev: 1.20.0
-    hooks:
-      - id: blacken-docs
-        alias: autoformat
-        additional_dependencies:
-          - black==22.12.0
-
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: '0.26'
     hooks:

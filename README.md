@@ -621,20 +621,17 @@ Filter mentions by username using exact matches or regular expressions:
 ```python
 # Exact match (case-insensitive)
 @gh.mention(username="deploy-bot")
-def exact_match_mention():
-    ...
+def exact_match_mention(): ...
 
 
 # Regular expression pattern
 @gh.mention(username=re.compile(r".*-bot"))
-def regex_mention():
-    ...
+def regex_mention(): ...
 
 
 # Respond to all mentions (no filter)
 @gh.mention()
-def all_mentions():
-    ...
+def all_mentions(): ...
 ```
 
 ##### Scopes
@@ -647,20 +644,17 @@ from django_github_app.mentions import MentionScope
 
 # Only respond in issues (not PRs)
 @gh.mention(username="issue-bot", scope=MentionScope.ISSUE)
-def issue_mention():
-    ...
+def issue_mention(): ...
 
 
 # Only respond in pull requests
 @gh.mention(username="review-bot", scope=MentionScope.PR)
-def pull_request_mention():
-    ...
+def pull_request_mention(): ...
 
 
 # Only respond in commit comments
 @gh.mention(username="commit-bot", scope=MentionScope.COMMIT)
-def commit_mention():
-    ...
+def commit_mention(): ...
 ```
 
 Scope mappings:
