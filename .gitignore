@@ -193,3 +193,6 @@ mediafiles/
 
 # pyright config for nvim-lspconfig
 pyrightconfig.json
+
+# Amp orb portals
+.amp/portals/*
